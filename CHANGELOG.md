@@ -572,8 +572,8 @@ C++ 版から Rust での作り直しを始めた最初のバージョン。
 - 行・列と呼び出し履歴つきのエラー表示。実行前の検査（未定義の関数、引数の数、関数の外での `$x` など）
 - ゴールデンテスト（`tests/cases/*.dol` と期待出力の比較）
 
-[Unreleased]: https://github.com/sonnnnnnp/dolphin/compare/v0.4.0...HEAD
-[0.4.0]: https://github.com/sonnnnnnp/dolphin/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/sonnnnnnp/dolphin/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/sonnnnnnp/dolphin/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/sonnnnnnp/dolphin/releases/tag/v0.1.0
+[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/sonp-2/dolphin/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/sonp-2/dolphin/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/sonp-2/dolphin/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/sonp-2/dolphin/releases/tag/v0.1.0

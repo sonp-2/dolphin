@@ -109,60 +109,60 @@ count: 3
 
 | タグ | 内容 | 差分（前のタグから） |
 |---|---|---|
-| [v0.1.0](https://github.com/sonnnnnnp/dolphin/tree/v0.1.0) | 段階 1: コア言語 | — |
-| [v0.2.0](https://github.com/sonnnnnnp/dolphin/tree/v0.2.0) | 段階 2: エラー表示、文字列、マップ、REPL | [v0.1.0...v0.2.0](https://github.com/sonnnnnnp/dolphin/compare/v0.1.0...v0.2.0) |
-| [v0.3.0](https://github.com/sonnnnnnp/dolphin/tree/v0.3.0) | `import`（名前空間つき） | [v0.2.0...v0.3.0](https://github.com/sonnnnnnp/dolphin/compare/v0.2.0...v0.3.0) |
-| [v0.4.0](https://github.com/sonnnnnnp/dolphin/tree/v0.4.0) | ファイル入出力 | [v0.3.0...v0.4.0](https://github.com/sonnnnnnp/dolphin/compare/v0.3.0...v0.4.0) |
-| [v0.5.0](https://github.com/sonnnnnnp/dolphin/tree/v0.5.0) | 文法の見直し（`$` の廃止、`:=`、添字 `{ }`、スコープ） | [v0.4.0...v0.5.0](https://github.com/sonnnnnnp/dolphin/compare/v0.4.0...v0.5.0) |
-| [v0.6.0](https://github.com/sonnnnnnp/dolphin/tree/v0.6.0) | 関数値とクロージャ | [v0.5.0...v0.6.0](https://github.com/sonnnnnnp/dolphin/compare/v0.5.0...v0.6.0) |
-| [v0.7.0](https://github.com/sonnnnnnp/dolphin/tree/v0.7.0) | `nil`、`for`、`range` | [v0.6.0...v0.7.0](https://github.com/sonnnnnnp/dolphin/compare/v0.6.0...v0.7.0) |
-| [v0.8.0](https://github.com/sonnnnnnp/dolphin/tree/v0.8.0) | エラー値と `?` | [v0.7.0...v0.8.0](https://github.com/sonnnnnnp/dolphin/compare/v0.7.0...v0.8.0) |
-| [v0.9.0](https://github.com/sonnnnnnp/dolphin/tree/v0.9.0) | 組み込みモジュールと `std:json` | [v0.8.0...v0.9.0](https://github.com/sonnnnnnp/dolphin/compare/v0.8.0...v0.9.0) |
-| [v0.10.0](https://github.com/sonnnnnnp/dolphin/tree/v0.10.0) | HTTP クライアント `std:http` | [v0.9.0...v0.10.0](https://github.com/sonnnnnnp/dolphin/compare/v0.9.0...v0.10.0) |
-| [v0.11.0](https://github.com/sonnnnnnp/dolphin/tree/v0.11.0) | 基本型の関数（配列・マップ・文字列・数値）、`type_of`、`std:math` | [v0.10.0...v0.11.0](https://github.com/sonnnnnnp/dolphin/compare/v0.10.0...v0.11.0) |
-| [v0.12.0](https://github.com/sonnnnnnp/dolphin/tree/v0.12.0) | `std:time`、`std:os`、`std:path`、ファイルの残り | [v0.11.0...v0.12.0](https://github.com/sonnnnnnp/dolphin/compare/v0.11.0...v0.12.0) |
-| [v0.13.0](https://github.com/sonnnnnnp/dolphin/tree/v0.13.0) | バイト列、`std:encoding`、`std:crypto` | [v0.12.0...v0.13.0](https://github.com/sonnnnnnp/dolphin/compare/v0.12.0...v0.13.0) |
-| [v0.14.0](https://github.com/sonnnnnnp/dolphin/tree/v0.14.0) | 例（`dolvc`、ライフゲーム、マンデルブロ）、`os.exe` | [v0.13.0...v0.14.0](https://github.com/sonnnnnnp/dolphin/compare/v0.13.0...v0.14.0) |
-| [v0.15.0](https://github.com/sonnnnnnp/dolphin/tree/v0.15.0) | 循環回収器、`gc_collect` | [v0.14.0...v0.15.0](https://github.com/sonnnnnnp/dolphin/compare/v0.14.0...v0.15.0) |
-| [v0.16.0](https://github.com/sonnnnnnp/dolphin/tree/v0.16.0) | HTTP サーバー `http.serve` | [v0.15.0...v0.16.0](https://github.com/sonnnnnnp/dolphin/compare/v0.15.0...v0.16.0) |
-| [v0.17.0](https://github.com/sonnnnnnp/dolphin/tree/v0.17.0) | `assert` `assert_eq` `dbg`、`dolphin check`、`dolphin test` | [v0.16.0...v0.17.0](https://github.com/sonnnnnnp/dolphin/compare/v0.16.0...v0.17.0) |
-| [v0.18.0](https://github.com/sonnnnnnp/dolphin/tree/v0.18.0) | `dolphin fmt` | [v0.17.0...v0.18.0](https://github.com/sonnnnnnp/dolphin/compare/v0.17.0...v0.18.0) |
-| [v0.19.0](https://github.com/sonnnnnnp/dolphin/tree/v0.19.0) | 数値リテラル（`0xFF` `1_000` `1e9`） | [v0.18.0...v0.19.0](https://github.com/sonnnnnnp/dolphin/compare/v0.18.0...v0.19.0) |
-| [v0.20.0](https://github.com/sonnnnnnp/dolphin/tree/v0.20.0) | 組み込み関数を隠す定義 | [v0.19.0...v0.20.0](https://github.com/sonnnnnnp/dolphin/compare/v0.19.0...v0.20.0) |
-| [v0.21.0](https://github.com/sonnnnnnp/dolphin/tree/v0.21.0) | `@m.key` | [v0.20.0...v0.21.0](https://github.com/sonnnnnnp/dolphin/compare/v0.20.0...v0.21.0) |
-| [v0.22.0](https://github.com/sonnnnnnp/dolphin/tree/v0.22.0) | 条件式（`if c ( a ) else ( b )`） | [v0.21.0...v0.22.0](https://github.com/sonnnnnnp/dolphin/compare/v0.21.0...v0.22.0) |
-| [v0.23.0](https://github.com/sonnnnnnp/dolphin/tree/v0.23.0) | 引数の既定値 | [v0.22.0...v0.23.0](https://github.com/sonnnnnnp/dolphin/compare/v0.22.0...v0.23.0) |
-| [v0.24.0](https://github.com/sonnnnnnp/dolphin/tree/v0.24.0) | 可変長引数 `...@rest` と展開 `...式` | [v0.23.0...v0.24.0](https://github.com/sonnnnnnp/dolphin/compare/v0.23.0...v0.24.0) |
-| [v0.25.0](https://github.com/sonnnnnnp/dolphin/tree/v0.25.0) | 文字列の式展開 `"@{a + b}"` と生の文字列 `r"…"` | [v0.24.0...v0.25.0](https://github.com/sonnnnnnp/dolphin/compare/v0.24.0...v0.25.0) |
-| [v0.26.0](https://github.com/sonnnnnnp/dolphin/tree/v0.26.0) | 分割代入（`{@a, @b} := …`） | [v0.25.0...v0.26.0](https://github.com/sonnnnnnp/dolphin/compare/v0.25.0...v0.26.0) |
-| [v0.27.0](https://github.com/sonnnnnnp/dolphin/tree/v0.27.0) | ビット演算 `std:bits` | [v0.26.0...v0.27.0](https://github.com/sonnnnnnp/dolphin/compare/v0.26.0...v0.27.0) |
-| [v0.28.0](https://github.com/sonnnnnnp/dolphin/tree/v0.28.0) | `std:regex`（正規表現） | [v0.27.0...v0.28.0](https://github.com/sonnnnnnp/dolphin/compare/v0.27.0...v0.28.0) |
-| [v0.29.0](https://github.com/sonnnnnnp/dolphin/tree/v0.29.0) | TCP `std:net` と `handle` 型 | [v0.28.0...v0.29.0](https://github.com/sonnnnnnp/dolphin/compare/v0.28.0...v0.29.0) |
-| [v0.30.0](https://github.com/sonnnnnnp/dolphin/tree/v0.30.0) | WebSocket（`http.serve` の `websocket` と `std:ws`） | [v0.29.0...v0.30.0](https://github.com/sonnnnnnp/dolphin/compare/v0.29.0...v0.30.0) |
-| [v0.31.0](https://github.com/sonnnnnnp/dolphin/tree/v0.31.0) | 非同期の関数（`std:async`、`http.get_async` など） | [v0.30.0...v0.31.0](https://github.com/sonnnnnnp/dolphin/compare/v0.30.0...v0.31.0) |
-| [v0.32.0](https://github.com/sonnnnnnp/dolphin/tree/v0.32.0) | `std:ui`（ウィンドウと宣言的 UI。`--features ui`） | [v0.31.0...v0.32.0](https://github.com/sonnnnnnp/dolphin/compare/v0.31.0...v0.32.0) |
-| [v0.33.0](https://github.com/sonnnnnnp/dolphin/tree/v0.33.0) | `std:canvas`（ゲーム・描画。`--features ui`） | [v0.32.0...v0.33.0](https://github.com/sonnnnnnp/dolphin/compare/v0.32.0...v0.33.0) |
-| [v0.34.0](https://github.com/sonnnnnnp/dolphin/tree/v0.34.0) | 画像（`canvas.image`） | [v0.33.0...v0.34.0](https://github.com/sonnnnnnp/dolphin/compare/v0.33.0...v0.34.0) |
-| [v0.35.0](https://github.com/sonnnnnnp/dolphin/tree/v0.35.0) | 音 `std:audio`（`--features audio`） | [v0.34.0...v0.35.0](https://github.com/sonnnnnnp/dolphin/compare/v0.34.0...v0.35.0) |
-| [v0.36.0](https://github.com/sonnnnnnp/dolphin/tree/v0.36.0) | SQLite `std:sqlite`（`--features sqlite`） | [v0.35.0...v0.36.0](https://github.com/sonnnnnnp/dolphin/compare/v0.35.0...v0.36.0) |
-| [v0.37.0](https://github.com/sonnnnnnp/dolphin/tree/v0.37.0) | CSV `std:csv` | [v0.36.0...v0.37.0](https://github.com/sonnnnnnp/dolphin/compare/v0.36.0...v0.37.0) |
-| [v0.38.0](https://github.com/sonnnnnnp/dolphin/tree/v0.38.0) | 日付の計算（`std:time` の `add_months` `start_of` など） | [v0.37.0...v0.38.0](https://github.com/sonnnnnnp/dolphin/compare/v0.37.0...v0.38.0) |
-| [v0.39.0](https://github.com/sonnnnnnp/dolphin/tree/v0.39.0) | 乱数 `std:random`（`seed` `choice` `shuffle` `sample` など） | [v0.38.0...v0.39.0](https://github.com/sonnnnnnp/dolphin/compare/v0.38.0...v0.39.0) |
-| [v0.40.0](https://github.com/sonnnnnnp/dolphin/tree/v0.40.0) | `std:collections`（ヒープ・`counts` `unique` `group_by` `chunk` `zip` `flatten`） | [v0.39.0...v0.40.0](https://github.com/sonnnnnnp/dolphin/compare/v0.39.0...v0.40.0) |
-| [v0.41.0](https://github.com/sonnnnnnp/dolphin/tree/v0.41.0) | 言語サーバー `dolphin lsp`（定義へ移動・エラー表示・ホバー・アウトライン・整形）と VS Code 拡張 | [v0.40.0...v0.41.0](https://github.com/sonnnnnnp/dolphin/compare/v0.40.0...v0.41.0) |
-| [v0.42.0](https://github.com/sonnnnnnp/dolphin/tree/v0.42.0) | 言語サーバーに補完・参照の検索・リネーム | [v0.41.0...v0.42.0](https://github.com/sonnnnnnp/dolphin/compare/v0.41.0...v0.42.0) |
-| [v0.43.0](https://github.com/sonnnnnnp/dolphin/tree/v0.43.0) | `wss://`（WebSocket の TLS） | [v0.42.0...v0.43.0](https://github.com/sonnnnnnp/dolphin/compare/v0.42.0...v0.43.0) |
-| [v0.44.0](https://github.com/sonnnnnnp/dolphin/tree/v0.44.0) | 画像の加工 `std:image`（`info` `resize` `crop` `convert`） | [v0.43.0...v0.44.0](https://github.com/sonnnnnnp/dolphin/compare/v0.43.0...v0.44.0) |
-| [v0.45.0](https://github.com/sonnnnnnp/dolphin/tree/v0.45.0) | WebSocket のコールバック版 `ws.connect_async` | [v0.44.0...v0.45.0](https://github.com/sonnnnnnp/dolphin/compare/v0.44.0...v0.45.0) |
-| [v0.46.0](https://github.com/sonnnnnnp/dolphin/tree/v0.46.0) | パッケージの `import["名前"]`（`dolphin_modules/` と `DOLPHIN_PATH`） | [v0.45.0...v0.46.0](https://github.com/sonnnnnnp/dolphin/compare/v0.45.0...v0.46.0) |
-| [v0.47.0](https://github.com/sonnnnnnp/dolphin/tree/v0.47.0) | エラー値の詳細データ（`err_new` の第 3 引数、`err_data`） | [v0.46.0...v0.47.0](https://github.com/sonnnnnnp/dolphin/compare/v0.46.0...v0.47.0) |
-| [v0.48.0](https://github.com/sonnnnnnp/dolphin/tree/v0.48.0) | 整数 `int`（`123i`、`to_int`） | [v0.47.0...v0.48.0](https://github.com/sonnnnnnp/dolphin/compare/v0.47.0...v0.48.0) |
-| [v0.49.0](https://github.com/sonnnnnnp/dolphin/tree/v0.49.0) | ストリーム `std:stream`（`HTTP` の `"stream": true` を含む） | [v0.48.0...v0.49.0](https://github.com/sonnnnnnp/dolphin/compare/v0.48.0...v0.49.0) |
-| [v0.50.0](https://github.com/sonnnnnnp/dolphin/tree/v0.50.0) | プロセスの常駐連携（`os.spawn` `os.wait`） | [v0.49.0...v0.50.0](https://github.com/sonnnnnnp/dolphin/compare/v0.49.0...v0.50.0) |
-| [v0.51.0](https://github.com/sonnnnnnp/dolphin/tree/v0.51.0) | ワーカー `std:worker`（別スレッドの別インタプリタ） | [v0.50.0...v0.51.0](https://github.com/sonnnnnnp/dolphin/compare/v0.50.0...v0.51.0) |
-| [v0.52.0](https://github.com/sonnnnnnp/dolphin/tree/v0.52.0) | FFI `std:ffi`（C の共有ライブラリを呼ぶ。`--features ffi`） | [v0.51.0...v0.52.0](https://github.com/sonnnnnnp/dolphin/compare/v0.51.0...v0.52.0) |
-| [v0.53.0](https://github.com/sonnnnnnp/dolphin/tree/v0.53.0) | バイトコード VM（評価器の置き換え。挙動は同じ） | [v0.52.0...v0.53.0](https://github.com/sonnnnnnp/dolphin/compare/v0.52.0...v0.53.0) |
-| [v0.54.0](https://github.com/sonnnnnnp/dolphin/tree/v0.54.0) | `async` と `await`（止めて再開できる関数、`future`） | [v0.53.0...v0.54.0](https://github.com/sonnnnnnp/dolphin/compare/v0.53.0...v0.54.0) |
+| [v0.1.0](https://github.com/sonp-2/dolphin/tree/v0.1.0) | 段階 1: コア言語 | — |
+| [v0.2.0](https://github.com/sonp-2/dolphin/tree/v0.2.0) | 段階 2: エラー表示、文字列、マップ、REPL | [v0.1.0...v0.2.0](https://github.com/sonp-2/dolphin/compare/v0.1.0...v0.2.0) |
+| [v0.3.0](https://github.com/sonp-2/dolphin/tree/v0.3.0) | `import`（名前空間つき） | [v0.2.0...v0.3.0](https://github.com/sonp-2/dolphin/compare/v0.2.0...v0.3.0) |
+| [v0.4.0](https://github.com/sonp-2/dolphin/tree/v0.4.0) | ファイル入出力 | [v0.3.0...v0.4.0](https://github.com/sonp-2/dolphin/compare/v0.3.0...v0.4.0) |
+| [v0.5.0](https://github.com/sonp-2/dolphin/tree/v0.5.0) | 文法の見直し（`$` の廃止、`:=`、添字 `{ }`、スコープ） | [v0.4.0...v0.5.0](https://github.com/sonp-2/dolphin/compare/v0.4.0...v0.5.0) |
+| [v0.6.0](https://github.com/sonp-2/dolphin/tree/v0.6.0) | 関数値とクロージャ | [v0.5.0...v0.6.0](https://github.com/sonp-2/dolphin/compare/v0.5.0...v0.6.0) |
+| [v0.7.0](https://github.com/sonp-2/dolphin/tree/v0.7.0) | `nil`、`for`、`range` | [v0.6.0...v0.7.0](https://github.com/sonp-2/dolphin/compare/v0.6.0...v0.7.0) |
+| [v0.8.0](https://github.com/sonp-2/dolphin/tree/v0.8.0) | エラー値と `?` | [v0.7.0...v0.8.0](https://github.com/sonp-2/dolphin/compare/v0.7.0...v0.8.0) |
+| [v0.9.0](https://github.com/sonp-2/dolphin/tree/v0.9.0) | 組み込みモジュールと `std:json` | [v0.8.0...v0.9.0](https://github.com/sonp-2/dolphin/compare/v0.8.0...v0.9.0) |
+| [v0.10.0](https://github.com/sonp-2/dolphin/tree/v0.10.0) | HTTP クライアント `std:http` | [v0.9.0...v0.10.0](https://github.com/sonp-2/dolphin/compare/v0.9.0...v0.10.0) |
+| [v0.11.0](https://github.com/sonp-2/dolphin/tree/v0.11.0) | 基本型の関数（配列・マップ・文字列・数値）、`type_of`、`std:math` | [v0.10.0...v0.11.0](https://github.com/sonp-2/dolphin/compare/v0.10.0...v0.11.0) |
+| [v0.12.0](https://github.com/sonp-2/dolphin/tree/v0.12.0) | `std:time`、`std:os`、`std:path`、ファイルの残り | [v0.11.0...v0.12.0](https://github.com/sonp-2/dolphin/compare/v0.11.0...v0.12.0) |
+| [v0.13.0](https://github.com/sonp-2/dolphin/tree/v0.13.0) | バイト列、`std:encoding`、`std:crypto` | [v0.12.0...v0.13.0](https://github.com/sonp-2/dolphin/compare/v0.12.0...v0.13.0) |
+| [v0.14.0](https://github.com/sonp-2/dolphin/tree/v0.14.0) | 例（`dolvc`、ライフゲーム、マンデルブロ）、`os.exe` | [v0.13.0...v0.14.0](https://github.com/sonp-2/dolphin/compare/v0.13.0...v0.14.0) |
+| [v0.15.0](https://github.com/sonp-2/dolphin/tree/v0.15.0) | 循環回収器、`gc_collect` | [v0.14.0...v0.15.0](https://github.com/sonp-2/dolphin/compare/v0.14.0...v0.15.0) |
+| [v0.16.0](https://github.com/sonp-2/dolphin/tree/v0.16.0) | HTTP サーバー `http.serve` | [v0.15.0...v0.16.0](https://github.com/sonp-2/dolphin/compare/v0.15.0...v0.16.0) |
+| [v0.17.0](https://github.com/sonp-2/dolphin/tree/v0.17.0) | `assert` `assert_eq` `dbg`、`dolphin check`、`dolphin test` | [v0.16.0...v0.17.0](https://github.com/sonp-2/dolphin/compare/v0.16.0...v0.17.0) |
+| [v0.18.0](https://github.com/sonp-2/dolphin/tree/v0.18.0) | `dolphin fmt` | [v0.17.0...v0.18.0](https://github.com/sonp-2/dolphin/compare/v0.17.0...v0.18.0) |
+| [v0.19.0](https://github.com/sonp-2/dolphin/tree/v0.19.0) | 数値リテラル（`0xFF` `1_000` `1e9`） | [v0.18.0...v0.19.0](https://github.com/sonp-2/dolphin/compare/v0.18.0...v0.19.0) |
+| [v0.20.0](https://github.com/sonp-2/dolphin/tree/v0.20.0) | 組み込み関数を隠す定義 | [v0.19.0...v0.20.0](https://github.com/sonp-2/dolphin/compare/v0.19.0...v0.20.0) |
+| [v0.21.0](https://github.com/sonp-2/dolphin/tree/v0.21.0) | `@m.key` | [v0.20.0...v0.21.0](https://github.com/sonp-2/dolphin/compare/v0.20.0...v0.21.0) |
+| [v0.22.0](https://github.com/sonp-2/dolphin/tree/v0.22.0) | 条件式（`if c ( a ) else ( b )`） | [v0.21.0...v0.22.0](https://github.com/sonp-2/dolphin/compare/v0.21.0...v0.22.0) |
+| [v0.23.0](https://github.com/sonp-2/dolphin/tree/v0.23.0) | 引数の既定値 | [v0.22.0...v0.23.0](https://github.com/sonp-2/dolphin/compare/v0.22.0...v0.23.0) |
+| [v0.24.0](https://github.com/sonp-2/dolphin/tree/v0.24.0) | 可変長引数 `...@rest` と展開 `...式` | [v0.23.0...v0.24.0](https://github.com/sonp-2/dolphin/compare/v0.23.0...v0.24.0) |
+| [v0.25.0](https://github.com/sonp-2/dolphin/tree/v0.25.0) | 文字列の式展開 `"@{a + b}"` と生の文字列 `r"…"` | [v0.24.0...v0.25.0](https://github.com/sonp-2/dolphin/compare/v0.24.0...v0.25.0) |
+| [v0.26.0](https://github.com/sonp-2/dolphin/tree/v0.26.0) | 分割代入（`{@a, @b} := …`） | [v0.25.0...v0.26.0](https://github.com/sonp-2/dolphin/compare/v0.25.0...v0.26.0) |
+| [v0.27.0](https://github.com/sonp-2/dolphin/tree/v0.27.0) | ビット演算 `std:bits` | [v0.26.0...v0.27.0](https://github.com/sonp-2/dolphin/compare/v0.26.0...v0.27.0) |
+| [v0.28.0](https://github.com/sonp-2/dolphin/tree/v0.28.0) | `std:regex`（正規表現） | [v0.27.0...v0.28.0](https://github.com/sonp-2/dolphin/compare/v0.27.0...v0.28.0) |
+| [v0.29.0](https://github.com/sonp-2/dolphin/tree/v0.29.0) | TCP `std:net` と `handle` 型 | [v0.28.0...v0.29.0](https://github.com/sonp-2/dolphin/compare/v0.28.0...v0.29.0) |
+| [v0.30.0](https://github.com/sonp-2/dolphin/tree/v0.30.0) | WebSocket（`http.serve` の `websocket` と `std:ws`） | [v0.29.0...v0.30.0](https://github.com/sonp-2/dolphin/compare/v0.29.0...v0.30.0) |
+| [v0.31.0](https://github.com/sonp-2/dolphin/tree/v0.31.0) | 非同期の関数（`std:async`、`http.get_async` など） | [v0.30.0...v0.31.0](https://github.com/sonp-2/dolphin/compare/v0.30.0...v0.31.0) |
+| [v0.32.0](https://github.com/sonp-2/dolphin/tree/v0.32.0) | `std:ui`（ウィンドウと宣言的 UI。`--features ui`） | [v0.31.0...v0.32.0](https://github.com/sonp-2/dolphin/compare/v0.31.0...v0.32.0) |
+| [v0.33.0](https://github.com/sonp-2/dolphin/tree/v0.33.0) | `std:canvas`（ゲーム・描画。`--features ui`） | [v0.32.0...v0.33.0](https://github.com/sonp-2/dolphin/compare/v0.32.0...v0.33.0) |
+| [v0.34.0](https://github.com/sonp-2/dolphin/tree/v0.34.0) | 画像（`canvas.image`） | [v0.33.0...v0.34.0](https://github.com/sonp-2/dolphin/compare/v0.33.0...v0.34.0) |
+| [v0.35.0](https://github.com/sonp-2/dolphin/tree/v0.35.0) | 音 `std:audio`（`--features audio`） | [v0.34.0...v0.35.0](https://github.com/sonp-2/dolphin/compare/v0.34.0...v0.35.0) |
+| [v0.36.0](https://github.com/sonp-2/dolphin/tree/v0.36.0) | SQLite `std:sqlite`（`--features sqlite`） | [v0.35.0...v0.36.0](https://github.com/sonp-2/dolphin/compare/v0.35.0...v0.36.0) |
+| [v0.37.0](https://github.com/sonp-2/dolphin/tree/v0.37.0) | CSV `std:csv` | [v0.36.0...v0.37.0](https://github.com/sonp-2/dolphin/compare/v0.36.0...v0.37.0) |
+| [v0.38.0](https://github.com/sonp-2/dolphin/tree/v0.38.0) | 日付の計算（`std:time` の `add_months` `start_of` など） | [v0.37.0...v0.38.0](https://github.com/sonp-2/dolphin/compare/v0.37.0...v0.38.0) |
+| [v0.39.0](https://github.com/sonp-2/dolphin/tree/v0.39.0) | 乱数 `std:random`（`seed` `choice` `shuffle` `sample` など） | [v0.38.0...v0.39.0](https://github.com/sonp-2/dolphin/compare/v0.38.0...v0.39.0) |
+| [v0.40.0](https://github.com/sonp-2/dolphin/tree/v0.40.0) | `std:collections`（ヒープ・`counts` `unique` `group_by` `chunk` `zip` `flatten`） | [v0.39.0...v0.40.0](https://github.com/sonp-2/dolphin/compare/v0.39.0...v0.40.0) |
+| [v0.41.0](https://github.com/sonp-2/dolphin/tree/v0.41.0) | 言語サーバー `dolphin lsp`（定義へ移動・エラー表示・ホバー・アウトライン・整形）と VS Code 拡張 | [v0.40.0...v0.41.0](https://github.com/sonp-2/dolphin/compare/v0.40.0...v0.41.0) |
+| [v0.42.0](https://github.com/sonp-2/dolphin/tree/v0.42.0) | 言語サーバーに補完・参照の検索・リネーム | [v0.41.0...v0.42.0](https://github.com/sonp-2/dolphin/compare/v0.41.0...v0.42.0) |
+| [v0.43.0](https://github.com/sonp-2/dolphin/tree/v0.43.0) | `wss://`（WebSocket の TLS） | [v0.42.0...v0.43.0](https://github.com/sonp-2/dolphin/compare/v0.42.0...v0.43.0) |
+| [v0.44.0](https://github.com/sonp-2/dolphin/tree/v0.44.0) | 画像の加工 `std:image`（`info` `resize` `crop` `convert`） | [v0.43.0...v0.44.0](https://github.com/sonp-2/dolphin/compare/v0.43.0...v0.44.0) |
+| [v0.45.0](https://github.com/sonp-2/dolphin/tree/v0.45.0) | WebSocket のコールバック版 `ws.connect_async` | [v0.44.0...v0.45.0](https://github.com/sonp-2/dolphin/compare/v0.44.0...v0.45.0) |
+| [v0.46.0](https://github.com/sonp-2/dolphin/tree/v0.46.0) | パッケージの `import["名前"]`（`dolphin_modules/` と `DOLPHIN_PATH`） | [v0.45.0...v0.46.0](https://github.com/sonp-2/dolphin/compare/v0.45.0...v0.46.0) |
+| [v0.47.0](https://github.com/sonp-2/dolphin/tree/v0.47.0) | エラー値の詳細データ（`err_new` の第 3 引数、`err_data`） | [v0.46.0...v0.47.0](https://github.com/sonp-2/dolphin/compare/v0.46.0...v0.47.0) |
+| [v0.48.0](https://github.com/sonp-2/dolphin/tree/v0.48.0) | 整数 `int`（`123i`、`to_int`） | [v0.47.0...v0.48.0](https://github.com/sonp-2/dolphin/compare/v0.47.0...v0.48.0) |
+| [v0.49.0](https://github.com/sonp-2/dolphin/tree/v0.49.0) | ストリーム `std:stream`（`HTTP` の `"stream": true` を含む） | [v0.48.0...v0.49.0](https://github.com/sonp-2/dolphin/compare/v0.48.0...v0.49.0) |
+| [v0.50.0](https://github.com/sonp-2/dolphin/tree/v0.50.0) | プロセスの常駐連携（`os.spawn` `os.wait`） | [v0.49.0...v0.50.0](https://github.com/sonp-2/dolphin/compare/v0.49.0...v0.50.0) |
+| [v0.51.0](https://github.com/sonp-2/dolphin/tree/v0.51.0) | ワーカー `std:worker`（別スレッドの別インタプリタ） | [v0.50.0...v0.51.0](https://github.com/sonp-2/dolphin/compare/v0.50.0...v0.51.0) |
+| [v0.52.0](https://github.com/sonp-2/dolphin/tree/v0.52.0) | FFI `std:ffi`（C の共有ライブラリを呼ぶ。`--features ffi`） | [v0.51.0...v0.52.0](https://github.com/sonp-2/dolphin/compare/v0.51.0...v0.52.0) |
+| [v0.53.0](https://github.com/sonp-2/dolphin/tree/v0.53.0) | バイトコード VM（評価器の置き換え。挙動は同じ） | [v0.52.0...v0.53.0](https://github.com/sonp-2/dolphin/compare/v0.52.0...v0.53.0) |
+| [v0.54.0](https://github.com/sonp-2/dolphin/tree/v0.54.0) | `async` と `await`（止めて再開できる関数、`future`） | [v0.53.0...v0.54.0](https://github.com/sonp-2/dolphin/compare/v0.53.0...v0.54.0) |
 
 差分は、まず `docs/design.md`（仕様）から読み、次に `tests/cases/`（使い方の実例）、最後に `src/` を読むと流れがつかめます。手元では `git diff v0.2.0 v0.3.0 --stat` のように見られます。
 
@@ -221,4 +221,4 @@ cargo test
 | ブランチ | 内容 |
 |---|---|
 | `main` | 作り直し版（Rust） |
-| [`archive/cpp`](https://github.com/sonnnnnnp/dolphin/tree/archive/cpp) | 初期実装（C++17 + SFML）。サンプルスクリプトは `my_scripts/` |
+| [`archive/cpp`](https://github.com/sonp-2/dolphin/tree/archive/cpp) | 初期実装（C++17 + SFML）。サンプルスクリプトは `my_scripts/` |
