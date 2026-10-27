@@ -57,17 +57,11 @@ fn is_function(value: &Value) -> bool {
     matches!(value, Value::Func(_) | Value::Native(_))
 }
 
-fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    if !(1..=2).contains(&args.len()) {
-        return Err(format!(
-            "worker.spawn の引数は 1 個か 2 個です（{} 個渡されました）",
-            args.len()
-        ));
-    }
-    let path = str_arg("worker.spawn", args, 0)?;
+/// `worker.spawn` のオプション。`(arg に渡す値, コールバックがあるか)`
+fn spawn_options(options: Option<&Value>) -> Result<(Data, bool), String> {
     let mut arg = Data::Nil;
     let mut callbacks = false;
-    if let Some(options) = args.get(1) {
+    if let Some(options) = options {
         let Value::Map(options) = options else {
             return Err(type_error("worker.spawn", 1, "マップ", options));
         };
@@ -89,6 +83,18 @@ fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
             }
         }
     }
+    Ok((arg, callbacks))
+}
+
+fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    if !(1..=2).contains(&args.len()) {
+        return Err(format!(
+            "worker.spawn の引数は 1 個か 2 個です（{} 個渡されました）",
+            args.len()
+        ));
+    }
+    let path = str_arg("worker.spawn", args, 0)?;
+    let (arg, callbacks) = spawn_options(args.get(1))?;
 
     let full = interp.current_dir().join(Path::new(path));
     let source = match std::fs::read_to_string(&full) {

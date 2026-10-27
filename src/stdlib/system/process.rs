@@ -2,7 +2,7 @@
 //! 標準入出力は、ストリーム（5.41）として渡す。標準ライブラリだけを使う
 
 use std::io::{self, BufReader, Write};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -146,19 +146,7 @@ pub fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
     let Value::Array(list) = &args[1] else {
         return Err(type_error("os.spawn", 1, "配列", &args[1]));
     };
-    let mut arguments = Vec::new();
-    for (i, item) in list.borrow().iter().enumerate() {
-        match item {
-            Value::Str(s) if !s.contains('\0') => arguments.push(s.to_string()),
-            Value::Str(_) => return Err(format!("os.spawn の引数 {i} 番目に NUL は使えません")),
-            other => {
-                return Err(format!(
-                    "os.spawn の引数の配列の {i} 番目は文字列です（{}が渡されました）",
-                    other.type_name()
-                ));
-            }
-        }
-    }
+    let arguments = spawn_arguments(&list.borrow())?;
     let options = match args.get(2) {
         Some(value) => options(value)?,
         None => Options {
@@ -204,7 +192,7 @@ pub fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
     for (key, value) in &options.env {
         cmd.env(key, value);
     }
-    let mut child = match cmd.spawn() {
+    let child = match cmd.spawn() {
         Ok(child) => child,
         Err(e) => {
             let (kind, reason) = match e.kind() {
@@ -220,6 +208,29 @@ pub fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
             ));
         }
     };
+    Ok(spawned_value(child))
+}
+
+/// `os.spawn` の第 2 引数（引数の配列）を、文字列の列にする
+fn spawn_arguments(list: &[Value]) -> Result<Vec<String>, String> {
+    let mut arguments = Vec::new();
+    for (i, item) in list.iter().enumerate() {
+        match item {
+            Value::Str(s) if !s.contains('\0') => arguments.push(s.to_string()),
+            Value::Str(_) => return Err(format!("os.spawn の引数 {i} 番目に NUL は使えません")),
+            other => {
+                return Err(format!(
+                    "os.spawn の引数の配列の {i} 番目は文字列です（{}が渡されました）",
+                    other.type_name()
+                ));
+            }
+        }
+    }
+    Ok(arguments)
+}
+
+/// 起動した子プロセスを、`{pid, process, stdin, stdout, stderr}` のマップにする
+fn spawned_value(mut child: Child) -> Value {
     let pid = child.id();
     let stdin = child.stdin.take().map(|pipe| {
         stream_value(
@@ -253,7 +264,7 @@ pub fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
     map.insert("stdin".into(), stdin.unwrap_or(Value::Nil));
     map.insert("stdout".into(), stdout.unwrap_or(Value::Nil));
     map.insert("stderr".into(), stderr.unwrap_or(Value::Nil));
-    Ok(new_map(map))
+    new_map(map)
 }
 
 /// プロセスのハンドルに `f` を適用する。閉じていればエラー値、プロセスでなければ実行時エラー
