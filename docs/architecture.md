@@ -90,7 +90,8 @@ dolphin/
 │  │  ├─ error.rs        RuntimeError（呼び出し履歴つき）
 │  │  ├─ bytecode.rs     命令（Op）と、コンパイルした 1 つのまとまり（Chunk）
 │  │  ├─ compile.rs      AST → バイトコード
-│  │  ├─ interp.rs       Interpreter（モジュール・import・組み込み関数の呼び出し・分割代入）
+│  │  ├─ interp.rs       Interpreter（モジュール・組み込み関数の呼び出し・分割代入）
+│  │  ├─ interp/import.rs  import（ファイルと組み込みモジュールの読み込み）
 │  │  └─ interp/vm.rs    VM（枠と値のスタックをヒープに持つ。Dolphin の関数呼び出しで Rust の再帰を使わない）と、`async` 関数の流れ（止めて再開する。future の終わりをイベントループが拾う）
 │  └─ stdlib/            `stdlib::http` のように 1 段で呼べるよう、mod.rs で再公開している
 │     ├─ mod.rs          全モジュールの登録、引数検査の共通処理
