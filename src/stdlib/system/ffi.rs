@@ -10,10 +10,10 @@ use std::rc::Rc;
 use libffi::middle::{Arg, Cif, CodePtr, Type};
 use libloading::Library;
 
-use super::{bytes_arg, error_value, expect_args, int_arg, str_arg, type_error};
 use crate::runtime::handle::{Handle, HandleKind};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::{bytes_arg, error_value, expect_args, int_arg, str_arg, type_error};
 
 /// バッファの大きさの上限
 const MAX_BUFFER: i64 = 64 * 1024 * 1024;
@@ -157,7 +157,7 @@ fn with_object<T: Any, R>(
                 i + 1
             )),
         },
-        HandleKind::Closed => Ok(Err(super::net::closed())),
+        HandleKind::Closed => Ok(Err(crate::stdlib::net::closed())),
         _ => Err(format!(
             "{name} の {} 番目の引数は{what}です（ほかの種類のハンドルでした）",
             i + 1

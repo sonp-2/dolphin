@@ -3,9 +3,9 @@
 //!
 //! 自前の実装。引数は、バイト列か文字列（UTF-8 として扱う）
 
-use super::{data_arg, error_value, expect_args, str_arg};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::{data_arg, error_value, expect_args, str_arg};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module(
@@ -65,7 +65,7 @@ const STANDARD: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwx
 const URL_SAFE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 /// `url` なら `-` `_` を使い、`=` の詰め物をしない
-pub(super) fn base64_encode(bytes: &[u8], url: bool) -> String {
+pub(in crate::stdlib) fn base64_encode(bytes: &[u8], url: bool) -> String {
     let table = if url { URL_SAFE } else { STANDARD };
     let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
     for chunk in bytes.chunks(3) {
@@ -136,7 +136,7 @@ fn base64_decode(s: &str, url: bool) -> Result<Vec<u8>, String> {
 
 // ---- 16 進数 ----
 
-pub(super) fn hex_encode(bytes: &[u8]) -> String {
+pub(in crate::stdlib) fn hex_encode(bytes: &[u8]) -> String {
     const DIGITS: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
     for &b in bytes {
@@ -167,7 +167,7 @@ fn hex_decode(s: &str) -> Result<Vec<u8>, String> {
 // ---- URL のパーセントエンコード ----
 
 /// 英数字と `-` `.` `_` `~` 以外を `%XX` にする
-pub(super) fn url_encode(bytes: &[u8]) -> String {
+pub(in crate::stdlib) fn url_encode(bytes: &[u8]) -> String {
     let mut out = String::with_capacity(bytes.len());
     for &b in bytes {
         match b {

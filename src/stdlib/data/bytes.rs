@@ -3,11 +3,11 @@
 //!
 //! バイト列は変更できない（`Value::Bytes`）。読み取りは `@b{i}`
 
-use super::{
-    array_arg, bytes_arg, data_arg, error_value, expect_args, int_arg, new_array, str_arg,
-};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::{
+    array_arg, bytes_arg, data_arg, error_value, expect_args, int_arg, new_array, str_arg,
+};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("str_to_bytes", str_to_bytes);

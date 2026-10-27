@@ -6,12 +6,12 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::async_::{spawn_blocking_opt, split_callback_opt};
-use super::path::to_slash;
-use super::{error_value, expect_args, int_arg, new_array, new_map, str_arg, type_error};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::async_::{spawn_blocking_opt, split_callback_opt};
+use crate::stdlib::path::to_slash;
+use crate::stdlib::{error_value, expect_args, int_arg, new_array, new_map, str_arg, type_error};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module(
@@ -28,10 +28,10 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("os.exe", exe),
             ("os.run", run),
             ("os.run_async", run_async),
-            ("os.spawn", super::process::spawn),
-            ("os.wait", super::process::wait),
-            ("os.poll", super::process::poll),
-            ("os.kill", super::process::kill),
+            ("os.spawn", crate::stdlib::process::spawn),
+            ("os.wait", crate::stdlib::process::wait),
+            ("os.poll", crate::stdlib::process::poll),
+            ("os.kill", crate::stdlib::process::kill),
         ],
     );
 }
@@ -135,7 +135,7 @@ fn temp_dir(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 
 /// OS のエラーを、種類つきのエラー値にする
 fn io_failure(action: &str, path: Option<&str>, e: &io::Error) -> Value {
-    let (kind, reason) = super::fs::classify(e);
+    let (kind, reason) = crate::stdlib::fs::classify(e);
     let subject = path.map_or(String::new(), |p| format!("`{p}` を"));
     error_value(kind, format!("{subject}{action}: {reason}"))
 }
@@ -337,7 +337,7 @@ fn spawn_and_wait(command: &str, arguments: &[String], options: RunOptions) -> V
                     "not_found",
                     "コマンドかカレントディレクトリが見つかりません".to_string(),
                 ),
-                _ => super::fs::classify(&e),
+                _ => crate::stdlib::fs::classify(&e),
             };
             return error_value(kind, format!("`{command}` を実行できません: {reason}"));
         }

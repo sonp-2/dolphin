@@ -92,39 +92,47 @@ dolphin/
 │  │  ├─ compile.rs      AST → バイトコード
 │  │  ├─ interp.rs       Interpreter（モジュール・import・組み込み関数の呼び出し・分割代入）
 │  │  └─ interp/vm.rs    VM（枠と値のスタックをヒープに持つ。Dolphin の関数呼び出しで Rust の再帰を使わない）と、`async` 関数の流れ（止めて再開する。future の終わりをイベントループが拾う）
-│  └─ stdlib/
+│  └─ stdlib/            `stdlib::http` のように 1 段で呼べるよう、mod.rs で再公開している
 │     ├─ mod.rs          全モジュールの登録、引数検査の共通処理
-│     ├─ io.rs           log, input
-│     ├─ fs.rs           file_read, file_write, file_append, file_exists
 │     ├─ string.rs       str_*、to_str、to_num
 │     ├─ array.rs        arr_len, arr_push, arr_pop
 │     ├─ map.rs          map_len, map_keys, map_has, map_remove
+│     ├─ collections.rs  std:collections
 │     ├─ bits.rs         std:bits（ビット演算）
-│     ├─ math.rs         abs, floor, …, random（乱数は xorshift64* を自前で実装）
-│     ├─ types.rs        type_of
-│     ├─ gc.rs           gc_collect
-│     ├─ debug.rs        assert, assert_eq, dbg
-│     ├─ bytes.rs        バイト列（str_to_bytes / bytes_* ）
-│     ├─ encoding.rs     std:encoding（base64 / hex / URL。自前）
-│     ├─ crypto.rs       std:crypto（feature = "crypto"。ring + md-5）
-│     ├─ regex.rs        std:regex（feature = "regex"。regex クレート）
-│     ├─ ws_proto.rs     WebSocket のフレーム・メッセージ・ハンドシェイク（RFC 6455。SHA-1 も自前）
-│     ├─ ws.rs           std:ws（クライアント。サーバー側の接続の send / close も受ける）
-│     ├─ async_.rs       std:async（タイマー、コールバック型の非同期の関数の共通処理）
-│     ├─ audio.rs        std:audio（feature = "audio"。rodio。再生は補助スレッド）
-│     ├─ net.rs          std:net（TCP。ブロッキング、標準ライブラリだけ）
-│     ├─ process.rs      os.spawn / wait / poll / kill（常駐する子プロセスとの連携）
-│     ├─ worker.rs       std:worker（別スレッドの別インタプリタとメッセージでやり取りする。runtime/worker.rs に口の型）
-│     ├─ ffi.rs          std:ffi（C の共有ライブラリを呼ぶ。ffi feature。libloading と libffi）
-│     ├─ stream.rs       std:stream（ファイル・標準入出力・HTTP の本文・メモリ・TCP を共通に読み書きする）
-│     ├─ path.rs         std:path
-│     ├─ os.rs           std:os（args / env / exit / run など）
+│     ├─ math.rs         abs, floor, …（乱数は random.rs。xorshift64* を自前で実装）
+│     ├─ random.rs       std:random
 │     ├─ time.rs         std:time（暦の計算は自前）
+│     ├─ types.rs        type_of
 │     ├─ error.rs        is_error, err_kind, err_message, err_new
-│     ├─ json.rs         std:json（parse / stringify / pretty。自前の実装、外部クレートなし）
-│     ├─ http.rs         std:http のクライアント（feature = "http"。ureq + rustls）
-│     ├─ http_server.rs  std:http の serve（std::net だけ。HTTP の解析は自前）
-│     └─ gfx.rs          ⬜ 段階 5（feature = "gfx"）
+│     ├─ debug.rs        assert, assert_eq, dbg
+│     ├─ gc.rs           gc_collect
+│     ├─ async_.rs       std:async（タイマー、コールバック型の非同期の関数の共通処理）
+│     ├─ stream.rs       std:stream（ファイル・標準入出力・HTTP の本文・メモリ・TCP を共通に読み書きする）
+│     ├─ worker.rs       std:worker（別スレッドの別インタプリタとメッセージでやり取りする。runtime/worker.rs に口の型）
+│     ├─ system/         OS との境界
+│     │  ├─ io.rs        log, input
+│     │  ├─ fs.rs        file_read, file_write, file_append, file_exists
+│     │  ├─ path.rs      std:path
+│     │  ├─ os.rs        std:os（args / env / exit / run など）
+│     │  ├─ process.rs   os.spawn / wait / poll / kill（常駐する子プロセスとの連携）
+│     │  └─ ffi.rs       std:ffi（C の共有ライブラリを呼ぶ。ffi feature。libloading と libffi）
+│     ├─ network/        通信
+│     │  ├─ net.rs       std:net（TCP。ブロッキング、標準ライブラリだけ）
+│     │  ├─ http.rs      std:http のクライアント（feature = "http"。ureq + rustls）
+│     │  ├─ http_server.rs  std:http の serve（std::net だけ。HTTP の解析は自前）
+│     │  ├─ ws.rs        std:ws（クライアント。サーバー側の接続の send / close も受ける）
+│     │  └─ ws_proto.rs  WebSocket のフレーム・メッセージ・ハンドシェイク（RFC 6455。SHA-1 も自前）
+│     ├─ data/           データの形式と変換
+│     │  ├─ json.rs      std:json（parse / stringify / pretty。自前の実装、外部クレートなし）
+│     │  ├─ csv.rs       std:csv
+│     │  ├─ bytes.rs     バイト列（str_to_bytes / bytes_* ）
+│     │  ├─ encoding.rs  std:encoding（base64 / hex / URL。自前）
+│     │  ├─ crypto.rs    std:crypto（feature = "crypto"。ring + md-5）
+│     │  ├─ regex.rs     std:regex（feature = "regex"。regex クレート）
+│     │  └─ sqlite.rs    std:sqlite（feature = "sqlite"）
+│     └─ media/          音と画像
+│        ├─ audio.rs     std:audio（feature = "audio"。rodio。再生は補助スレッド）
+│        └─ image_.rs    std:image（feature = "image"）
 ├─ tests/
 │  ├─ golden.rs          cases/*.dol を実行し、*.out と比較する
 │  └─ cases/

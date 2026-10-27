@@ -16,9 +16,9 @@ use std::time::Duration;
 
 use rodio::{Decoder, DeviceSinkBuilder, Player, Source};
 
-use super::{error_value, expect_args, int_arg, num_arg, str_arg, type_error};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::{error_value, expect_args, int_arg, num_arg, str_arg, type_error};
 
 type BoxSource = Box<dyn Source + Send>;
 

@@ -2,10 +2,10 @@
 
 use std::rc::Rc;
 
-use super::{array_arg, error_value, map_arg, new_array, new_map, str_arg, type_error};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::{array_arg, error_value, map_arg, new_array, new_map, str_arg, type_error};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module(

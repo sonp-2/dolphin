@@ -9,10 +9,10 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::time::UNIX_EPOCH;
 
-use super::{bytes_arg, error_value, expect_args, new_array, new_map, str_arg};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::{bytes_arg, error_value, expect_args, new_array, new_map, str_arg};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("file_read", file_read);
@@ -95,7 +95,7 @@ fn io_error2(action: &str, from: &str, to: &str, e: &io::Error) -> Value {
 }
 
 /// エラーの種類（`kind`）と、メッセージの理由
-pub(super) fn classify(e: &io::Error) -> (&'static str, String) {
+pub(in crate::stdlib) fn classify(e: &io::Error) -> (&'static str, String) {
     match e.kind() {
         io::ErrorKind::NotFound => ("not_found", "ファイルが見つかりません".to_string()),
         io::ErrorKind::PermissionDenied => ("permission", "権限がありません".to_string()),

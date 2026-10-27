@@ -4,47 +4,42 @@
 
 pub mod array;
 pub mod async_;
-#[cfg(feature = "audio")]
-pub mod audio;
 pub mod bits;
-pub mod bytes;
 pub mod collections;
-#[cfg(feature = "crypto")]
-pub mod crypto;
-pub mod csv;
+pub mod data;
 pub mod debug;
-pub mod encoding;
 pub mod error;
-#[cfg(feature = "ffi")]
-pub mod ffi;
-pub mod fs;
 pub mod gc;
-#[cfg(feature = "http")]
-pub mod http;
-#[cfg(feature = "http")]
-pub mod http_server;
-#[cfg(feature = "image")]
-pub mod image_;
-pub mod io;
-pub mod json;
 pub mod map;
 pub mod math;
-pub mod net;
-pub mod os;
-pub mod path;
-pub mod process;
+pub mod media;
+pub mod network;
 pub mod random;
-#[cfg(feature = "regex")]
-pub mod regex;
-#[cfg(feature = "sqlite")]
-pub mod sqlite;
 pub mod stream;
 pub mod string;
+pub mod system;
 pub mod time;
 pub mod types;
 pub mod worker;
-pub mod ws;
-pub mod ws_proto;
+
+// 階層を分けても、`stdlib::http` のように 1 段で呼べるようにする
+#[cfg(feature = "crypto")]
+pub use data::crypto;
+#[cfg(feature = "regex")]
+pub use data::regex;
+#[cfg(feature = "sqlite")]
+pub use data::sqlite;
+pub use data::{bytes, csv, encoding, json};
+#[cfg(feature = "audio")]
+pub use media::audio;
+#[cfg(feature = "image")]
+pub use media::image_;
+#[cfg(feature = "http")]
+pub use network::{http, http_server};
+pub use network::{net, ws, ws_proto};
+#[cfg(feature = "ffi")]
+pub use system::ffi;
+pub use system::{fs, io, os, path, process};
 
 use std::cell::RefCell;
 use std::rc::Rc;

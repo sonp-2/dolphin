@@ -6,10 +6,10 @@
 use md5::{Digest, Md5};
 use ring::{digest, hmac, rand};
 
-use super::encoding::hex_encode;
-use super::{data_arg, expect_args, int_arg, str_arg};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::encoding::hex_encode;
+use crate::stdlib::{data_arg, expect_args, int_arg, str_arg};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module(

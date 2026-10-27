@@ -8,9 +8,9 @@
 use std::ffi::OsStr;
 use std::path::{Component, Path, PathBuf};
 
-use super::{error_value, expect_args, str_arg};
 use crate::runtime::interp::{Const, Interpreter};
 use crate::runtime::value::Value;
+use crate::stdlib::{error_value, expect_args, str_arg};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module_constants("std:path", &[("sep", Const::Str("/"))]);
@@ -30,7 +30,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
 }
 
 /// `/` 区切りの文字列にする。Windows 以外では、`\` は名前の一部なのでそのまま
-pub(super) fn to_slash(path: &Path) -> String {
+pub(in crate::stdlib) fn to_slash(path: &Path) -> String {
     let s = path.to_string_lossy();
     if cfg!(windows) {
         s.replace('\\', "/")
@@ -146,7 +146,7 @@ fn absolute(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     match std::path::absolute(path) {
         Ok(abs) => Ok(str_value(to_slash(&normalize_path(&abs)))),
         Err(e) => {
-            let (kind, reason) = super::fs::classify(&e);
+            let (kind, reason) = crate::stdlib::fs::classify(&e);
             Ok(error_value(
                 kind,
                 format!("`{path}` を絶対パスにできません: {reason}"),

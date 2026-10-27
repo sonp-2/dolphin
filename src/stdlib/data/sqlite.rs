@@ -8,11 +8,11 @@ use std::time::Duration;
 use rusqlite::types::{Value as SqlValue, ValueRef};
 use rusqlite::{Connection, ErrorCode, OpenFlags, Statement};
 
-use super::{error_value, expect_args, new_array, new_map, str_arg, type_error};
 use crate::runtime::handle::{Handle, HandleKind, SqliteConn};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::{error_value, expect_args, new_array, new_map, str_arg, type_error};
 
 /// ロックされているときに待つ時間の既定（秒）
 const DEFAULT_TIMEOUT: f64 = 5.0;

@@ -5,10 +5,10 @@
 use std::fmt::Write as _;
 use std::rc::Rc;
 
-use super::{error_value, expect_args, new_array, new_map, str_arg, type_error};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::{error_value, expect_args, new_array, new_map, str_arg, type_error};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module(

@@ -5,11 +5,13 @@ use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 use std::rc::Rc;
 use std::time::Duration;
 
-use super::{data_arg, error_value, expect_args, int_arg, new_map, num_arg, str_arg, type_error};
 use crate::runtime::handle::{Handle, HandleKind};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::{
+    data_arg, error_value, expect_args, int_arg, new_map, num_arg, str_arg, type_error,
+};
 
 /// 1 行の長さの上限
 const MAX_LINE: usize = 16 * 1024 * 1024;
@@ -50,12 +52,12 @@ fn port_arg(name: &str, args: &[Value], i: usize) -> Result<u16, String> {
     u16::try_from(n).map_err(|_| format!("{name} のポートは 0〜65535 の整数です（{n}）"))
 }
 
-pub(super) fn closed() -> Value {
+pub(in crate::stdlib) fn closed() -> Value {
     error_value("closed", "ハンドルはすでに閉じています")
 }
 
 /// 通信の失敗をエラー値にする
-pub(super) fn failure(what: &str, e: &io::Error) -> Value {
+pub(in crate::stdlib) fn failure(what: &str, e: &io::Error) -> Value {
     let kind = match e.kind() {
         io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock => "timeout",
         _ => "network",
@@ -63,7 +65,7 @@ pub(super) fn failure(what: &str, e: &io::Error) -> Value {
     error_value(kind, format!("{what}: {e}"))
 }
 
-pub(super) fn seconds(name: &str, n: f64) -> Result<Duration, String> {
+pub(in crate::stdlib) fn seconds(name: &str, n: f64) -> Result<Duration, String> {
     if n.is_finite() && n > 0.0 {
         Ok(Duration::from_secs_f64(n))
     } else {

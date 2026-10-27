@@ -2,9 +2,9 @@
 
 use std::io::{self, BufRead};
 
-use super::expect_args;
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::expect_args;
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("log", log);

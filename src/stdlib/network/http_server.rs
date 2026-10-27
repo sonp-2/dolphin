@@ -16,11 +16,6 @@ use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::thread;
 use std::time::Duration;
 
-use super::json::to_json_string;
-use super::ws_proto::{
-    self, Message, OP_BINARY, OP_CLOSE, OP_PONG, OP_TEXT, accept_key, close_payload,
-};
-use super::{error_value, expect_args, func_arg, new_map, type_error};
 use crate::diag::Diagnostic;
 use crate::runtime::error::RuntimeError;
 use crate::runtime::events::Event;
@@ -28,6 +23,11 @@ use crate::runtime::handle::{Handle, HandleKind, WsOut};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::json::to_json_string;
+use crate::stdlib::ws_proto::{
+    self, Message, OP_BINARY, OP_CLOSE, OP_PONG, OP_TEXT, accept_key, close_payload,
+};
+use crate::stdlib::{error_value, expect_args, func_arg, new_map, type_error};
 
 const DEFAULT_MAX_BODY: usize = 10 * 1024 * 1024;
 /// request line とヘッダー全体の大きさの上限

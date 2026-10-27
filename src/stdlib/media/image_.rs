@@ -11,10 +11,10 @@ use image::{AnimationDecoder, DynamicImage, Frame, ImageFormat};
 #[cfg(test)]
 use image::{Rgba, RgbaImage};
 
-use super::{bytes_arg, error_value, int_arg, new_map, str_arg, type_error};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::{bytes_arg, error_value, int_arg, new_map, str_arg, type_error};
 
 /// 縦横それぞれの上限（画素）
 const MAX_SIDE: u32 = 16384;

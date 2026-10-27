@@ -11,18 +11,18 @@ use std::sync::mpsc::{self, Receiver, Sender};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use super::encoding::base64_encode;
-use super::net::{closed, failure, seconds};
-use super::ws_proto::{
-    Message, OP_BINARY, OP_CLOSE, OP_PING, OP_PONG, OP_TEXT, ProtoError, accept_key, close_payload,
-    read_message, read_message_or_control, write_frame,
-};
-use super::{error_value, expect_args, int_arg, num_arg, str_arg, type_error};
 use crate::runtime::data::Data;
 use crate::runtime::events::{Event, StreamEvent};
 use crate::runtime::handle::{Handle, HandleKind, WsConn, WsOut};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::encoding::base64_encode;
+use crate::stdlib::net::{closed, failure, seconds};
+use crate::stdlib::ws_proto::{
+    Message, OP_BINARY, OP_CLOSE, OP_PING, OP_PONG, OP_TEXT, ProtoError, accept_key, close_payload,
+    read_message, read_message_or_control, write_frame,
+};
+use crate::stdlib::{error_value, expect_args, int_arg, num_arg, str_arg, type_error};
 
 const DEFAULT_TIMEOUT: f64 = 30.0;
 /// ハンドシェイクの応答の大きさの上限

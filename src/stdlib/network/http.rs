@@ -8,12 +8,12 @@ use std::time::Duration;
 
 use ureq::http;
 
-use super::async_::{spawn_blocking_opt, split_callback_opt};
-use super::json::to_json_string;
-use super::{error_value, expect_args, new_map, type_error};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::async_::{spawn_blocking_opt, split_callback_opt};
+use crate::stdlib::json::to_json_string;
+use crate::stdlib::{error_value, expect_args, new_map, type_error};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module(
@@ -37,7 +37,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("http.delete_async", |i, a| {
                 method_async(i, "http.delete_async", "DELETE", a)
             }),
-            ("http.serve", super::http_server::serve),
+            ("http.serve", crate::stdlib::http_server::serve),
         ],
     );
 }
@@ -389,7 +389,7 @@ fn read_response(
     }
     let body = if stream {
         let reader = std::io::BufReader::new(response.into_body().into_reader());
-        super::stream::network_reader(Box::new(reader), "HTTP の本文 読み込み".into())
+        crate::stdlib::stream::network_reader(Box::new(reader), "HTTP の本文 読み込み".into())
     } else if as_bytes {
         let config = response.body_mut().with_config().limit(MAX_BODY);
         Value::bytes(config.read_to_vec()?)

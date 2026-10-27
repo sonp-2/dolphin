@@ -3,7 +3,7 @@
 
 use std::io::{self, Read, Write};
 
-use super::encoding::base64_encode;
+use crate::stdlib::encoding::base64_encode;
 
 /// メッセージの大きさの上限（バイト）
 pub const MAX_MESSAGE: usize = 16 * 1024 * 1024;

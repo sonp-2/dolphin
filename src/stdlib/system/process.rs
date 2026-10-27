@@ -6,13 +6,13 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::net::closed;
-use super::stream::stream_value;
-use super::{error_value, expect_args, new_map, num_arg, str_arg, type_error};
 use crate::runtime::handle::{Handle, HandleKind, ProcessHandle, StreamSink};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::net::closed;
+use crate::stdlib::stream::stream_value;
+use crate::stdlib::{error_value, expect_args, new_map, num_arg, str_arg, type_error};
 
 /// 書くたびに相手へ送る（パイプで対話するとき、`flush` を忘れて止まらないように）
 struct FlushEach<W: Write>(W);
@@ -185,7 +185,7 @@ pub fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
                 ));
             }
             Err(e) => {
-                let (kind, reason) = super::fs::classify(&e);
+                let (kind, reason) = crate::stdlib::fs::classify(&e);
                 return Ok(error_value(
                     kind,
                     format!("`{dir}` をカレントディレクトリにできません: {reason}"),
@@ -212,7 +212,7 @@ pub fn spawn(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
                     "not_found",
                     "コマンドかカレントディレクトリが見つかりません".to_string(),
                 ),
-                _ => super::fs::classify(&e),
+                _ => crate::stdlib::fs::classify(&e),
             };
             return Ok(error_value(
                 kind,
@@ -298,7 +298,7 @@ fn try_finish(p: &mut ProcessHandle) -> Result<Option<Option<i32>>, io::Error> {
 }
 
 fn wait_failure(e: &io::Error) -> Value {
-    let (kind, reason) = super::fs::classify(e);
+    let (kind, reason) = crate::stdlib::fs::classify(e);
     error_value(kind, format!("プロセスを待てません: {reason}"))
 }
 
