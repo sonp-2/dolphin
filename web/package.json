@@ -1,0 +1,22 @@
+{
+  "name": "dolphin-playground",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "wasm": "cargo build --target wasm32-unknown-unknown --release && wasm-bindgen --target web --out-dir src/wasm target/wasm32-unknown-unknown/release/dolphin_web.wasm",
+    "dev": "npm run wasm && vite",
+    "build": "npm run wasm && vite build"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6.8.0",
+    "@codemirror/language": "^6.11.0",
+    "@codemirror/lint": "^6.8.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.36.0",
+    "@lezer/highlight": "^1.2.0",
+    "codemirror": "^6.0.1"
+  },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dolphin Playground</title>
+  <link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+  <header>
+    <h1>Dolphin <span>Playground</span></h1>
+    <select id="sample" aria-label="サンプル"></select>
+    <button id="run" type="button">▶ 実行 <kbd>Ctrl+Enter</kbd></button>
+  </header>
+  <main>
+    <section id="editor" aria-label="エディタ"></section>
+    <section aria-label="出力">
+      <pre id="output"></pre>
+    </section>
+  </main>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

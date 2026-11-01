@@ -3,3 +3,6 @@
 *.vsix
 /web/target
 /web/pkg
+/web/node_modules
+/web/dist
+/web/src/wasm
