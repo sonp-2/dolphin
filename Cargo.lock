@@ -562,6 +562,7 @@ dependencies = [
  "rustls",
  "rustyline",
  "ureq",
+ "web-time",
  "webpki-roots",
 ]
 

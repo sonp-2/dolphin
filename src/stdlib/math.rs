@@ -2,7 +2,7 @@
 //! trunc, sign, clamp, num_fixed。`std:math`（定数・三角関数・対数。design.md 5.12）
 
 use std::cell::Cell;
-use std::time::{SystemTime, UNIX_EPOCH};
+use crate::clock::{SystemTime, UNIX_EPOCH};
 
 use super::{expect_args, int_arg, num_arg};
 use crate::runtime::interp::{Const, Interpreter};

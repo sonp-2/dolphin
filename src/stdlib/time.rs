@@ -5,8 +5,9 @@
 //! 時差は「UTC からの分」で、省略は UTC。外部クレートは使わず、暦の計算は自前
 
 use std::sync::OnceLock;
-use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
+
+use crate::clock::{Instant, SystemTime, UNIX_EPOCH};
 
 use super::{error_value, int_arg, new_map, num_arg, str_arg, type_error};
 use crate::runtime::interp::Interpreter;
@@ -238,7 +239,7 @@ fn sleep(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
     }
     // 待つ前に、ここまでの出力を見せる
     interp.out.flush().map_err(|e| e.to_string())?;
-    thread::sleep(Duration::try_from_secs_f64(seconds).unwrap_or(Duration::MAX));
+    crate::clock::sleep(Duration::try_from_secs_f64(seconds).unwrap_or(Duration::MAX));
     Ok(Value::Nil)
 }
 

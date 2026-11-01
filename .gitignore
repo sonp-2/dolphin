@@ -1,3 +1,5 @@
 /target
 /editors/vscode/node_modules
 *.vsix
+/web/target
+/web/pkg

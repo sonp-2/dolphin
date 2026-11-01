@@ -1,0 +1,14 @@
+[package]
+name = "dolphin-web"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+# ブラウザで動かす Playground 用の薄い包み。本体の dolphin には依存を足さない
+[dependencies]
+dolphin = { path = "..", default-features = false }
+wasm-bindgen = "0.2"
+
+[workspace]

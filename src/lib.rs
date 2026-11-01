@@ -3,6 +3,7 @@
 //! ソース → Lexer → Parser → AST → Resolver → Interpreter
 //! 全体像は docs/architecture.md
 
+pub mod clock;
 pub mod diag;
 pub mod fmt;
 pub mod lsp;
