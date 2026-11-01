@@ -279,7 +279,12 @@ pub fn take_detached() -> Option<Detached> {
 
 impl Detached {
     /// 1 フレーム進める。`dt` は前のフレームからの秒数（0.25 を上限にする）
-    pub fn step(&self, interp: &mut Interpreter<'_>, dt: f32, input: Input) -> Result<Frame, String> {
+    pub fn step(
+        &self,
+        interp: &mut Interpreter<'_>,
+        dt: f32,
+        input: Input,
+    ) -> Result<Frame, String> {
         frame(interp, dt.clamp(0.0, 0.25), input)?;
         let cmds = self.frames.try_iter().last();
         let (error, quit) = STATE.with(|state| {

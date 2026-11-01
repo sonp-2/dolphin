@@ -1,8 +1,8 @@
 //! 数学: abs, floor, ceil, round, sqrt, pow, min, max, random, random_int,
 //! trunc, sign, clamp, num_fixed。`std:math`（定数・三角関数・対数。design.md 5.12）
 
-use std::cell::Cell;
 use crate::clock::{SystemTime, UNIX_EPOCH};
+use std::cell::Cell;
 
 use super::{expect_args, int_arg, num_arg};
 use crate::runtime::interp::{Const, Interpreter};
