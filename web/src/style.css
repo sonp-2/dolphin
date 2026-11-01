@@ -21,6 +21,11 @@ main > section + section { border-left: 1px solid var(--border); }
 #editor .cm-editor { height: 100%; background: var(--panel); color: var(--fg); }
 #editor .cm-gutters { background: var(--panel); color: var(--muted); border: 0; }
 #editor .cm-activeLine, #editor .cm-activeLineGutter { background: transparent; }
+#stage { position: relative; display: flex; justify-content: center; padding: 16px; border-bottom: 1px solid var(--border); background: var(--bg); }
+#stage[hidden] { display: none; }
+/* 画面の縦横比のまま、幅と高さ（画面の 55%）に収める。余白を作らない */
+#screen { display: block; width: min(100%, calc(55vh * var(--ratio, 1.333))); height: auto; aspect-ratio: var(--ratio, 1.333); border-radius: 6px; outline: none; box-shadow: 0 0 0 1px var(--border); }
+#screen:focus-visible { box-shadow: 0 0 0 1px var(--border); }
 #output { margin: 0; padding: 12px 16px; font: 13px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap; word-break: break-word; }
 #output.error { color: var(--err); }
 @media (max-width: 720px) {
@@ -28,3 +33,18 @@ main > section + section { border-left: 1px solid var(--border); }
   main > section + section { border-left: 0; border-top: 1px solid var(--border); }
   kbd { display: none; }
 }
+
+#right { display: flex; flex-direction: column; }
+.pane-title { margin: 0; padding: 6px 16px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--border); }
+#output { flex: 1; }
+#output:empty::before { content: "log の出力はここに表示されます"; color: var(--muted); }
+
+/* CodeMirror の既定のカーソルは黒で、暗い背景では見えない */
+#editor .cm-cursor, #editor .cm-dropCursor { border-left: 2px solid var(--accent); }
+#editor .cm-content { caret-color: var(--accent); }
+#editor .cm-focused { outline: none; }
+#editor .cm-selectionBackground, #editor .cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* 実行してもエディタのフォーカスを奪わない。キー操作はクリックで始める */
+.hint { position: absolute; right: 24px; bottom: 24px; padding: 2px 8px; border-radius: 10px; font-size: 11px; color: #fff; background: rgba(0, 0, 0, .55); pointer-events: none; }
+#stage:focus-within .hint { display: none; }

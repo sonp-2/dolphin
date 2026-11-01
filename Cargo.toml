@@ -44,7 +44,9 @@ crypto = ["dep:ring", "dep:md-5"]
 # 正規表現（`import["std:regex"]`）
 regex = ["dep:regex"]
 # GUI（`import["std:ui"]`）。依存が多くビルドが重いので、既定では無効（`--features ui`）
-ui = ["dep:eframe", "image"]
+ui = ["dep:eframe", "image", "canvas"]
+# `std:canvas` の登録だけ（ウィンドウは開かない）。ブラウザ版が、描画を自前で行うために使う
+canvas = []
 # 画像の加工（`import["std:image"]`）。`ui` feature にも含まれる
 image = ["dep:image"]
 # 音の再生（`import["std:audio"]`）。既定では無効（`--features audio`）

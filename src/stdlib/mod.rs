@@ -67,7 +67,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
     async_::register(interp);
     #[cfg(feature = "audio")]
     audio::register(interp);
-    #[cfg(feature = "ui")]
+    #[cfg(feature = "canvas")]
     crate::ui::register(interp);
     ws::register(interp);
     worker::register(interp);

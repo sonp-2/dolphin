@@ -103,6 +103,17 @@ impl<'a> Session<'a> {
         }
     }
 
+    /// `canvas.run` がブラウザ用に画面を開いていたら、それを受け取る。
+    /// 以後のフレームは `Detached::step` で進める
+    pub fn take_canvas(&mut self) -> Option<ui::canvas::Detached> {
+        ui::canvas::take_detached()
+    }
+
+    /// `Detached::step` に渡すインタプリタ
+    pub fn interpreter(&mut self) -> &mut Interpreter<'a> {
+        &mut self.interp
+    }
+
     /// 名前つきの関数を定義の順に（名前、引数の数）で返す（`dolphin test`）
     pub fn user_functions(&self) -> Vec<(String, usize)> {
         self.interp.user_functions()

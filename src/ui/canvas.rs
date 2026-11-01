@@ -170,6 +170,9 @@ fn run(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
         return Err(type_error("canvas.run", 0, "マップ", &args[0]));
     };
     let (options, draw, update) = parse_options(&options.borrow())?;
+    if cfg!(target_arch = "wasm32") {
+        return start_detached(options, draw, update);
+    }
     if !host::claim() {
         return Err(
             "ウィンドウは、1 つのプログラムで 1 回だけ開けます（`ui.run` か `canvas.run`）".into(),
@@ -215,6 +218,77 @@ fn run(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     interp.events.clear_ext();
     STATE.with(|state| *state.borrow_mut() = None);
     result.map(|()| Value::Nil)
+}
+
+// ---- 外からフレームを進める（ブラウザ） ----
+
+/// ウィンドウを開かずに、呼び出し側（ブラウザの JS）が 1 フレームずつ進める画面
+pub struct Detached {
+    pub options: CanvasOptions,
+    frames: Receiver<Vec<Cmd>>,
+}
+
+/// `Detached::step` の結果
+pub struct Frame {
+    /// このフレームで描いた命令の列。`draw` が失敗したときは None（前のフレームのまま）
+    pub cmds: Option<Vec<Cmd>>,
+    /// `update` か `draw` の最後のエラー
+    pub error: Option<String>,
+    /// `canvas.quit` が呼ばれた
+    pub quit: bool,
+}
+
+thread_local! {
+    static DETACHED: RefCell<Option<Detached>> = const { RefCell::new(None) };
+}
+
+/// `canvas.run` はイベントループに入らず、すぐ戻る。画面は `take_detached` で受け取る
+fn start_detached(
+    options: CanvasOptions,
+    draw: Value,
+    update: Option<Value>,
+) -> Result<Value, String> {
+    let (frames, frame_rx) = mpsc::channel();
+    STATE.with(|state| {
+        *state.borrow_mut() = Some(State {
+            update,
+            draw,
+            frames,
+            repaint: Arc::new(Mutex::new(None)),
+            quit: Arc::new(AtomicBool::new(false)),
+            width: options.window.width,
+            height: options.window.height,
+            input: Input::default(),
+            cmds: None,
+            last_error: None,
+        });
+    });
+    DETACHED.with(|d| {
+        *d.borrow_mut() = Some(Detached {
+            options,
+            frames: frame_rx,
+        });
+    });
+    Ok(Value::Nil)
+}
+
+/// `canvas.run` がブラウザで呼ばれていたら、その画面
+pub fn take_detached() -> Option<Detached> {
+    DETACHED.with(|d| d.borrow_mut().take())
+}
+
+impl Detached {
+    /// 1 フレーム進める。`dt` は前のフレームからの秒数（0.25 を上限にする）
+    pub fn step(&self, interp: &mut Interpreter<'_>, dt: f32, input: Input) -> Result<Frame, String> {
+        frame(interp, dt.clamp(0.0, 0.25), input)?;
+        let cmds = self.frames.try_iter().last();
+        let (error, quit) = STATE.with(|state| {
+            state.borrow().as_ref().map_or((None, true), |s| {
+                (s.last_error.clone(), s.quit.load(Ordering::SeqCst))
+            })
+        });
+        Ok(Frame { cmds, error, quit })
+    }
 }
 
 fn parse_options(map: &Map) -> Result<(CanvasOptions, Value, Option<Value>), String> {

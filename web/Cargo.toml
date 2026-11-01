@@ -8,7 +8,7 @@ crate-type = ["cdylib"]
 
 # ブラウザで動かす Playground 用の薄い包み。本体の dolphin には依存を足さない
 [dependencies]
-dolphin = { path = "..", default-features = false }
+dolphin = { path = "..", default-features = false, features = ["canvas"] }
 wasm-bindgen = "0.2"
 
 [workspace]

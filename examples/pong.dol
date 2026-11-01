@@ -1,0 +1,104 @@
+// ポン（`cargo run --features ui -- examples/pong.dol`）
+// ↑ ↓ か W S で左のパドルを動かす（マウスを押しながらでも動く）。スペースで始める
+@canvas := import["std:canvas"]
+
+@W := 640
+@H := 400
+@pad_h := 70
+@py := 165
+@cy := 165
+@bx := 320
+@by := 200
+@vx := 0
+@vy := 0
+@me := 0
+@cpu := 0
+@state := "ready"
+@next_dir := 1
+
+serve[@dir] (
+    @bx = @W / 2
+    @by = @H / 2
+    @vx = 0
+    @vy = 0
+    @state = "ready"
+    @next_dir = @dir
+)
+
+launch[] (
+    @vx = 280 * @next_dir
+    @vy = 120
+    @state = "play"
+)
+
+update[@dt] (
+    // 自分のパドル
+    if @canvas.key_down["up"] || @canvas.key_down["w"] ( @py = @py - 360 * @dt )
+    if @canvas.key_down["down"] || @canvas.key_down["s"] ( @py = @py + 360 * @dt )
+    @m := @canvas.mouse[]
+    if @m.inside && @m.left ( @py = @m.y - @pad_h / 2 )
+    @py = max[0, min[@H - @pad_h, @py]]
+
+    // 相手は、ボールを少し遅れて追いかける
+    @target := @by - @pad_h / 2
+    if @target > @cy + 4 ( @cy = @cy + 230 * @dt )
+    if @target < @cy - 4 ( @cy = @cy - 230 * @dt )
+    @cy = max[0, min[@H - @pad_h, @cy]]
+
+    if @state == "ready" (
+        if @canvas.key_pressed["space"] ( launch[] )
+    ) else (
+        @bx = @bx + @vx * @dt
+        @by = @by + @vy * @dt
+
+        // 上と下の壁
+        if @by < 6 (
+            @by = 6
+            @vy = abs[@vy]
+        )
+        if @by > @H - 6 (
+            @by = @H - 6
+            @vy = -abs[@vy]
+        )
+
+        // 左のパドル（当たった位置で角度が変わる。当たるたびに少し速くなる）
+        if @vx < 0 && @bx < 36 && @bx > 20 && @by > @py - 6 && @by < @py + @pad_h + 6 (
+            @vx = abs[@vx] * 1.06
+            @vy = (@by - (@py + @pad_h / 2)) * 7
+        )
+        // 右のパドル
+        if @vx > 0 && @bx > @W - 36 && @bx < @W - 20 && @by > @cy - 6 && @by < @cy + @pad_h + 6 (
+            @vx = -abs[@vx] * 1.06
+            @vy = (@by - (@cy + @pad_h / 2)) * 7
+        )
+
+        // 抜けた
+        if @bx < -10 (
+            @cpu = @cpu + 1
+            serve[1]
+        )
+        if @bx > @W + 10 (
+            @me = @me + 1
+            serve[-1]
+        )
+    )
+)
+
+draw[] (
+    for @y in range[0, 20] (
+        @canvas.rect[@W / 2 - 2, @y * 20 + 4, 4, 10, "#334155"]
+    )
+    @canvas.rect[20, @py, 10, @pad_h, "#e2e8f0"]
+    @canvas.rect[@W - 30, @cy, 10, @pad_h, "#e2e8f0"]
+    @canvas.circle[@bx, @by, 6, "#facc15"]
+    @canvas.text[@W / 2 - 60, 12, "@me", "#94a3b8", 36]
+    @canvas.text[@W / 2 + 40, 12, "@cpu", "#94a3b8", 36]
+    if @state == "ready" (
+        @canvas.text[@W / 2 - 90, @H - 60, "スペースで始める", "#7dd3fc", 22]
+    )
+)
+
+@canvas.run[{
+    "title": "ポン", "width": @W, "height": @H, "background": "#0f172a",
+    "update": update, "draw": draw
+}]

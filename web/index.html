@@ -14,7 +14,9 @@
   </header>
   <main>
     <section id="editor" aria-label="エディタ"></section>
-    <section aria-label="出力">
+    <section id="right" aria-label="出力">
+      <div id="stage" hidden><canvas id="screen" tabindex="0" aria-label="canvas の画面"></canvas><span class="hint">クリックで操作</span></div>
+      <h2 class="pane-title">Output</h2>
       <pre id="output"></pre>
     </section>
   </main>
