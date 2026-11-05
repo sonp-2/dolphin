@@ -4,6 +4,7 @@
 //! コンパイル時にスロット（番号）に解決して値のスタックの枠に置く（`compile_function`）。
 //! 位置情報は、評価器が使っていた式・文の位置をそのまま命令に付ける
 
+use std::cell::Cell;
 use std::collections::HashMap;
 
 use super::bytecode::{Chunk, Op};
@@ -14,6 +15,7 @@ use crate::syntax::span::Span;
 /// ファイルの本体をコンパイルする。`keep_last` で最後の文が式なら、その値が戻り値になる
 pub fn compile_program(stmts: &[Stmt], keep_last: bool) -> Chunk {
     let mut c = Compiler::new(None);
+    c.top_level = true;
     let end = stmts.last().map_or(Span { line: 1, col: 1 }, |s| s.span);
     match stmts.split_last() {
         Some((last, rest)) if keep_last => {
@@ -123,6 +125,10 @@ struct Compiler {
     loops: Vec<LoopCtx>,
     /// 関数のローカル変数をスロットにするとき。トップレベルとフォールバックでは `None`
     slots: Option<Slots>,
+    /// ファイルの本体か。ブロックの中で宣言していない名前は、トップレベルの変数（`LoadGlobal`）
+    top_level: bool,
+    /// 実行時に作るブロックのスコープごとの、宣言した変数の名前（`top_level` で使う）
+    block_names: Vec<Vec<String>>,
 }
 
 impl Compiler {
@@ -141,6 +147,8 @@ impl Compiler {
             scope_depth: 0,
             loops: Vec::new(),
             slots,
+            top_level: false,
+            block_names: Vec::new(),
         }
     }
 
@@ -186,15 +194,32 @@ impl Compiler {
             let slot = slots.declare(name);
             self.emit(Op::StoreLocal(slot), span);
         } else {
+            if let Some(scope) = self.block_names.last_mut() {
+                scope.push(name.to_string());
+            }
             let name = self.name(name);
             self.emit(Op::Declare(name), span);
         }
+    }
+
+    /// ファイルの本体で、ブロックの中の変数ではない名前か（トップレベルの変数を指す）
+    fn is_global(&self, name: &str) -> bool {
+        self.top_level && !self.block_names.iter().any(|s| s.iter().any(|n| n == name))
     }
 
     fn emit_load(&mut self, name: &str, span: Span) {
         let slot = self.slots.as_mut().and_then(|s| s.resolve(name));
         if let Some(slot) = slot {
             self.emit(Op::LoadLocal(slot), span);
+        } else if self.is_global(name) {
+            let name = self.name(name);
+            self.emit(
+                Op::LoadGlobal {
+                    name,
+                    cache: Cell::new(u32::MAX),
+                },
+                span,
+            );
         } else {
             let name = self.name(name);
             self.emit(Op::LoadVar(name), span);
@@ -205,6 +230,15 @@ impl Compiler {
         let slot = self.slots.as_mut().and_then(|s| s.resolve(name));
         if let Some(slot) = slot {
             self.emit(Op::StoreLocal(slot), span);
+        } else if self.is_global(name) {
+            let name = self.name(name);
+            self.emit(
+                Op::AssignGlobal {
+                    name,
+                    cache: Cell::new(u32::MAX),
+                },
+                span,
+            );
         } else {
             let name = self.name(name);
             self.emit(Op::AssignVar(name), span);
@@ -283,7 +317,9 @@ impl Compiler {
         }
         self.emit(Op::PushScope, span);
         self.scope_depth += 1;
+        self.block_names.push(Vec::new());
         self.block(stmts);
+        self.block_names.pop();
         self.scope_depth -= 1;
         self.emit(Op::PopScope, span);
     }
@@ -342,12 +378,14 @@ impl Compiler {
                 self.expr(iter);
                 self.emit(Op::ForPrep, iter.span);
                 let next = self.here();
+                let mut for_var = String::new();
                 let for_next = if let Some(slots) = &mut self.slots {
                     // 繰り返しごとの新しいスコープ（ループ変数と本体）は、コンパイル時だけのもの
                     slots.scopes.push(Vec::new());
                     let slot = slots.declare(&var.0);
                     self.emit(Op::ForNextLocal { end: 0, slot }, span)
                 } else {
+                    for_var = var.0.clone();
                     let var = self.name(&var.0);
                     self.emit(Op::ForNext { end: 0, var }, span)
                 };
@@ -362,7 +400,9 @@ impl Compiler {
                     self.pop_slot_scope();
                 } else {
                     self.scope_depth += 1;
+                    self.block_names.push(vec![for_var]);
                     self.block(body);
+                    self.block_names.pop();
                     self.scope_depth -= 1;
                     self.emit(Op::PopScope, span);
                 }
@@ -410,6 +450,11 @@ impl Compiler {
             } => {
                 self.bail();
                 self.expr(value);
+                if *declare
+                    && let Some(scope) = self.block_names.last_mut()
+                {
+                    scope.extend(pattern.vars().into_iter().map(|v| v.0.clone()));
+                }
                 self.chunk.patterns.push(pattern.clone());
                 let pattern = (self.chunk.patterns.len() - 1) as u32;
                 self.emit(

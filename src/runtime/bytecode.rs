@@ -1,6 +1,7 @@
 //! バイトコード（design.md 5.45）。関数・ファイルの本体を、命令の列にコンパイルしたもの。
 //! 命令は `compile.rs` が作り、`interp/vm.rs` の VM が実行する
 
+use std::cell::Cell;
 use std::rc::Rc;
 
 use super::value::Value;
@@ -26,6 +27,17 @@ pub enum Op {
     PopScope,
     /// 関数のローカル変数（スロット）を読んで積む。スロットは枠の `base` からの位置
     LoadLocal(u32),
+    /// ファイルの本体で、ブロックの中の変数ではない名前（トップレベルの変数）を読んで積む。
+    /// `cache` は前回見つけた表の位置
+    LoadGlobal {
+        name: u32,
+        cache: Cell<u32>,
+    },
+    /// `LoadGlobal` の代入版。なければ「未定義の変数」
+    AssignGlobal {
+        name: u32,
+        cache: Cell<u32>,
+    },
     /// スタックの値を、ローカル変数（スロット）に入れる（宣言も代入も）
     StoreLocal(u32),
 

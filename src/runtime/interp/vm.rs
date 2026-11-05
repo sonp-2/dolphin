@@ -331,6 +331,22 @@ impl Interpreter<'_> {
                             continue;
                         }
                     }
+                    Op::LoadGlobal { name, cache } => {
+                        let name = &chunk.names[*name as usize];
+                        if let Some(value) = self.current.globals.get_cached(name, cache) {
+                            self.stack.push(value);
+                            continue;
+                        }
+                    }
+                    Op::AssignGlobal { name, cache } => {
+                        let name = &chunk.names[*name as usize];
+                        let value = self.pop();
+                        if !self.current.globals.assign_cached(name, value, cache) {
+                            let span = chunk.spans[ip - 1];
+                            return Err(self.unwind(undefined_name(name, span), target));
+                        }
+                        continue;
+                    }
                     Op::AssignVar(n) => {
                         let value = self.pop();
                         if !self.env.assign(&chunk.names[*n as usize], value) {
@@ -590,6 +606,11 @@ impl Interpreter<'_> {
                     None => return Err(undefined_name(name, span)),
                 }
             }
+            // 速い経路は `run_vm_exit` にある。ここに来るのは、変数がなくてエラーになる場合
+            Op::LoadGlobal { name, .. } => {
+                return Err(undefined_name(&chunk.names[*name as usize], span));
+            }
+            Op::AssignGlobal { .. } => unreachable!("代入は run_vm_exit で済ませる"),
             Op::Declare(n) => {
                 let value = self.pop();
                 self.env.declare(&chunk.names[*n as usize], value);
