@@ -64,7 +64,33 @@ pub enum StmtKind {
         value: Expr,
         declare: bool,
     },
+    /// `match 式 ( パターン => 文 … )`（文の位置。design.md 5.59）
+    Match {
+        scrutinee: Expr,
+        arms: Vec<MatchArm<Block>>,
+    },
     Expr(Expr),
+}
+
+/// `match` の腕 1 つ。`B` は本体（文の `match` ではブロック、式の `match` では式）
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchArm<B> {
+    pub pattern: Pattern,
+    /// `パターン if 条件 => …` の条件
+    pub guard: Option<Expr>,
+    pub body: B,
+    /// 腕の先頭（パターン）の位置
+    pub span: Span,
+}
+
+/// パターンのリテラル（design.md 5.59）。比べるときは型も合わせる（`1` は数値、`1i` は整数）
+#[derive(Debug, Clone, PartialEq)]
+pub enum Literal {
+    Number(f64),
+    Int(i64),
+    Str(String),
+    Bool(bool),
+    Nil,
 }
 
 /// 分割代入の左辺
@@ -76,8 +102,19 @@ pub enum Pattern {
         items: Vec<Pattern>,
         rest: Option<Var>,
     },
-    /// `{"key": パターン, ...}`
+    /// `{"key": パターン, ...}`。`match` の `{:}`（任意のマップ）は空の `Map`
     Map(Vec<(String, Pattern)>),
+    /// `_`。何にも合い、何も束縛しない（design.md 5.59）
+    Wild,
+    /// `1` `"a"` `true` `nil` など。`match` だけ
+    Lit(Literal),
+    /// `Point[p1, p2]`。型名が同じレコードの、定義順のフィールドに当てる。`match` だけ
+    Record {
+        name: String,
+        items: Vec<Pattern>,
+    },
+    /// `p1 | p2`。どれかに合う。各選択肢は同じ変数を束縛する。`match` だけ
+    Or(Vec<Pattern>),
 }
 
 impl Pattern {
@@ -91,6 +128,32 @@ impl Pattern {
                 .chain(rest.iter())
                 .collect(),
             Pattern::Map(entries) => entries.iter().flat_map(|(_, p)| p.vars()).collect(),
+            Pattern::Wild | Pattern::Lit(_) => Vec::new(),
+            Pattern::Record { items, .. } => items.iter().flat_map(Pattern::vars).collect(),
+            // 各選択肢が同じ変数を束縛する（Resolver が確かめる）ので、先頭の選択肢の分
+            Pattern::Or(alts) => alts.first().map_or_else(Vec::new, Pattern::vars),
+        }
+    }
+
+    /// 変数の束縛だけでなく、リテラルなどの「合わないことがある」部分を含むか
+    pub fn is_refutable(&self) -> bool {
+        match self {
+            Pattern::Var(_) | Pattern::Wild => false,
+            Pattern::Array { items, .. } => items.iter().any(Pattern::is_refutable),
+            Pattern::Map(entries) => entries.iter().any(|(_, p)| p.is_refutable()),
+            Pattern::Lit(_) | Pattern::Record { .. } | Pattern::Or(_) => true,
+        }
+    }
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Literal::Number(n) => write!(f, "{n}"),
+            Literal::Int(n) => write!(f, "{n}i"),
+            Literal::Str(s) => write!(f, "{s:?}"),
+            Literal::Bool(b) => write!(f, "{b}"),
+            Literal::Nil => write!(f, "nil"),
         }
     }
 }
@@ -113,6 +176,22 @@ impl fmt::Display for Pattern {
                 write!(f, "(map")?;
                 for (key, pattern) in entries {
                     write!(f, " ({key:?} {pattern})")?;
+                }
+                write!(f, ")")
+            }
+            Pattern::Wild => write!(f, "_"),
+            Pattern::Lit(lit) => write!(f, "{lit}"),
+            Pattern::Record { name, items } => {
+                write!(f, "(rec {name}")?;
+                for item in items {
+                    write!(f, " {item}")?;
+                }
+                write!(f, ")")
+            }
+            Pattern::Or(alts) => {
+                write!(f, "(or")?;
+                for alt in alts {
+                    write!(f, " {alt}")?;
                 }
                 write!(f, ")")
             }
@@ -204,6 +283,11 @@ pub enum ExprKind {
     Try(Box<Expr>),
     /// `await expr`。future が終わるまで待って、その値になる（design.md 5.46）
     Await(Box<Expr>),
+    /// `match 式 ( パターン => 式 … )`。選ばれた腕の式の値になる（design.md 5.59）
+    Match {
+        scrutinee: Box<Expr>,
+        arms: Vec<MatchArm<Expr>>,
+    },
     /// `callee[args]`。関数値を呼ぶ（`@f[1]`）
     CallValue {
         callee: Box<Expr>,
@@ -341,9 +425,29 @@ impl fmt::Display for Stmt {
                 }
                 write!(f, "(= {place} {value})")
             }
+            StmtKind::Match { scrutinee, arms } => {
+                write!(f, "(match {scrutinee}")?;
+                for arm in arms {
+                    write_arm(f, arm, &BlockDisplay(&arm.body))?;
+                }
+                write!(f, ")")
+            }
             StmtKind::Expr(expr) => write!(f, "{expr}"),
         }
     }
+}
+
+/// `(pattern body)` / `(pattern (if guard) body)`
+fn write_arm<B>(
+    f: &mut fmt::Formatter<'_>,
+    arm: &MatchArm<B>,
+    body: &dyn fmt::Display,
+) -> fmt::Result {
+    write!(f, " ({}", arm.pattern)?;
+    if let Some(guard) = &arm.guard {
+        write!(f, " (if {guard})")?;
+    }
+    write!(f, " {body})")
 }
 
 struct BlockDisplay<'a>(&'a [Stmt]);
@@ -392,6 +496,13 @@ impl fmt::Display for Expr {
             ExprKind::Try(inner) => write!(f, "(? {inner})"),
             ExprKind::Await(inner) => write!(f, "(await {inner})"),
             ExprKind::Spread(inner) => write!(f, "(... {inner})"),
+            ExprKind::Match { scrutinee, arms } => {
+                write!(f, "(match {scrutinee}")?;
+                for arm in arms {
+                    write_arm(f, arm, &arm.body)?;
+                }
+                write!(f, ")")
+            }
             ExprKind::If {
                 cond,
                 then_expr,

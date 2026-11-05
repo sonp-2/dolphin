@@ -129,6 +129,10 @@ impl Interpreter<'_> {
                 let pattern: &Pattern = &chunk.patterns[*pattern as usize];
                 self.destructure(pattern, &value, *declare, span)?;
             }
+            Op::MatchPat { pattern, fail } => {
+                self.match_pat(&chunk.matches[*pattern as usize], *fail, ip)
+            }
+            Op::MatchFail => return Err(self.match_fail(span)),
             Op::ForPrep => self.for_prep(span)?,
             Op::ForNextLocal { end, slot } => self.for_next_local(*end, *slot, ip, base),
             Op::ForNext { end, var } => self.for_next(*end, &chunk.names[*var as usize], ip),

@@ -44,7 +44,8 @@ impl<'t> Parser<'t> {
             // for_stmt = "for" pattern "in" expression block
             TokenKind::For => {
                 self.advance();
-                if !matches!(self.peek().kind, TokenKind::Var(_) | TokenKind::LBrace) {
+                let is_wild = matches!(&self.peek().kind, TokenKind::Ident(n) if n == "_");
+                if !is_wild && !matches!(self.peek().kind, TokenKind::Var(_) | TokenKind::LBrace) {
                     return Err(self.unexpected("変数（`@x`）かパターン（`{@k, @v}`）"));
                 }
                 let target = self.pattern()?;
@@ -70,6 +71,7 @@ impl<'t> Parser<'t> {
                 StmtKind::Continue
             }
             TokenKind::Record => return self.record_def(),
+            TokenKind::Match => return self.match_stmt(),
             // defer_stmt = "defer" expression
             TokenKind::Defer => {
                 self.advance();

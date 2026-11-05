@@ -34,6 +34,18 @@ impl<'a> Resolver<'a> {
                 }
                 self.expr(inner, ctx)
             }
+            ExprKind::Match { scrutinee, arms } => {
+                self.expr(scrutinee, ctx)?;
+                // 腕のスコープを重ねるため、スコープの写しで調べる（変数を作るのは腕のパターンだけ）
+                let mut inner = Ctx {
+                    scopes: ctx.scopes.clone(),
+                    in_func: ctx.in_func,
+                    in_async: ctx.in_async,
+                };
+                arms.iter().try_for_each(|arm| {
+                    self.match_arm(arm, &mut inner, |ctx| self.expr(&arm.body, ctx))
+                })
+            }
             ExprKind::If {
                 cond,
                 then_expr,

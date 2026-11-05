@@ -374,8 +374,33 @@ impl<'a> Walker<'a> {
                 self.expr(value);
                 self.pattern(pattern, stmt.span, *declare);
             }
+            StmtKind::Match { scrutinee, arms } => {
+                self.expr(scrutinee);
+                for arm in arms {
+                    self.match_arm(&arm.pattern, arm.span, arm.guard.as_ref(), |this| {
+                        this.stmts(&arm.body)
+                    });
+                }
+            }
             StmtKind::Expr(expr) | StmtKind::Defer(expr) => self.expr(expr),
         }
+    }
+
+    /// `match` の腕。パターンの変数・ガード・本体が同じスコープに入る
+    fn match_arm(
+        &mut self,
+        pattern: &Pattern,
+        span: Span,
+        guard: Option<&Expr>,
+        body: impl FnOnce(&mut Self),
+    ) {
+        self.scopes.push(HashMap::new());
+        self.pattern(pattern, span, true);
+        if let Some(guard) = guard {
+            self.expr(guard);
+        }
+        body(self);
+        self.scopes.pop();
     }
 
     fn pattern(&mut self, pattern: &Pattern, from: Span, declare: bool) {
@@ -430,6 +455,14 @@ impl<'a> Walker<'a> {
             ExprKind::Lambda(def) => self.func_body(def),
             ExprKind::Spread(inner) | ExprKind::Try(inner) | ExprKind::Await(inner) => {
                 self.expr(inner)
+            }
+            ExprKind::Match { scrutinee, arms } => {
+                self.expr(scrutinee);
+                for arm in arms {
+                    self.match_arm(&arm.pattern, arm.span, arm.guard.as_ref(), |this| {
+                        this.expr(&arm.body)
+                    });
+                }
             }
             ExprKind::If {
                 cond,

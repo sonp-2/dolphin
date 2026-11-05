@@ -13,6 +13,7 @@
 
 mod expr;
 mod func;
+mod matching;
 mod scope;
 mod stmt;
 #[cfg(test)]
@@ -55,6 +56,7 @@ pub fn resolve(
     has_global: impl Fn(&str) -> bool,
 ) -> RResult {
     let mut functions = HashMap::new();
+    let mut records = HashMap::new();
     let mut hoisted = HashSet::new();
     for stmt in &program.stmts {
         match &stmt.kind {
@@ -66,6 +68,9 @@ pub fn resolve(
                         def.span,
                         "`import` と同じ名前の関数は定義できません",
                     ));
+                }
+                if def.record {
+                    records.insert(def.name.as_str(), def.params.len());
                 }
                 if functions
                     .insert(def.name.as_str(), (def.min_args(), def.max_args()))
@@ -93,6 +98,7 @@ pub fn resolve(
 
     let resolver = Resolver {
         functions,
+        records,
         hoisted,
         lookup: &lookup,
         has_global: &has_global,
@@ -123,6 +129,8 @@ struct Ctx<'a> {
 struct Resolver<'a> {
     /// 関数名 → 引数の数
     functions: HashMap<&'a str, (usize, Option<usize>)>,
+    /// このファイルで定義したレコード → フィールドの数（`match` のレコードのパターンの検査）
+    records: HashMap<&'a str, usize>,
     /// トップレベルで宣言される変数すべて（関数の中から見える）
     hoisted: HashSet<&'a str>,
     lookup: &'a dyn Fn(&str) -> Option<Callee>,

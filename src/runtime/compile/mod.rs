@@ -9,16 +9,17 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use super::bytecode::{Chunk, Op};
+use super::bytecode::{Chunk, MatchInfo, Op};
 use super::env::intern;
 use super::value::Value;
 use crate::syntax::ast::{
-    BinaryOp, Expr, ExprKind, FuncDef, Pattern, Stmt, StmtKind, StrSegment, Var,
+    BinaryOp, Expr, ExprKind, FuncDef, MatchArm, Pattern, Stmt, StmtKind, StrSegment, Var,
 };
 use crate::syntax::span::Span;
 mod expr;
 mod for_loop;
 mod function;
+mod matching;
 mod stmt;
 
 /// ファイルの本体をコンパイルする。`keep_last` で最後の文が式なら、その値が戻り値になる
@@ -133,6 +134,8 @@ struct Compiler {
     loops: Vec<LoopCtx>,
     /// 関数のローカル変数をスロットにするとき。ファイルの本体とフォールバックでは `None`
     slots: Option<Slots>,
+    /// `match` が対象の値を持つ隠した変数の数（名前を重ねないため）
+    hidden: u32,
 }
 
 impl Compiler {
@@ -148,11 +151,13 @@ impl Compiler {
                 rest_name: None,
                 defs: Vec::new(),
                 patterns: Vec::new(),
+                matches: Vec::new(),
             },
             names: HashMap::new(),
             scope_depth: 0,
             loops: Vec::new(),
             slots,
+            hidden: 0,
         }
     }
 
@@ -216,6 +221,7 @@ impl Compiler {
             | Op::JumpIfFalseCond(t)
             | Op::ShortCircuit(_, t)
             | Op::SkipIfGiven { target: t, .. }
+            | Op::MatchPat { fail: t, .. }
             | Op::ForNext { end: t, .. }
             | Op::ForNextLocal { end: t, .. } => *t = to,
             other => unreachable!("行き先のない命令を書き換えようとした: {other:?}"),

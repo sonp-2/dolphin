@@ -94,6 +94,7 @@ mod control;
 mod coroutine;
 mod for_loop;
 mod frame;
+mod matching;
 mod step;
 mod unwind;
 

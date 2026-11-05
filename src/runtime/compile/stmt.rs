@@ -82,6 +82,15 @@ impl Compiler {
                 indices,
                 value,
             } => self.assign_stmt(&target.0, indices, value, span),
+            StmtKind::Match { scrutinee, arms } => {
+                self.match_common(
+                    scrutinee,
+                    arms,
+                    span,
+                    |c, body| c.block(body),
+                    |body| body.iter().any(declares_variable),
+                );
+            }
             StmtKind::Expr(expr) => {
                 self.expr(expr);
                 self.emit(Op::PopCheckError, expr.span);
@@ -204,7 +213,7 @@ impl Compiler {
 }
 
 /// その文が、いまのスコープに変数を作るか
-fn declares_variable(stmt: &Stmt) -> bool {
+pub(super) fn declares_variable(stmt: &Stmt) -> bool {
     matches!(
         &stmt.kind,
         StmtKind::FuncDef(_)

@@ -44,6 +44,8 @@ pub enum TokenKind {
     Await,
     /// `record`（design.md 5.55）
     Record,
+    /// `match`（design.md 5.59）
+    Match,
 
     // 記号
     LBracket,
@@ -63,6 +65,10 @@ pub enum TokenKind {
     /// `:=`
     Declare,
     Hash,
+    /// `=>`（`match` の腕）
+    FatArrow,
+    /// `|`（`match` のパターンの or）
+    Pipe,
 
     // 演算子
     Plus,
@@ -108,6 +114,7 @@ impl fmt::Display for TokenKind {
             Async => "`async`",
             Await => "`await`",
             Record => "`record`",
+            Match => "`match`",
             LBracket => "`[`",
             RBracket => "`]`",
             LParen => "`(`",
@@ -122,6 +129,8 @@ impl fmt::Display for TokenKind {
             Assign => "`=`",
             Declare => "`:=`",
             Hash => "`#`",
+            FatArrow => "`=>`",
+            Pipe => "`|`",
             Plus => "`+`",
             Minus => "`-`",
             Star => "`*`",
@@ -272,6 +281,7 @@ impl Lexer {
                         "async" => TokenKind::Async,
                         "await" => TokenKind::Await,
                         "record" => TokenKind::Record,
+                        "match" => TokenKind::Match,
                         "break" => TokenKind::Break,
                         "continue" => TokenKind::Continue,
                         "defer" => TokenKind::Defer,
@@ -605,6 +615,7 @@ impl Lexer {
             '/' => Slash,
             '%' => Percent,
             '=' if self.eat('=') => Eq,
+            '=' if self.eat('>') => FatArrow,
             '=' => Assign,
             '!' if self.eat('=') => NotEq,
             '!' => Bang,
@@ -614,7 +625,8 @@ impl Lexer {
             '>' => Gt,
             '&' if self.eat('&') => AndAnd,
             '|' if self.eat('|') => OrOr,
-            '&' | '|' => return self.error(start, format!("`{c}{c}` と書いてください")),
+            '|' => Pipe,
+            '&' => return self.error(start, "`&&` と書いてください"),
             _ => return self.error(start, format!("不明な文字 `{c}`")),
         };
         Ok(kind)

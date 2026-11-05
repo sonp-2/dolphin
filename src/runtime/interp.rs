@@ -277,6 +277,11 @@ impl<'a> Interpreter<'a> {
         span: Span,
     ) -> RResult<()> {
         match pattern {
+            Pattern::Wild => {}
+            // 合わないことがある部分は、パーサーが分割代入と `for` では弾く
+            Pattern::Lit(_) | Pattern::Record { .. } | Pattern::Or(_) => {
+                unreachable!("match 以外のパターンにリテラル・レコード・or は書けない")
+            }
             Pattern::Var(var) => {
                 if declare {
                     self.env.declare(&var.0, value.clone());
