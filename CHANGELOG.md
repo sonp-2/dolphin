@@ -7,11 +7,11 @@
 
 ## [Unreleased]
 
-内部の整理が中心で、**言語の仕様と出力は変わらない**。
+標準ライブラリの追加（PostgreSQL・YAML・TOML・zip・ログ・ファイル操作など）と、VM の高速化。**言語の構文と既存の出力は変わらない**。
 
 ### 追加
 - `import["std:postgres"]`（`postgres` feature。**既定では無効**で、`cargo build --features postgres`。純 Rust の `postgres` クレート（同期版）を使い、TLS は `tls` feature と同じ rustls。[design.md 5.47](docs/design.md)）: `connect[url_or_map, options]`（`timeout` `tls` `int` `application_name`）`close` `exec[c, sql, params]`（`{"changes"}` を返す）`query[c, sql, params]`（行を、列名をキーにしたマップの配列で返す）`run_script[c, sql]`。API の形・ハンドル・トランザクション（`exec[c, "BEGIN"]` など）は `std:sqlite` に揃えた
-- `params` は配列（`` `$1` `$2` … に順番に）。値はサーバーが決めた型に合わせて変換する: `int2`〜`int8`・`float`・`numeric`（結果は桁を失わない文字列）・`bool`・`text`・`bytea`・`uuid`・`date`/`time`（文字列）・`timestamp`/`timestamptz`（Unix 時刻の数値）・`json`/`jsonb`・配列型（多次元も）。`interval` `inet` などは `::text` で受ける
+- `params` は配列（`$1` `$2` … に順番に入る）。値はサーバーが決めた型に合わせて変換する: `int2`〜`int8`・`float`・`numeric`（結果は桁を失わない文字列）・`bool`・`text`・`bytea`・`uuid`・`date`/`time`（文字列）・`timestamp`/`timestamptz`（Unix 時刻の数値）・`json`/`jsonb`・配列型（多次元も）。`interval` `inet` などは `::text` で受ける
 - 失敗はエラー値（種類 `sql` `busy` `auth` `network` `parse` `closed`。メッセージに SQLSTATE を含む）。問い合わせはブロッキングで、`LISTEN`/`NOTIFY`・`COPY`・接続のプールは作らない
 - `examples/pg_demo.dol`。テストは、サーバーがなくても通るもの（URL の解析・接続失敗の種類・値の変換の単体テスト）と、環境変数 `DOLPHIN_TEST_PG_URL` があるときだけ動くサーバーを使うもの（`tests/postgres.rs`）
 - CI に `--features postgres` のビルドとテストを足した
@@ -21,6 +21,7 @@
 - データ形式（[design.md 5.51](docs/design.md)。`yaml` `toml` `zip` feature。**既定では無効**）: `std:yaml`（`parse` `parse_all` `stringify`）、`std:toml`（`parse` `stringify`）、`std:zip`（`gzip` `gunzip` `deflate` `inflate`、zip と tar の読み書き・展開。`..` や絶対パスなどの危険な名前は展開前に断る）
 
 ### 変更
+- VM の高速化（挙動は同じ）。関数呼び出しで引数の `Vec` を作らない、変数表を小さいうちは線形探索にする、主ループで頻出の命令を直接処理する、整数と数値の演算に速い経路を持たせる。`fib(27)` は約 0.75 秒から約 0.25 秒、300 万回のループは約 1.8 秒から約 0.45 秒
 - 変数を作らないブロックは、実行時にスコープ（`Env`）を作らないようにし、変数表のハッシュも軽くした。挙動は同じで、速くなる。計測用のスクリプトを `bench/`（`fib.dol` `loop.dol` `array.dol`）に置いた
 - 大きかったファイルを分けた（挙動は同じ）。`stdlib/` を `system`・`network`・`data`・`media` のフォルダに、`interp.rs` から `import` を `interp/import.rs` に、`lsp` を通信（`transport.rs`）と変換（`convert.rs`）に、`ui/mod.rs` から部品の木を作る処理を `ui/tree.rs` に。`os.spawn` と `worker.spawn` の引数の処理も関数に切り出した
 - GitHub のユーザー名の変更（`sonnnnnnp` から `sonp-2`）に合わせて、リンクと著作権者名を直した
