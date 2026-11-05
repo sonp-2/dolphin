@@ -104,7 +104,7 @@ dolphin/
 │     ├─ map.rs          map_len, map_keys, map_has, map_remove
 │     ├─ collections.rs  std:collections
 │     ├─ bits.rs         std:bits（ビット演算）
-│     ├─ math.rs         abs, floor, …（乱数は random.rs。xorshift64* を自前で実装）
+│     ├─ math.rs         abs, floor, …（乱数の本体は random.rs。xorshift64* を自前で実装）
 │     ├─ random.rs       std:random
 │     ├─ time.rs         std:time（暦の計算は自前）
 │     ├─ types.rs        type_of
@@ -116,7 +116,7 @@ dolphin/
 │     ├─ worker.rs       std:worker（別スレッドの別インタプリタとメッセージでやり取りする。runtime/worker.rs に口の型）
 │     ├─ system/         OS との境界
 │     │  ├─ io.rs        log, input
-│     │  ├─ fs.rs        file_read, file_write, file_append, file_exists
+│     │  ├─ fs.rs        std:fs（fs.read, fs.write, …。旧名 file_* は deprecated.rs の警告つき）
 │     │  ├─ path.rs      std:path
 │     │  ├─ os.rs        std:os（args / env / exit / run など）
 │     │  ├─ process.rs   os.spawn / wait / poll / kill（常駐する子プロセスとの連携）
@@ -130,7 +130,7 @@ dolphin/
 │     ├─ data/           データの形式と変換
 │     │  ├─ json.rs      std:json（parse / stringify / pretty。自前の実装、外部クレートなし）
 │     │  ├─ csv.rs       std:csv
-│     │  ├─ bytes.rs     バイト列（str_to_bytes / bytes_* ）
+│     │  ├─ bytes.rs     バイト列（bytes_* ）
 │     │  ├─ encoding.rs  std:encoding（base64 / hex / URL。自前）
 │     │  ├─ crypto.rs    std:crypto（feature = "crypto"。ring + md-5）
 │     │  ├─ regex.rs     std:regex（feature = "regex"。regex クレート）
