@@ -1,0 +1,19 @@
+{"headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "plain"}
+{"headers": {"Content-Type": "text/css; charset=utf-8"}, "body": "body {}"}
+{"headers": {"Content-Type": "application/octet-stream"}, "body": "bin"}
+{"headers": {"Content-Type": "text/html; charset=utf-8"}, "body": "<h1>home</h1>"}
+{"headers": {"Content-Type": "text/html; charset=utf-8"}, "body": "sub home"}
+{"headers": {"Content-Type": "text/html; charset=utf-8"}, "body": "sub home"}
+{"headers": {"Content-Type": "text/plain; charset=utf-8"}, "body": "plain"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 405, "headers": {"Allow": "POST, OPTIONS"}, "body": "Method Not Allowed"}
+{"status": 405, "headers": {"Allow": "GET, HEAD"}, "body": "Method Not Allowed"}

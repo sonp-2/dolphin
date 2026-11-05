@@ -1,0 +1,94 @@
+// std:router のミドルウェアとグループ（design.md 5.52）
+@router := import["std:router"]
+
+@trace := {}
+
+call[@h, @method, @path] (
+    # @h[{"method": @method, "path": @path, "headers": {:}, "query": {:}}]
+)
+
+tag[@name] (
+    # [@req, @next] (
+        arr_push[@trace, "in @{@name}"]
+        @resp := @next[@req]
+        arr_push[@trace, "out @{@name}"]
+        # @resp
+    )
+)
+
+show[] (
+    log[str_join[@trace, " "]]
+    arr_clear[@trace]
+)
+
+@r := @router.new[]
+// use は経路より前でも後でも、全部を包む
+@router.use[@r, tag["a"]]
+@router.get[@r, "/x", [@req] (
+    arr_push[@trace, "handler"]
+    # "x"
+)]
+@router.use[@r, tag["b"]]
+
+@h := @router.handler[@r]
+log[call[@h, "GET", "/x"]]
+show[]
+// 404 と 405 も包む
+log[call[@h, "GET", "/y"]]
+show[]
+log[call[@h, "POST", "/x"]]
+show[]
+
+// 短絡と、req の書き換え、応答の加工
+@r2 := @router.new[]
+@router.use[@r2, [@req, @next] (
+    if map_get[@req{"headers"}, "x-token", ""] != "secret" (
+        # @router.json[401, {"error": "unauthorized"}]
+    )
+    @req{"user"} = "alice"
+    # @next[@req]
+)]
+@router.use[@r2, [@req, @next] (
+    @resp := @next[@req]
+    @resp{"headers"} = {"X-Seen": @req{"path"}}
+    # @resp
+)]
+@router.get[@r2, "/me/:suffix", [@req] ( # "hi @{@req{"user"}} @{@req{"params"}{"suffix"}}" )]
+@h2 := @router.handler[@r2]
+log[call[@h2, "GET", "/me/a"]]
+log[@h2[{"method": "GET", "path": "/me/a", "headers": {"x-token": "secret"}}]]
+
+// グループ: 接頭辞。サブのミドルウェアはサブの経路だけを包む
+@api := @router.new[]
+@router.use[@api, tag["api"]]
+@router.get[@api, "/ping", [@req] (
+    arr_push[@trace, "ping"]
+    # "pong"
+)]
+@router.get[@api, "/items/:id", [@req] ( # @req{"params"}{"id"} )]
+@inner := @router.new[]
+@router.get[@inner, "/deep", [@req] ( # "deep " + to_str[@req{"params"}] )]
+@router.use[@inner, tag["inner"]]
+@router.group[@api, "/inner", @inner]
+
+@top := @router.new[]
+@router.use[@top, tag["top"]]
+@router.get[@top, "/plain", [@req] ( # "plain" )]
+@router.group[@top, "/api/v1", @api]
+@router.group[@top, "/users/:uid", @inner]
+@router.not_found[@top, [@req] ( # @router.text[404, "top 404"] )]
+@router.not_found[@api, [@req] ( # @router.text[404, "api 404 (使われない)"] )]
+@ht := @router.handler[@top]
+log[call[@ht, "GET", "/plain"]]
+show[]
+log[call[@ht, "GET", "/api/v1/ping"]]
+show[]
+log[call[@ht, "GET", "/api/v1/items/7"]]
+show[]
+log[call[@ht, "GET", "/api/v1/inner/deep"]]
+show[]
+log[call[@ht, "GET", "/users/bob/deep"]]
+show[]
+log[call[@ht, "GET", "/api/v1/nope"]]
+show[]
+log[call[@ht, "POST", "/api/v1/ping"]{"headers"}]

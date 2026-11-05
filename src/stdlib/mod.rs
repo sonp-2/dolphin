@@ -58,7 +58,17 @@ use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
 
+/// 組み込みモジュールのうち、Dolphin で書いた関数を持つものの、そのソース（`import` のときに取り込む）
+pub fn prelude(key: &str) -> Option<&'static str> {
+    match key {
+        "std:async" => Some(async_::PRELUDE),
+        "std:router" => Some(include_str!("router.dol")),
+        _ => None,
+    }
+}
+
 pub fn register(interp: &mut Interpreter<'_>) {
+    interp.register_module("std:router", &[]);
     io::register(interp);
     error::register(interp);
     json::register(interp);

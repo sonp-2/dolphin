@@ -1,0 +1,6 @@
+// ハンドラが値を返し忘れたとき（# の付け忘れ）は、実行時エラー
+@router := import["std:router"]
+@r := @router.new[]
+@router.get[@r, "/x", [@req] ( log["呼ばれた"] )]
+@h := @router.handler[@r]
+log[@h[{"method": "GET", "path": "/x", "headers": {:}}]]

@@ -1,0 +1,17 @@
+{"status": 201, "json": {"a": 1}}
+{"status": 404, "body": "no"}
+{"status": 302, "headers": {"Location": "/login"}}
+{"status": 301, "headers": {"Location": "/new"}}
+sid=abc; Path=/; HttpOnly; SameSite=Lax
+name=a%20b%3Bc; Path=/app; Domain=example.com; Max-Age=3600; Secure; SameSite=Strict
+x=y; Path=/; Secure; HttpOnly; SameSite=None
+{"a": "1", "b": "あ", "c": "q"}
+{:}
+{:}
+{"json": {"ok": true}, "headers": {"Vary": "Accept"}}
+{"json": {"ok": true}, "headers": {"Vary": "Accept"}}
+{"json": {"ok": true}, "headers": {"Vary": "Accept, Origin", "Access-Control-Allow-Origin": "https://a.example", "Access-Control-Allow-Credentials": "true", "Access-Control-Expose-Headers": "X-Total"}}
+{"status": 204, "headers": {"Access-Control-Allow-Origin": "https://b.example", "Vary": "Origin", "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "x-a, content-type", "Access-Control-Max-Age": "60"}}
+{"status": 204, "headers": {"Allow": "GET, POST, HEAD, OPTIONS", "Access-Control-Allow-Origin": "https://b.example", "Vary": "Origin", "Access-Control-Allow-Credentials": "true", "Access-Control-Expose-Headers": "X-Total"}}
+{"body": "hello", "headers": {"Access-Control-Allow-Origin": "*"}}
+{"status": 204, "headers": {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS", "Access-Control-Allow-Headers": "Content-Type, Authorization", "Access-Control-Max-Age": "600"}}

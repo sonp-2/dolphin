@@ -1,0 +1,12 @@
+// async のハンドラは使えない（http.serve は future を待たない）
+@router := import["std:router"]
+
+async slow[@req] (
+    # "late"
+)
+
+@r := @router.new[]
+@router.get[@r, "/x", slow]
+@h := @router.handler[@r]
+log[@h[{"method": "GET", "path": "/y", "headers": {:}}]]
+log[@h[{"method": "GET", "path": "/x", "headers": {:}}]]

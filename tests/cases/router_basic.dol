@@ -1,0 +1,63 @@
+// std:router の経路の選び方（design.md 5.52）。router.handler[r] の関数に、リクエストのマップを直接渡す
+@router := import["std:router"]
+
+call[@h, @method, @path] (
+    # @h[{"method": @method, "path": @path, "headers": {:}, "query": {:}}]
+)
+
+@r := @router.new[]
+@router.get[@r, "/", [@req] ( # "root" )]
+@router.get[@r, "/users", [@req] ( # "list" )]
+@router.get[@r, "/users/:id", [@req] ( # @router.json[200, {"id": @req{"params"}{"id"}}] )]
+@router.get[@r, "/users/me", [@req] ( # "me" )]
+@router.post[@r, "/users/:id", [@req] ( # @router.text[201, "created @{@req{"params"}{"id"}}"] )]
+@router.get[@r, "/users/:id/posts/:post", [@req] ( # to_str[@req{"params"}] )]
+@router.get[@r, "/files/*path", [@req] ( # to_str[@req{"params"}] )]
+@router.get[@r, "/files/img/logo.png", [@req] ( # "logo" )]
+@router.get[@r, "/any/*", [@req] ( # to_str[@req{"params"}] )]
+@router.any[@r, "/echo", [@req] ( # @req{"method"} )]
+@router.get[@r, "/echo", [@req] ( # "get-echo" )]
+@router.route[@r, "head", "/h", [@req] ( # "head-route" )]
+@router.get[@r, "/h", [@req] ( # "get-h" )]
+@router.get[@r, "/only", [@req] ( # "only" )]
+@router.put[@r, "/only", [@req] ( # "put-only" )]
+
+@h := @router.handler[@r]
+
+// リテラル > :param > *rest
+log[call[@h, "GET", "/"]]
+log[call[@h, "GET", "/users"]]
+log[call[@h, "GET", "/users/42"]]
+log[call[@h, "GET", "/users/me"]]
+log[call[@h, "GET", "/users/42/"]]
+log[call[@h, "POST", "/users/42"]]
+log[call[@h, "GET", "/users/1/posts/9"]]
+log[call[@h, "GET", "/files/a/b/c.txt"]]
+log[call[@h, "GET", "/files/img/logo.png"]]
+log[call[@h, "GET", "/files"]]
+log[call[@h, "GET", "//files//a//b"]]
+log[call[@h, "GET", "/any/x"]]
+
+// any と、方法を指定した経路。HEAD は GET にフォールバックする
+log[call[@h, "DELETE", "/echo"]]
+log[call[@h, "GET", "/echo"]]
+log[call[@h, "HEAD", "/users"]]
+log[call[@h, "HEAD", "/h"]]
+
+// 経路が合わない（404）、方法が違う（405）、OPTIONS（204）
+log[call[@h, "GET", "/nope"]]
+log[call[@h, "GET", "/users/1/2/3"]]
+log[call[@h, "DELETE", "/only"]]
+log[call[@h, "OPTIONS", "/only"]]
+log[call[@h, "OPTIONS", "/users/1"]]
+log[call[@h, "OPTIONS", "/nope"]]
+log[call[@h, "POST", "/"]]
+
+// 経路が合わないときのハンドラ
+@router.not_found[@r, [@req] ( # @router.json[404, {"error": "no route", "path": @req{"path"}}] )]
+@h2 := @router.handler[@r]
+log[call[@h2, "GET", "/nope"]]
+// 作ったあとの変更は、先に作った関数には反映されない
+@router.get[@r, "/late", [@req] ( # "late" )]
+log[call[@h, "GET", "/late"]{"status"}]
+log[call[@router.handler[@r], "GET", "/late"]]

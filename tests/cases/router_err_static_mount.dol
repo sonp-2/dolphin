@@ -1,0 +1,6 @@
+// router.static はワイルドカードの経路に付ける
+@router := import["std:router"]
+@r := @router.new[]
+@router.get[@r, "/assets", @router.static["."]]
+@h := @router.handler[@r]
+log[@h[{"method": "GET", "path": "/assets", "headers": {:}}]]

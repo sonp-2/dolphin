@@ -151,7 +151,15 @@ impl Interpreter<'_> {
         if let Some(module) = self.std_loaded.get(key) {
             return Ok(Value::Module(Rc::clone(module)));
         }
-        let mut module = Module::new(key.into(), PathBuf::new(), None);
+        // Dolphin で書いた関数を持つモジュールは、その中で起きたエラーが自分のソースの行を引用できるよう、出どころを持つ
+        let prelude = crate::stdlib::prelude(key);
+        let origin = prelude.map(|src| {
+            Rc::new(Origin {
+                path: key.to_string(),
+                src: src.to_string(),
+            })
+        });
+        let mut module = Module::new(key.into(), PathBuf::new(), origin);
         for &(full, f) in functions {
             let short = full.rsplit('.').next().unwrap_or(full);
             module.natives.insert(short, NativeRef { name: full, f });
@@ -163,12 +171,12 @@ impl Interpreter<'_> {
             };
             module.globals.declare(name, value);
         }
-        // Dolphin で書いた関数（`async.all` など）
-        if key == "std:async" {
-            let tokens = lexer::tokenize(crate::stdlib::async_::PRELUDE)
-                .expect("std:async の Dolphin のコードは字句に分けられる");
-            let program =
-                parser::parse(&tokens).expect("std:async の Dolphin のコードは解析できる");
+        // Dolphin で書いた関数（`async.all`、`std:router` の全部など）
+        if let Some(source) = prelude {
+            let tokens = lexer::tokenize(source)
+                .unwrap_or_else(|_| panic!("{key} の Dolphin のコードは字句に分けられる"));
+            let program = parser::parse(&tokens)
+                .unwrap_or_else(|_| panic!("{key} の Dolphin のコードは解析できる"));
             for stmt in &program.stmts {
                 if let StmtKind::FuncDef(def) = &stmt.kind {
                     module

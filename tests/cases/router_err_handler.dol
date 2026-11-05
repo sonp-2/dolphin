@@ -1,0 +1,4 @@
+// ハンドラは関数でなければならない
+@router := import["std:router"]
+@r := @router.new[]
+@router.get[@r, "/x", "not a function"]
