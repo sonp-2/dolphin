@@ -1,5 +1,5 @@
 //! `std:encoding`: base64_encode, base64_decode, base64url_encode, base64url_decode,
-//! hex_encode, hex_decode, url_encode, url_decode（design.md 5.14）
+//! hex_encode, hex_decode, url_encode, url_decode（design.md 5.14）, crc32（5.50）
 //!
 //! 自前の実装。引数は、バイト列か文字列（UTF-8 として扱う）
 
@@ -33,6 +33,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("encoding.hex_decode", |_, args| {
                 decode("encoding.hex_decode", args, hex_decode)
             }),
+            ("encoding.crc32", crc32_fn),
             ("encoding.url_encode", url_encode_fn),
             ("encoding.url_decode", url_decode_fn),
         ],
@@ -57,6 +58,43 @@ fn decode(
         Ok(bytes) => Value::bytes(bytes),
         Err(message) => error_value("parse", message),
     })
+}
+
+// ---- CRC-32（IEEE 802.3。design.md 5.50） ----
+
+const CRC_TABLE: [u32; 256] = {
+    let mut table = [0u32; 256];
+    let mut i = 0;
+    while i < 256 {
+        let mut c = i as u32;
+        let mut k = 0;
+        while k < 8 {
+            c = if c & 1 == 1 {
+                0xEDB8_8320 ^ (c >> 1)
+            } else {
+                c >> 1
+            };
+            k += 1;
+        }
+        table[i] = c;
+        i += 1;
+    }
+    table
+};
+
+pub(in crate::stdlib) fn crc32(bytes: &[u8]) -> u32 {
+    !bytes.iter().fold(!0u32, |crc, &b| {
+        CRC_TABLE[((crc ^ u32::from(b)) & 0xff) as usize] ^ (crc >> 8)
+    })
+}
+
+fn crc32_fn(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("encoding.crc32", args, 1)?;
+    Ok(Value::Num(f64::from(crc32(&data_arg(
+        "encoding.crc32",
+        args,
+        0,
+    )?))))
 }
 
 // ---- base64（RFC 4648） ----
@@ -283,6 +321,17 @@ mod tests {
         assert_eq!(
             url_encode("a b/日本~-._".as_bytes()),
             "a%20b%2F%E6%97%A5%E6%9C%AC~-._"
+        );
+    }
+
+    #[test]
+    fn crc32_known_values() {
+        assert_eq!(crc32(b""), 0);
+        assert_eq!(crc32(b"123456789"), 0xCBF4_3926);
+        assert_eq!(crc32(b"a"), 0xE8B7_BE43);
+        assert_eq!(
+            crc32(b"The quick brown fox jumps over the lazy dog"),
+            0x414F_A339
         );
     }
 }

@@ -10,6 +10,7 @@ pub mod data;
 pub mod debug;
 pub mod error;
 pub mod gc;
+pub mod log;
 pub mod map;
 pub mod math;
 pub mod media;
@@ -61,6 +62,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
     stream::register(interp);
     array::register(interp);
     map::register(interp);
+    log::register(interp);
     math::register(interp);
     bits::register(interp);
     net::register(interp);

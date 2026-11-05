@@ -146,10 +146,20 @@ pub enum HandleKind {
 }
 
 /// future の状態
+#[derive(Clone)]
 pub enum FutureOutcome {
     Pending,
     Resolved(Value),
     Failed(RuntimeError),
+}
+
+/// future の結果の転送先（design.md 5.50）
+pub struct Forward {
+    pub target: Value,
+    /// Some なら、成功したとき、元の値の代わりにこれを渡す
+    pub replace: Option<Value>,
+    /// 転送したとき止める、イベントループのタイマーの番号
+    pub cancel_timer: Option<u64>,
 }
 
 /// `async` 関数の結果を、あとから受け取るための入れ物（design.md 5.46）
@@ -157,6 +167,8 @@ pub struct FutureState {
     pub outcome: FutureOutcome,
     /// 終わるのを待って止まっている流れ（`Interpreter::coroutines` の番号）
     pub waiters: Vec<u64>,
+    /// 終わったら、同じ結果で終わらせる future（`async.race` `async.timeout`。design.md 5.50）
+    pub forwards: Vec<Forward>,
     /// 失敗を `await` で受け取ったか。受け取られないまま捨てられた失敗は、標準エラーに出す
     pub observed: bool,
 }
@@ -233,6 +245,7 @@ impl Handle {
         Value::Handle(Handle::new(HandleKind::Future(FutureState {
             outcome: FutureOutcome::Pending,
             waiters: Vec::new(),
+            forwards: Vec::new(),
             observed: false,
         })))
     }
