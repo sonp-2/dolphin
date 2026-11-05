@@ -9,6 +9,11 @@
 
 ### 追加
 - `for` の拡張（[design.md 5.54](docs/design.md)）。ループ変数に分割代入のパターンを書ける（`for {@i, @x} in arr_enumerate[@a]`、`for {"name": @n} in @people`。文法とエラーは 5.19 と同じ）。マップを直接回せる（`for {@k, @v} in @m` は挿入順に `{キー, 値}` を渡す。回し始めた時点の写しを回すので、回しながら書き換えても影響しない）。文字列を 1 文字（コードポイント）ずつ回せる。回せない型のエラーは「for で回せるのは配列・マップ・文字列です」になった。添字つきの `for @i, @x in` は作らない（`arr_enumerate` で足りる）
+- レコード（[design.md 5.55](docs/design.md)）: `record Point[@x, @y]` で、型名のタグを持つ軽いレコードを定義する（トップレベルのみ。既定値・可変長引数・メソッド・継承はない）。`Point[1, 2]` で作り（コンストラクタは関数と同じ扱いなので、`dolphin check` が引数の数の間違いを実行前に検出し、`@u.Point[1, 2]` でモジュールからも使える）、`@p.x` `@p{"x"}` で読み書きする。定義にないフィールドの読み書きと、`map_remove` `map_clear` は実行時エラー
+- `==` は型名が同じで中身が等しいときだけ true。表示は `Point{x: 1, y: 2}`。`type_of` は `"record"`。`json.stringify` は普通のマップと同じ。分割代入（マップのパターン）がそのまま使える。`map_copy` は型名を保ち、`map_merge` などが新しく作るマップは普通のマップになる
+- 組み込み関数 `record_name[v]`（型名か `nil`）と `record_from[Point, @map]`（`json.parse` の結果を型に当てはめる。足りないフィールドはエラー値 `invalid`）
+- `record` を予約語にした（識別子としての `record` は使えなくなる。`@record` は変数なので影響しない）
+- `examples/shapes.dol`
 
 ## [0.55.0] - 2026-11-05
 

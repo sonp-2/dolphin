@@ -112,6 +112,7 @@ impl Value {
             Value::Int(_) => "整数",
             Value::Str(_) => "文字列",
             Value::Array(_) => "配列",
+            Value::Map(m) if m.borrow().tag.is_some() => "レコード",
             Value::Map(_) => "マップ",
             Value::Module(_) => "モジュール",
             Value::Func(_) | Value::Native(_) => "関数",
@@ -147,7 +148,9 @@ impl Value {
             }
             (Value::Map(a), Value::Map(b)) => {
                 let (a, b) = (a.borrow(), b.borrow());
-                a.len() == b.len() && a.iter().all(|(k, v)| b.get(k).is_some_and(|w| v.equals(w)))
+                a.tag == b.tag
+                    && a.len() == b.len()
+                    && a.iter().all(|(k, v)| b.get(k).is_some_and(|w| v.equals(w)))
             }
             _ => false,
         }
@@ -197,6 +200,11 @@ fn write_value(
         Value::Map(map) => Rc::as_ptr(map).cast::<()>(),
     };
     if seen.contains(&ptr) {
+        if let Value::Map(map) = value
+            && let Some(tag) = &map.borrow().tag
+        {
+            return write!(f, "{tag}{{...}}");
+        }
         return write!(f, "{{...}}");
     }
 
@@ -215,7 +223,17 @@ fn write_value(
         }
         Value::Map(map) => {
             let map = map.borrow();
-            if map.is_empty() {
+            if let Some(tag) = &map.tag {
+                write!(f, "{tag}{{")?;
+                for (i, (key, item)) in map.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{key}: ")?;
+                    write_value(f, item, true, seen)?;
+                }
+                write!(f, "}}")
+            } else if map.is_empty() {
                 write!(f, "{{:}}")
             } else {
                 write!(f, "{{")?;
@@ -294,6 +312,7 @@ mod tests {
             Rc::new(FuncDef {
                 name: name.into(),
                 is_async: false,
+                record: false,
                 params: Vec::new(),
                 rest: None,
                 body: Vec::new(),
@@ -314,6 +333,26 @@ mod tests {
         assert!(make(&add).equals(&make(&add)));
         assert!(!make(&add).equals(&make(&anon)));
         assert_eq!(make(&add).type_name(), "関数");
+    }
+
+    #[test]
+    fn record_display_equality_and_type() {
+        let make = |tag: Option<&str>, x: f64| {
+            let mut map = Map::default();
+            map.insert("x".into(), Value::Num(x));
+            map.insert("s".into(), Value::Str("a".into()));
+            map.tag = tag.map(Into::into);
+            gc::new_map(map)
+        };
+        let p = make(Some("Point"), 1.0);
+        assert_eq!(p.to_string(), "Point{x: 1, s: \"a\"}");
+        assert_eq!(p.type_name(), "レコード");
+        assert!(p.equals(&make(Some("Point"), 1.0)));
+        assert!(!p.equals(&make(Some("Point"), 2.0)));
+        // 型名が違えば、中身が同じでも等しくない。普通のマップとも等しくない
+        assert!(!p.equals(&make(Some("Size"), 1.0)));
+        assert!(!p.equals(&make(None, 1.0)));
+        assert_eq!(make(None, 1.0).type_name(), "マップ");
     }
 
     #[test]

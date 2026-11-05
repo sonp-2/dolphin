@@ -1,0 +1,24 @@
+// 定義・生成・読み書き・表示・型
+record Point[@x, @y]
+
+@p := Point[1, 2]
+log[@p]
+log[@p.x, @p{"y"}]
+@p.x = 10
+@p{"y"} = 20
+log[@p]
+log[type_of[@p], record_name[@p], record_name[{"x": 1}], record_name[3]]
+log["表示: @p"]
+log[to_str[@p]]
+log[map_keys[@p], map_values[@p], map_len[@p], map_has[@p, "x"]]
+
+// 関数値としても使える
+@ps := arr_map[{{1, 2}, {3, 4}}, [@a] ( # Point[@a{0}, @a{1}] )]
+log[@ps]
+@made := map_map_values[{"a": 1}, [@v] ( # @v + 1 )]
+log[@made]
+
+// 参照渡し（マップと同じ）
+@q := @p
+@q.x = 99
+log[@p.x]

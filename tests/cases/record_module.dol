@@ -1,0 +1,8 @@
+@u := import["lib/record_lib.dol"]
+@v := @u.Vec2[1, 2]
+log[@v, type_of[@v], record_name[@v]]
+log[@u.origin[] == @u.Vec2[0, 0]]
+// 本体で同じ名前を定義しても、モジュールのものとは別
+record Vec2[@a]
+log[Vec2[1]]
+log[@u.Vec2[1, 2] == Vec2[1]]

@@ -40,6 +40,8 @@ pub enum TokenKind {
     Async,
     /// `await`
     Await,
+    /// `record`（design.md 5.55）
+    Record,
 
     // 記号
     LBracket,
@@ -102,6 +104,7 @@ impl fmt::Display for TokenKind {
             Nil => "`nil`",
             Async => "`async`",
             Await => "`await`",
+            Record => "`record`",
             LBracket => "`[`",
             RBracket => "`]`",
             LParen => "`(`",
@@ -265,6 +268,7 @@ impl Lexer {
                         "nil" => TokenKind::Nil,
                         "async" => TokenKind::Async,
                         "await" => TokenKind::Await,
+                        "record" => TokenKind::Record,
                         "break" => TokenKind::Break,
                         "continue" => TokenKind::Continue,
                         "true" => TokenKind::True,

@@ -498,10 +498,14 @@ fn index_get(container: &Value, key: &Value, target_span: Span, key_span: Span) 
         }
         Value::Map(map) => {
             let k = to_key(key, key_span)?;
-            map.borrow()
-                .get(&k)
-                .cloned()
-                .ok_or_else(|| RuntimeError::new(key_span, format!("キー {k:?} がありません")))
+            let map = map.borrow();
+            map.get(&k).cloned().ok_or_else(|| match &map.tag {
+                Some(tag) => RuntimeError::new(
+                    key_span,
+                    format!("record {tag} にフィールド {k:?} はありません"),
+                ),
+                None => RuntimeError::new(key_span, format!("キー {k:?} がありません")),
+            })
         }
         Value::Bytes(bytes) => {
             let i = to_index(key, bytes.len(), key_span)?;
@@ -538,7 +542,17 @@ fn index_set(
         }
         Value::Map(map) => {
             let k = to_key(key, key_span)?;
-            map.borrow_mut().insert(k, value);
+            let mut map = map.borrow_mut();
+            // レコードにフィールドは増やせない（design.md 5.55）
+            if let Some(tag) = &map.tag
+                && !map.contains_key(&k)
+            {
+                return Err(RuntimeError::new(
+                    key_span,
+                    format!("record {tag} にフィールド {k:?} はありません"),
+                ));
+            }
+            map.insert(k, value);
         }
         Value::Bytes(_) => {
             return Err(RuntimeError::new(

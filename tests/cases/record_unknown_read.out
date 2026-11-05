@@ -1,0 +1,4 @@
+record_unknown_read.dol:3:5: エラー: record Point にフィールド "z" はありません
+  |
+3 | log[@p.z]
+  |     ^

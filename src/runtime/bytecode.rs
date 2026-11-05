@@ -57,6 +57,8 @@ pub enum Op {
     CheckKey,
     /// スタックの上から 2n 個（キー、値の順）でマップを作る
     MakeMap(u32),
+    /// マップ（一番上）に、型名（`names`）のタグをつけてレコードにする（design.md 5.55）
+    TagRecord(u32),
     /// 値を `log` と同じ表示の文字列にする
     ToDisplay,
     /// スタックの上から n 個の文字列をつなげる

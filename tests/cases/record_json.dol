@@ -1,0 +1,16 @@
+@json := import["std:json"]
+
+record User[@name, @age]
+
+@u := User["太郎", 20]
+@text := @json.stringify[@u]
+log[@text]
+// 戻すときは record_from
+@back := record_from[User, @json.parse[@text]]
+log[@back, @back == @u]
+// 余計なキーは無視する
+log[record_from[User, {"name": "花子", "age": 3, "extra": true}]]
+// 足りないフィールドはエラー値
+@bad := record_from[User, {"name": "x"}]
+log[is_error[@bad], err_kind[@bad]]
+log[err_message[@bad]]

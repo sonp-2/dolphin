@@ -1,0 +1,4 @@
+record_arity.dol:4:5: エラー: `Point` の引数は 2 個です（1 個渡されました）
+  |
+4 | log[Point[1]]
+  |     ^

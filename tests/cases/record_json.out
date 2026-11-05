@@ -1,0 +1,5 @@
+{"name":"太郎","age":20}
+User{name: "太郎", age: 20} true
+User{name: "花子", age: 3}
+true invalid
+record User にフィールド "age" がありません

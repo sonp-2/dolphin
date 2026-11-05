@@ -1,0 +1,5 @@
+Point{x: 1, y: 2}
+record_unknown_write.dol:4:1: エラー: record Point にフィールド "z" はありません
+  |
+4 | @p.z = 3
+  | ^

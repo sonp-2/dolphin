@@ -824,6 +824,11 @@ impl Interpreter<'_> {
                 }
                 self.stack.push(gc::new_map(map));
             }
+            Op::TagRecord(name) => {
+                if let Some(Value::Map(map)) = self.stack.last() {
+                    map.borrow_mut().tag = Some(Rc::clone(&chunk.names[*name as usize]));
+                }
+            }
             Op::ToDisplay => {
                 let value = self.pop();
                 self.stack.push(Value::Str(value.to_string().into()));

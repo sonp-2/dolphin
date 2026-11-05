@@ -57,6 +57,25 @@ fn mandelbrot_draws_the_set() {
 }
 
 #[test]
+fn shapes_uses_records() {
+    let output = dolphin(&["examples/shapes.dol"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    let text = stdout(&output);
+    for expected in [
+        "Circle: 面積 12.56636 外周 12.56636",
+        "Rect: 面積 12 外周 14",
+        "Rect{origin: Point{x: 11, y: 21}, width: 3, height: 4}",
+        "Point{x: 11, y: 21}",
+    ] {
+        assert!(
+            text.contains(expected),
+            "{expected:?} がない:
+{text}"
+        );
+    }
+}
+
+#[test]
 fn life_runs_a_few_generations() {
     let output = dolphin(&["examples/life.dol", "3"]);
     assert!(output.status.success(), "{}", stderr(&output));

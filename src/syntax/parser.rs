@@ -147,6 +147,7 @@ impl<'t> Parser<'t> {
                 self.advance();
                 StmtKind::Continue
             }
+            TokenKind::Record => return self.record_def(),
             TokenKind::LBrace if self.looks_like_destructure() => return self.destructure(),
             // `async 名前[…] ( … )` は async 関数の定義。`async [` は無名関数の式
             TokenKind::Async if matches!(self.tokens[self.pos + 1].kind, TokenKind::Ident(_)) => {
@@ -201,6 +202,50 @@ impl<'t> Parser<'t> {
         Ok(Stmt { kind, span })
     }
 
+    /// record_def = "record" IDENT "[" VAR { "," VAR } "]"（design.md 5.55）。
+    /// コンストラクタ関数として表す（本体は空）
+    fn record_def(&mut self) -> PResult<Stmt> {
+        let span = self.advance().span;
+        let TokenKind::Ident(name) = &self.peek().kind else {
+            return Err(self.unexpected("レコードの名前"));
+        };
+        let name = name.clone();
+        self.advance();
+        self.expect(&TokenKind::LBracket)?;
+        let (params, rest) = self.params()?;
+        if rest.is_some() {
+            return Err(Diagnostic::new(
+                span,
+                "レコードのフィールドに `...@名前` は書けません",
+            ));
+        }
+        if params.is_empty() {
+            return Err(Diagnostic::new(
+                span,
+                "レコードにはフィールドが 1 つ以上必要です",
+            ));
+        }
+        if params.iter().any(|p| p.default.is_some()) {
+            return Err(Diagnostic::new(
+                span,
+                "レコードのフィールドに既定値は書けません",
+            ));
+        }
+        let def = FuncDef {
+            name,
+            is_async: false,
+            record: true,
+            params,
+            rest: None,
+            body: Vec::new(),
+            span,
+        };
+        Ok(Stmt {
+            kind: StmtKind::FuncDef(Rc::new(def)),
+            span,
+        })
+    }
+
     /// 関数の定義 `名前[引数] ( … )`。先頭は名前（`looks_like_func_def` が確かめてある）
     fn func_def_stmt(&mut self, is_async: bool, span: Span) -> PResult<Stmt> {
         let TokenKind::Ident(name) = &self.peek().kind else {
@@ -214,6 +259,7 @@ impl<'t> Parser<'t> {
         let def = FuncDef {
             name,
             is_async,
+            record: false,
             params,
             rest,
             body,
@@ -626,6 +672,7 @@ impl<'t> Parser<'t> {
                 let def = FuncDef {
                     name: String::new(),
                     is_async,
+                    record: false,
                     params,
                     rest,
                     body,
@@ -1114,5 +1161,33 @@ log[@f[1], @g[1, 2], make[][3]]"),
     fn chained_comparison() {
         let e = error("@x = 1 < @a < 3");
         assert!(e.message.starts_with("比較は続けて書けません"));
+    }
+}
+
+#[cfg(test)]
+mod record_tests {
+    use super::*;
+    use crate::syntax::lexer::tokenize;
+
+    fn parse_src(src: &str) -> Result<Program, Diagnostic> {
+        parse(&tokenize(src).unwrap())
+    }
+
+    #[test]
+    fn record_definition_is_a_constructor_function() {
+        let program = parse_src("record Point[@x, @y]\n").unwrap();
+        assert_eq!(program.to_string(), "(record Point (@x @y) ())\n");
+    }
+
+    #[test]
+    fn record_definition_errors() {
+        for src in [
+            "record P[]\n",
+            "record P[@x = 1]\n",
+            "record P[...@r]\n",
+            "record [@x]\n",
+        ] {
+            assert!(parse_src(src).is_err(), "{src}");
+        }
     }
 }

@@ -175,6 +175,18 @@ impl Compiler {
                 slots.scopes[0].push((param.name.clone(), i as u32));
             }
         }
+        if def.record {
+            // レコードのコンストラクタ（design.md 5.55）: 引数を名前でまとめてタグをつける
+            for param in &def.params {
+                self.constant(Value::Str(param.name.as_str().into()), def.span);
+                self.emit_load(&param.name, def.span);
+            }
+            self.emit(Op::MakeMap(def.params.len() as u32), def.span);
+            let name = self.name(&def.name);
+            self.emit(Op::TagRecord(name), def.span);
+            self.emit(Op::Return, def.span);
+            return;
+        }
         self.block(&def.body);
         self.nil(def.span);
         self.emit(Op::Return, def.span);

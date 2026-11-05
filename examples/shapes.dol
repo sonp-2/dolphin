@@ -1,0 +1,46 @@
+// レコードの例（design.md 5.55）: 図形を record で表して、面積と外周を求める
+@json := import["std:json"]
+
+record Point[@x, @y]
+record Circle[@center, @radius]
+record Rect[@origin, @width, @height]
+
+area[@shape] (
+    @kind := record_name[@shape]
+    if @kind == "Circle" (
+        # 3.14159 * @shape.radius * @shape.radius
+    ) else if @kind == "Rect" (
+        # @shape.width * @shape.height
+    )
+    # 0
+)
+
+perimeter[@shape] (
+    if record_name[@shape] == "Circle" (
+        # 2 * 3.14159 * @shape.radius
+    )
+    # 2 * (@shape.width + @shape.height)
+)
+
+// 平行移動: レコードのフィールドを書き換える
+move[@shape, @dx, @dy] (
+    @c := if record_name[@shape] == "Circle" ( @shape.center ) else ( @shape.origin )
+    @c.x = @c.x + @dx
+    @c.y = @c.y + @dy
+)
+
+@shapes := {Circle[Point[0, 0], 2], Rect[Point[1, 1], 3, 4]}
+
+for @s in @shapes (
+    log["@{record_name[@s]}: 面積 @{area[@s]} 外周 @{perimeter[@s]}"]
+)
+
+@r := @shapes{1}
+move[@r, 10, 20]
+log[@r]
+log[@r.origin == Point[11, 21]]
+
+// JSON との往復: 書き出しは普通のマップと同じ、戻すときに型を当てはめる
+@text := @json.stringify[@r.origin]
+log[@text]
+log[record_from[Point, @json.parse[@text]]]

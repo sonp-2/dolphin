@@ -8,6 +8,8 @@ use super::value::Value;
 /// 順序つきのマップ。`entries` が追加順の本体で、`index` はキーから位置を引くための索引
 #[derive(Debug, Clone, Default)]
 pub struct Map {
+    /// レコードの型名（design.md 5.55）。普通のマップは `None`
+    pub tag: Option<Rc<str>>,
     entries: Vec<(Rc<str>, Value)>,
     index: HashMap<Rc<str>, usize>,
 }
