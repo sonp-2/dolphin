@@ -1,6 +1,6 @@
 [package]
 name = "dolphin"
-version = "0.54.0"
+version = "0.55.0"
 edition = "2024"
 # let chains（`if let ... && ...`）を使っているので 1.88 以上。既定の feature の依存も 1.88 で足りる
 rust-version = "1.88"

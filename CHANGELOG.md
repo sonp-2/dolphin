@@ -7,6 +7,8 @@
 
 ## [Unreleased]
 
+## [0.55.0] - 2026-11-05
+
 標準ライブラリの追加（PostgreSQL・YAML・TOML・zip・ログ・ファイル操作など）と、VM の高速化。**言語の構文と既存の出力は変わらない**。
 
 ### 追加
@@ -595,7 +597,8 @@ C++ 版から Rust での作り直しを始めた最初のバージョン。
 - 行・列と呼び出し履歴つきのエラー表示。実行前の検査（未定義の関数、引数の数、関数の外での `$x` など）
 - ゴールデンテスト（`tests/cases/*.dol` と期待出力の比較）
 
-[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.54.0...HEAD
+[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.55.0...HEAD
+[0.55.0]: https://github.com/sonp-2/dolphin/compare/v0.54.0...v0.55.0
 [0.54.0]: https://github.com/sonp-2/dolphin/compare/v0.53.0...v0.54.0
 [0.53.0]: https://github.com/sonp-2/dolphin/compare/v0.52.0...v0.53.0
 [0.52.0]: https://github.com/sonp-2/dolphin/compare/v0.51.0...v0.52.0
