@@ -340,9 +340,9 @@ pub(crate) fn refresh(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Va
     Ok(Value::Nil)
 }
 
-/// `ui.quit[]`
+/// `ui.stop[]`
 pub(crate) fn quit(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("ui.quit", args, 0)?;
+    expect_args("ui.stop", args, 0)?;
     STATE.with(|state| {
         if let Some(state) = state.borrow().as_ref() {
             state.quit.store(true, Ordering::SeqCst);

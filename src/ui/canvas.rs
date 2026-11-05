@@ -13,6 +13,7 @@ use crate::runtime::events::Event;
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::deprecated::legacy;
 use crate::stdlib::{expect_args, new_map, num_arg, str_arg, type_error};
 
 /// `[r, g, b, a]`
@@ -138,7 +139,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
         "std:canvas",
         &[
             ("canvas.run", run),
-            ("canvas.quit", quit),
+            ("canvas.stop", quit),
+            ("canvas.quit", legacy!("canvas.quit", quit)),
             ("canvas.size", size),
             ("canvas.key_down", |_, a| {
                 key("canvas.key_down", a, |i| &i.down)
@@ -479,8 +481,8 @@ fn size(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 }
 
 fn quit(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("canvas.quit", args, 0)?;
-    with_state("canvas.quit", |s| {
+    expect_args("canvas.stop", args, 0)?;
+    with_state("canvas.stop", |s| {
         s.quit.store(true, Ordering::SeqCst);
         wake(&s.repaint);
         Value::Nil

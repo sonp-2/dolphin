@@ -1,17 +1,19 @@
-//! バイト列: str_to_bytes, bytes_from_arr, bytes_new, bytes_concat, bytes_len, bytes_slice,
+//! バイト列: bytes_from_str, bytes_from_arr, bytes_new, bytes_concat, bytes_len, bytes_slice,
 //! bytes_to_arr, bytes_find, bytes_to_str（design.md 5.14）
 //!
 //! バイト列は変更できない（`Value::Bytes`）。読み取りは `@b{i}`
 
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
+use crate::stdlib::deprecated::legacy;
 use crate::stdlib::{
     array_arg, bytes_arg, data_arg, error_value, expect_args, int_arg, new_array, str_arg,
     type_error,
 };
 
 pub fn register(interp: &mut Interpreter<'_>) {
-    interp.register("str_to_bytes", str_to_bytes);
+    interp.register("bytes_from_str", str_to_bytes);
+    interp.register("str_to_bytes", legacy!("str_to_bytes", str_to_bytes));
     interp.register("bytes_from_arr", bytes_from_arr);
     interp.register("bytes_new", bytes_new);
     interp.register("bytes_concat", bytes_concat);
@@ -29,8 +31,8 @@ const BYTES_MAX: i64 = 100_000_000;
 
 /// 文字列を UTF-8 のバイト列にする
 fn str_to_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("str_to_bytes", args, 1)?;
-    Ok(Value::bytes(str_arg("str_to_bytes", args, 0)?.as_bytes()))
+    expect_args("bytes_from_str", args, 1)?;
+    Ok(Value::bytes(str_arg("bytes_from_str", args, 0)?.as_bytes()))
 }
 
 /// 0〜255 の整数の配列から作る

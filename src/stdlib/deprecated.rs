@@ -115,4 +115,40 @@ mod tests {
         assert!(is_deprecated("os.exe"));
         assert!(!is_deprecated("os.exit"));
     }
+
+    /// 表の旧名も新名も、実際に登録されている（その feature を付けていないモジュールは飛ばす）
+    #[test]
+    fn every_entry_is_registered() {
+        use crate::runtime::interp::Interpreter;
+        let mut out = Vec::new();
+        let mut interp = Interpreter::new(&mut out, std::path::PathBuf::from("."));
+        crate::stdlib::register(&mut interp);
+        let modules = interp.std_modules();
+        let has_member = |module: &str, member: &str| {
+            modules
+                .iter()
+                .find(|(name, _)| *name == module)
+                .map(|(_, members)| members.contains(&member))
+        };
+        for &(old, to) in DEPRECATED {
+            match old.split_once('.') {
+                None => assert!(interp.native(old).is_some(), "{old}"),
+                Some((module, member)) => {
+                    let found = has_member(&format!("std:{module}"), member);
+                    assert_ne!(found, Some(false), "{old}");
+                }
+            }
+            match to.split_once(" の ") {
+                None => assert!(interp.native(to).is_some(), "{to}"),
+                Some((module, member)) => {
+                    let found = has_member(module, member);
+                    assert_ne!(found, Some(false), "{to}");
+                    // 旧名が新名と同じモジュールに残る場合（os.exe → os.exe_path）以外は、モジュールがある
+                    if !old.contains('.') {
+                        assert_eq!(found, Some(true), "{to}");
+                    }
+                }
+            }
+        }
+    }
 }
