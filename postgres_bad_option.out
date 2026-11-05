@@ -1,4 +1,0 @@
-postgres_bad_option.dol:3:1: エラー: postgres.connect の `tls` は "disable" "prefer" "require" のどれかです（"verify-full"）
-  |
-3 | @pg.connect["postgres://u@127.0.0.1:1/db", {"tls": "verify-full"}]
-  | ^

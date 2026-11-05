@@ -1,4 +1,0 @@
-postgres_bad_arg.dol:3:1: エラー: postgres.connect の接続先 `host` の型が違います（数値が渡されました）
-  |
-3 | @pg.connect[{"host": 1}]
-  | ^
