@@ -26,6 +26,14 @@ ureq = { version = "3.4", optional = true }
 # WebSocket の TLS（`wss://`）。ルート証明書は std:http と同じ webpki-roots
 rustls = { version = "0.23", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
 webpki-roots = { version = "1", optional = true }
+# YAML（`import["std:yaml"]`）。パーサーのイベントを読み、値は自前で組み立てる
+yaml-rust2 = { version = "0.13", optional = true }
+# TOML（`import["std:toml"]`）。キーの順を保つ
+toml = { version = "1", optional = true, default-features = false, features = ["parse", "display", "serde", "preserve_order"] }
+# 圧縮とアーカイブ（`import["std:zip"]`）。どれも純 Rust
+flate2 = { version = "1", optional = true }
+zip = { version = "9", optional = true, default-features = false, features = ["deflate-flate2"] }
+tar = { version = "0.4", optional = true, default-features = false }
 
 [features]
 default = ["repl", "http", "crypto", "regex", "tls", "image"]
@@ -49,3 +57,9 @@ audio = ["dep:rodio"]
 ffi = ["dep:libloading", "dep:libffi"]
 # SQLite（`import["std:sqlite"]`）。ソースを同梱するのでビルドが長くなる。既定では無効（`--features sqlite`）
 sqlite = ["dep:rusqlite"]
+# YAML（`import["std:yaml"]`）。純 Rust。既定では無効（`--features yaml`）
+yaml = ["dep:yaml-rust2"]
+# TOML（`import["std:toml"]`）。純 Rust。既定では無効（`--features toml`）
+toml = ["dep:toml"]
+# gzip・zlib・zip・tar（`import["std:zip"]`）。純 Rust。既定では無効（`--features zip`）
+zip = ["dep:flate2", "dep:zip", "dep:tar"]
