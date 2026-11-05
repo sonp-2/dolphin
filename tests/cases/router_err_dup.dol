@@ -1,0 +1,8 @@
+// パラメータの名前が違うだけの経路は重複（同じ方法のとき）
+@router := import["std:router"]
+@r := @router.new[]
+@router.get[@r, "/u/:id", [@req] ( # "a" )]
+@router.post[@r, "/u/:id", [@req] ( # "post は別の方法なので重複ではない" )]
+@router.any[@r, "/u/:id", [@req] ( # "any も別" )]
+log["ここまでは通る"]
+@router.get[@r, "/u/:name", [@req] ( # "b" )]

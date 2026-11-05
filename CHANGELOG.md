@@ -7,6 +7,15 @@
 
 ## [Unreleased]
 
+### 追加
+- `import["std:router"]`（[design.md 5.52](docs/design.md)）: `http.serve` のハンドラを組み立てるルーターとミドルウェア。Dolphin で書いた関数だけのモジュール（`src/stdlib/router.dol`）で、外部クレートも feature も要らない。`new` `get` `post` `put` `delete` `patch` `any` `route` `use` `group` `not_found` `handler`、応答の補助 `json` `text` `redirect`、`static`（静的ファイル。`..`・ドットファイル・`\`・`:` は 404）`cors` `cookies` `set_cookie`
+- 経路は `:param` と `*rest`（`req{"params"}`）で、リテラル > `:param` > `*rest` の順に選ぶ。同じ経路の重複は実行時エラー。方法違いは `405`（`Allow` つき）、`OPTIONS` は `204`、`HEAD` は `GET` にもなる。ミドルウェアは登録順に全リクエスト（`404` `405` も）を包み、`group` したルーターのミドルウェアはそのルーターの経路だけを包む
+- 制限: ハンドラは同期だけ（`future` を返すと実行時エラー）、1 つの応答に複数の `Set-Cookie` を付けられない（`http.serve` の応答の `headers` は文字列だけ）、`query` の同名の複数値は最後の 1 つ、静的配信はシンボリックリンクを解決しない
+- `examples/todo_api.dol` を `std:router` で書き直した（`/todos` に対する想定外の方法は、`404` ではなく `405` になる）
+
+### 変更
+- Dolphin で書いた関数を持つ組み込みモジュール（`std:router`、`std:async`）は、`import` したファイルと同じく出どころ（`std:router` など）を持ち、中で起きたエラーはそのソースの行を引用する。エラーの出どころは、いちばん内側の関数のファイルで決める（メインのファイルのハンドラが `std:router` の関数を通り抜けて起こしたエラーは、メインのファイルの行を引用する。`import` したファイルの関数が、メインのファイルのコールバックを呼ぶ場合も同じ）
+
 ## [0.55.0] - 2026-11-05
 
 標準ライブラリの追加（PostgreSQL・YAML・TOML・zip・ログ・ファイル操作など）と、VM の高速化。**言語の構文と既存の出力は変わらない**。

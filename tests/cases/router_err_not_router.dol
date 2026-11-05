@@ -1,0 +1,3 @@
+// 最初の引数はルーター（router.new[] の結果）
+@router := import["std:router"]
+@router.get[{:}, "/x", [@req] ( # "x" )]

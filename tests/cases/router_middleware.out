@@ -1,0 +1,21 @@
+{"body": "x"}
+in a in b handler out b out a
+{"status": 404, "body": "Not Found"}
+in a in b out b out a
+{"status": 405, "headers": {"Allow": "GET, HEAD, OPTIONS"}, "body": "Method Not Allowed"}
+in a in b out b out a
+{"status": 401, "json": {"error": "unauthorized"}}
+{"body": "hi alice a", "headers": {"X-Seen": "/me/a"}}
+{"body": "plain"}
+in top out top
+{"body": "pong"}
+in top in api ping out api out top
+{"body": "7"}
+in top in api out api out top
+{"body": "deep {:}"}
+in top in api in inner out inner out api out top
+{"body": "deep {\"uid\": \"bob\"}"}
+in top in inner out inner out top
+{"status": 404, "body": "top 404"}
+in top out top
+{"Allow": "GET, HEAD, OPTIONS"}

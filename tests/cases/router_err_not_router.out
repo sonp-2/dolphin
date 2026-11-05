@@ -1,0 +1,7 @@
+std:router:10:5: エラー: router.route: 最初の引数は router.new[] で作ったルーターです（mapが渡されました）
+   |
+10 |     assert[type_of[@r] == "map" && map_get[@r, "kind", ""] == "router", "@{@who}: 最初の引数は router.new[] で作ったルーターです（@{type_of[@r]}が渡されました）"]
+   |     ^
+  = _check_router の中（std:router:215:5 から呼び出し）
+  = route の中（std:router:228:33 から呼び出し）
+  = get の中（3:1 から呼び出し）

@@ -1,0 +1,7 @@
+std:router:30:5: エラー: router.route: パスは / で始めてください（"users"）
+   |
+30 |     assert[str_starts_with[@pattern, "/"], "@{@who}: パスは / で始めてください（\"@{@pattern}\"）"]
+   |     ^
+  = _parse_pattern の中（std:router:219:14 から呼び出し）
+  = route の中（std:router:228:33 から呼び出し）
+  = get の中（3:1 から呼び出し）

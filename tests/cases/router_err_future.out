@@ -1,0 +1,9 @@
+{"status": 404, "body": "Not Found"}
+std:router:185:5: エラー: router: ハンドラが future を返しました（async のハンドラは使えません。http.serve はハンドラを同期で呼びます）
+    |
+185 |     assert[@t != "future", "router: ハンドラが future を返しました（async のハンドラは使えません。http.serve はハンドラを同期で呼びます）"]
+    |     ^
+  = _norm の中（std:router:190:17 から呼び出し）
+  = 無名関数 の中（std:router:287:11 から呼び出し）
+  = _dispatch の中（std:router:320:18 から呼び出し）
+  = 無名関数 の中（12:5 から呼び出し）

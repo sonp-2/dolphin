@@ -1,0 +1,4 @@
+// * は最後の区間にだけ書ける
+@router := import["std:router"]
+@r := @router.new[]
+@router.get[@r, "/a/*/b", [@req] ( # "x" )]

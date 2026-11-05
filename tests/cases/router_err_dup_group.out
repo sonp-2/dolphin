@@ -1,0 +1,6 @@
+group までは通る
+std:router:312:9: エラー: router.handler: 経路が重複しています（GET /api/ping）
+    |
+312 |         assert[!map_has[@seen, @key], "router.handler: 経路が重複しています（@{@shown}）"]
+    |         ^
+  = handler の中（9:1 から呼び出し）

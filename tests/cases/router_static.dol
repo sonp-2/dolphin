@@ -1,0 +1,54 @@
+// std:router の静的ファイルの配信（design.md 5.52）。一時ディレクトリに置いたファイルを返す
+@router := import["std:router"]
+
+@root := file_temp_dir[{"prefix": "router_static_"}]
+@pub := @root + "/pub"
+file_mkdir[@pub + "/sub"]
+file_write[@pub + "/index.html", "<h1>home</h1>"]
+file_write[@pub + "/a.txt", "plain"]
+file_write[@pub + "/style.css", "body {}"]
+file_write[@pub + "/data.bin", "bin"]
+file_write[@pub + "/sub/index.html", "sub home"]
+file_write[@pub + "/.secret", "dot"]
+file_write[@root + "/outside.txt", "outside"]
+
+call[@h, @method, @path] (
+    @resp := @h[{"method": @method, "path": @path, "headers": {:}, "query": {:}}]
+    if map_has[@resp, "body"] && type_of[@resp{"body"}] == "bytes" (
+        @resp = map_merge[@resp, {"body": bytes_to_str[@resp{"body"}]}]
+    )
+    # @resp
+)
+
+@r := @router.new[]
+@router.get[@r, "/s/*", @router.static[@pub]]
+@h := @router.handler[@r]
+
+log[call[@h, "GET", "/s/a.txt"]]
+log[call[@h, "GET", "/s/style.css"]]
+log[call[@h, "GET", "/s/data.bin"]]
+log[call[@h, "GET", "/s"]]
+log[call[@h, "GET", "/s/sub"]]
+log[call[@h, "GET", "/s/sub/"]]
+log[call[@h, "HEAD", "/s/a.txt"]]
+log[call[@h, "GET", "/s/nope.txt"]]
+log[call[@h, "GET", "/s/sub/nope.txt"]]
+
+// 断るもの: .. とドットファイル、バックスラッシュ、コロン（デコード後に調べる）
+log[call[@h, "GET", "/s/../outside.txt"]]
+log[call[@h, "GET", "/s/sub/../../outside.txt"]]
+log[call[@h, "GET", "/s/..\\outside.txt"]]
+log[call[@h, "GET", "/s/.secret"]]
+log[call[@h, "GET", "/s/./a.txt"]]
+log[call[@h, "GET", "/s/C:/Windows/win.ini"]]
+log[call[@h, "GET", "/s/sub/..\\..\\outside.txt"]]
+log[call[@h, "GET", "/s/a.txt:stream"]]
+
+// GET と HEAD 以外の方法に付けても、静的配信は 405 を返す
+@up := @router.new[]
+@router.post[@up, "/up/*", @router.static[@pub]]
+@hu := @router.handler[@up]
+log[call[@hu, "GET", "/up/a.txt"]]
+log[call[@hu, "POST", "/up/a.txt"]]
+
+file_remove_all[@root]
