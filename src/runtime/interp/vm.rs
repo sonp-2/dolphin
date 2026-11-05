@@ -3,7 +3,8 @@
 //! 関数の呼び出し 1 回分の枠（`VmFrame`）と値のスタックをヒープに持つ。Dolphin の関数を呼ぶとき
 //! Rust の再帰を使わない。組み込み関数が関数値を呼ぶ（`call_value`）ときだけ、入れ子で `run_vm` が動く。
 //!
-//! 変数の置き場所は評価器のときと同じ（名前で引く `Env` の連なり）。`Interpreter` の
+//! 変数の置き場所は、トップレベルとファイルの本体、無名関数を含む関数では名前で引く `Env` の連なり。
+//! 無名関数や分割代入を含まない関数のローカル変数は、値のスタックの枠（`base` からの位置）に置く。`Interpreter` の
 //! `current`（いまのモジュール）と `env`（いまのスコープ）は、いま動いている枠のものを指し続ける。
 //! 枠を作るときに呼び出し元の分を枠に預け、枠を抜けるときに戻す
 
@@ -118,7 +119,9 @@ impl Interpreter<'_> {
         args: Vec<Value>,
         span: Span,
     ) -> RResult<()> {
-        let (frame, env) = self.make_function_frame(module, def, parent, args, span, self.depth)?;
+        let (frame, env, locals) =
+            self.make_function_frame(module, def, parent, args, span, self.depth)?;
+        self.stack.extend(locals);
         self.current = Rc::clone(module);
         self.env = env;
         self.depth += 1;
@@ -126,7 +129,9 @@ impl Interpreter<'_> {
         Ok(())
     }
 
-    /// 関数の枠と、その引数のスコープを作る（積まない）。`depth` はいまの呼び出しの深さ
+    /// 関数の枠と、その引数のスコープを作る（積まない）。`depth` はいまの呼び出しの深さ。
+    /// ローカル変数をスロットに置く関数なら、スコープは作らず（外側のスコープをそのまま使う）、
+    /// スロットの初期値（引数、残りの引数、空き）を返す。呼び出し側が値のスタックに積む
     fn make_function_frame(
         &mut self,
         module: &Rc<Module>,
@@ -135,7 +140,7 @@ impl Interpreter<'_> {
         args: Vec<Value>,
         span: Span,
         depth: usize,
-    ) -> RResult<(VmFrame, Rc<Env>)> {
+    ) -> RResult<(VmFrame, Rc<Env>, Vec<Value>)> {
         if args.len() < def.min_args() || def.max_args().is_some_and(|max| args.len() > max) {
             return Err(RuntimeError::new(
                 span,
@@ -158,18 +163,28 @@ impl Interpreter<'_> {
         }
 
         gc::maybe_collect();
-        // 関数のスコープは、そのファイルのトップレベルのスコープの内側に作る
-        let env = Env::new(Some(Rc::clone(parent)));
+        let chunk = self.chunk_for(def);
         let given = args.len().min(def.params.len());
         let mut args = args;
         let extra = args.split_off(given);
-        for (param, value) in def.params.iter().zip(args) {
-            env.declare(&param.name, value);
-        }
-        if let Some(rest) = &def.rest {
-            env.declare(rest, gc::new_array(extra));
-        }
-        let chunk = self.chunk_for(def);
+        let (env, locals) = if let Some(count) = chunk.locals {
+            args.resize(def.params.len(), Value::Nil);
+            if def.rest.is_some() {
+                args.push(gc::new_array(extra));
+            }
+            args.resize(count as usize, Value::Nil);
+            (Rc::clone(parent), args)
+        } else {
+            // 関数のスコープは、そのファイルのトップレベルのスコープの内側に作る
+            let env = Env::new(Some(Rc::clone(parent)));
+            for (param, value) in def.params.iter().zip(args) {
+                env.declare(&param.name, value);
+            }
+            if let Some(rest) = &def.rest {
+                env.declare(rest, gc::new_array(extra));
+            }
+            (env, Vec::new())
+        };
         let frame = VmFrame {
             chunk,
             ip: 0,
@@ -184,7 +199,7 @@ impl Interpreter<'_> {
             caller_module: Rc::clone(&self.current),
             caller_env: Rc::clone(&self.env),
         };
-        Ok((frame, env))
+        Ok((frame, env, locals))
     }
 
     /// 関数を呼ぶ命令。`async` 関数なら新しい流れを始めて future を積み、普通の関数なら枠を積むだけ
@@ -251,15 +266,15 @@ impl Interpreter<'_> {
     /// `run_vm` と同じ。`async` 関数の流れの入口なら、`await` で止まって `Exit::Suspend` を返すことがある
     fn run_vm_exit(&mut self, target: usize) -> RResult<Exit> {
         loop {
-            let (chunk, mut ip) = {
+            let (chunk, mut ip, base) = {
                 let frame = self.vm_frames.last().expect("実行する枠がある");
-                (Rc::clone(&frame.chunk), frame.ip)
+                (Rc::clone(&frame.chunk), frame.ip, frame.base)
             };
             loop {
                 let op = &chunk.code[ip];
                 let span = chunk.spans[ip];
                 ip += 1;
-                match self.step(op, span, &chunk, &mut ip, target) {
+                match self.step(op, span, &chunk, &mut ip, base, target) {
                     Ok(Step::Next) => {}
                     Ok(Step::Reload) => break,
                     Ok(Step::Done(value)) => return Ok(Exit::Return(value)),
@@ -284,14 +299,15 @@ impl Interpreter<'_> {
     ) -> RResult<Value> {
         // その場で始まる流れの入れ子は、いまの深さに積む（Rust の再帰が無限に深くならないように）
         let base = self.depth;
-        let (mut frame, env) = self.make_function_frame(module, def, parent, args, span, base)?;
+        let (mut frame, env, locals) =
+            self.make_function_frame(module, def, parent, args, span, base)?;
         frame.base = 0;
         let future = Handle::new_future();
         let id = self.next_coroutine;
         self.next_coroutine += 1;
         let co = Coroutine {
             frames: vec![frame],
-            stack: Vec::new(),
+            stack: locals,
             depth: base + 1,
             current: Rc::clone(module),
             env,
@@ -471,10 +487,19 @@ impl Interpreter<'_> {
         span: Span,
         chunk: &Rc<Chunk>,
         ip: &mut usize,
+        base: usize,
         target: usize,
     ) -> RResult<Step> {
         match op {
             Op::Const(i) => self.stack.push(chunk.consts[*i as usize].clone()),
+            Op::LoadLocal(slot) => {
+                let value = self.stack[base + *slot as usize].clone();
+                self.stack.push(value);
+            }
+            Op::StoreLocal(slot) => {
+                let value = self.pop();
+                self.stack[base + *slot as usize] = value;
+            }
             Op::LoadVar(n) => {
                 let name = &chunk.names[*n as usize];
                 match self.env.get(name) {
@@ -798,6 +823,24 @@ impl Interpreter<'_> {
                     ));
                 }
             },
+            Op::ForNextLocal { end, slot } => {
+                let len = self.stack.len();
+                let (Value::Num(position), Value::Array(items)) =
+                    (&self.stack[len - 1], &self.stack[len - 2])
+                else {
+                    unreachable!("ForPrep が積んだ値");
+                };
+                let i = *position as usize;
+                let item = items.borrow().get(i).cloned();
+                match item {
+                    None => *ip = *end as usize,
+                    Some(item) => {
+                        self.stack[len - 1] = Value::Num((i + 1) as f64);
+                        gc::maybe_collect();
+                        self.stack[base + *slot as usize] = item;
+                    }
+                }
+            }
             Op::ForNext { end, var } => {
                 let len = self.stack.len();
                 let (Value::Num(position), Value::Array(items)) =
