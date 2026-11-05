@@ -3,8 +3,8 @@
 use std::rc::Rc;
 
 use super::{array_arg, expect_args, func_arg, map_arg, new_array, new_map, str_arg};
-use crate::runtime::map::Map;
 use crate::runtime::interp::Interpreter;
+use crate::runtime::map::Map;
 use crate::runtime::value::Value;
 
 pub fn register(interp: &mut Interpreter<'_>) {
@@ -32,20 +32,23 @@ fn map_from_items(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
     for (i, pair) in pairs.iter().enumerate() {
         let Value::Array(pair) = pair else {
             return Err(format!(
-                "map_from_items の {i} 番目の要素は {{キー, 値}} の配列である必要があります（{}でした）",
+                "map_from_items の {} 番目の要素は {{キー, 値}} の配列である必要があります（{}でした）",
+                i + 1,
                 pair.type_name()
             ));
         };
         let pair = pair.borrow();
         if pair.len() != 2 {
             return Err(format!(
-                "map_from_items の {i} 番目の要素は {{キー, 値}} の配列である必要があります（要素は {} 個でした）",
+                "map_from_items の {} 番目の要素は {{キー, 値}} の配列である必要があります（要素は {} 個でした）",
+                i + 1,
                 pair.len()
             ));
         }
         let Value::Str(key) = &pair[0] else {
             return Err(format!(
-                "map_from_items の {i} 番目のキーは文字列である必要があります（{}でした）",
+                "map_from_items の {} 番目のキーは文字列である必要があります（{}でした）",
+                i + 1,
                 pair[0].type_name()
             ));
         };
@@ -88,7 +91,7 @@ fn map_filter(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Str
                 return Err(format!(
                     "map_filter の関数は真偽値を返す必要があります（{}でした）",
                     other.type_name()
-                ))
+                ));
             }
         }
     }

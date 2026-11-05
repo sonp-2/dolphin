@@ -188,11 +188,7 @@ fn format_one(value: &Value, spec: &Spec) -> Result<String, String> {
     };
     // (符号, 本体, 数値か)
     let (sign, body, numeric): (&str, String, bool) = match spec.ty {
-        Some('s') => (
-            "",
-            truncate(value.to_string(), spec.prec),
-            false,
-        ),
+        Some('s') => ("", truncate(value.to_string(), spec.prec), false),
         Some(t @ ('d' | 'x' | 'X' | 'b' | 'o')) => {
             let Some((neg, abs)) = integer_of(value) else {
                 return Err(mismatch(t, "整数"));
@@ -219,7 +215,15 @@ fn format_one(value: &Value, spec: &Spec) -> Result<String, String> {
                 _ => return Err(mismatch('f', "数値")),
             };
             let text = format!("{:.*}", spec.prec.unwrap_or(6), n.abs());
-            (if n.is_sign_negative() && !n.is_nan() { "-" } else { "" }, text, true)
+            (
+                if n.is_sign_negative() && !n.is_nan() {
+                    "-"
+                } else {
+                    ""
+                },
+                text,
+                true,
+            )
         }
         _ => match value {
             Value::Num(_) | Value::Int(_) => {
@@ -316,7 +320,10 @@ mod tests {
         assert_eq!(f("{:,.1f}", vec![n(-1234.56)]).unwrap(), "-1,234.6");
         assert_eq!(f("{:05d}", vec![n(42.0)]).unwrap(), "00042");
         assert_eq!(f("{:05d}", vec![n(-42.0)]).unwrap(), "-0042");
-        assert_eq!(f("{:x} {:X} {:b} {:o}", vec![n(255.0); 4]).unwrap(), "ff FF 11111111 377");
+        assert_eq!(
+            f("{:x} {:X} {:b} {:o}", vec![n(255.0); 4]).unwrap(),
+            "ff FF 11111111 377"
+        );
         assert_eq!(f("{:d}", vec![Value::Int(-5)]).unwrap(), "-5");
         assert_eq!(f("{:.3}", vec![s("abcdef")]).unwrap(), "abc");
     }

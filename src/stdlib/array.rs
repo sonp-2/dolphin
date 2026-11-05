@@ -35,7 +35,9 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("arr_copy", arr_copy);
     interp.register("arr_sum", arr_sum);
     interp.register("arr_min", |i, a| min_max("arr_min", i, a, Ordering::Less));
-    interp.register("arr_max", |i, a| min_max("arr_max", i, a, Ordering::Greater));
+    interp.register("arr_max", |i, a| {
+        min_max("arr_max", i, a, Ordering::Greater)
+    });
     interp.register("arr_enumerate", arr_enumerate);
     interp.register("arr_sort_key", arr_sort_key);
     interp.register("arr_take", |_, a| take_drop("arr_take", a, true));
@@ -547,7 +549,7 @@ fn arr_flat_map(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, S
                 return Err(format!(
                     "arr_flat_map の関数は配列を返す必要があります（{}でした）",
                     other.type_name()
-                ))
+                ));
             }
         }
     }
@@ -570,6 +572,26 @@ mod tests {
                 _ => panic!("数値ではない"),
             })
             .collect()
+    }
+
+    #[test]
+    fn check_keys_accepts_uniform_types_only() {
+        assert!(check_keys("t", &[]).is_ok());
+        assert!(check_keys("t", &nums(&[1.0, 2.0])).is_ok());
+        assert!(check_keys("t", &[Value::Int(1), Value::Int(2)]).is_ok());
+        assert!(check_keys("t", &[Value::Num(1.0), Value::Int(2)]).is_err());
+        assert!(check_keys("t", &[Value::Bool(true)]).is_err());
+        assert!(check_keys("t", &[Value::Nil, Value::Nil]).is_err());
+    }
+
+    #[test]
+    fn cmp_keys_orders_each_type() {
+        assert_eq!(cmp_keys(&Value::Num(1.0), &Value::Num(2.0)), Ordering::Less);
+        assert_eq!(cmp_keys(&Value::Int(3), &Value::Int(2)), Ordering::Greater);
+        assert_eq!(
+            cmp_keys(&Value::Str("b".into()), &Value::Str("a".into())),
+            Ordering::Greater
+        );
     }
 
     #[test]
