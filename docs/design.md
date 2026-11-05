@@ -2504,6 +2504,104 @@ log[record_name[@p]]    // Point
 record_def = "record" IDENT "[" VAR { "," VAR } "]" ;
 ```
 
+### 5.58 標準ライブラリの名前の整理（確定 2026-11-06）
+
+1.0 で名前を凍結する前に、0.x のうちに揺れを直す。直すのは**名前だけ**で、引数・戻り値・挙動は変えない。旧名は 1 版だけ警告つきで残し、次の版で削除する。
+
+#### 命名の規則
+
+| 項目 | 内容 | 状態 |
+|---|---|---|
+| グローバルに置くもの | 言語の基本関数だけ。日常で頻出し、既存プログラムへの影響が大きいもの: `log` `len` 系（`arr_len` `str_len` `map_len`）、型の関数（`type_of` `to_str` `to_num` `is_error` など）、数値の基本（`abs` `min` `max` `floor` `ceil` `round` `trunc` `sign` `clamp` `sqrt` `pow` `num_fixed` `num_group`）、型名の接頭辞つきの関数（`str_*` `arr_*` `map_*` `bytes_*` `err_*`） | 確定 |
+| `std:*` に置くもの | ドメイン別のもの（ファイル、乱数、通信、時刻、データ形式など）。呼び名は `@fs.read[...]` のように、モジュール名 `.` 動詞 | 確定 |
+| 同じ分野の二重 | グローバルと `std:*` の両方にあるときは、`std:*` に寄せる。`std:math` と重複するグローバルは**ない**（`std:math` は定数・三角関数・対数・統計だけで、`abs` `floor` `sqrt` `pow` などは入っていない）ので、数学は変えない | 確定 |
+| 接頭辞の規則 | グローバルの関数は `型名_動詞`（`str_split` `arr_push`）。型名は短縮形で統一する（`str` `arr` `map` `bytes` `err`）。`err_*` は `error` の短縮形で、`str_*` `arr_*` と同じ流儀なので直さない（`is_error` は `is_` 述語の形） | 確定 |
+
+#### 改名の対応表（旧名 → 新名）
+
+ファイル操作は `std:fs` に移す。引数・戻り値は旧名と同じ。
+
+| 旧名（グローバル） | 新名 | 状態 |
+|---|---|---|
+| `file_read` | `fs.read` | 確定 |
+| `file_write` | `fs.write` | 確定 |
+| `file_append` | `fs.append` | 確定 |
+| `file_exists` | `fs.exists` | 確定 |
+| `file_read_bytes` | `fs.read_bytes` | 確定 |
+| `file_write_bytes` | `fs.write_bytes` | 確定 |
+| `file_append_bytes` | `fs.append_bytes` | 確定 |
+| `file_list` | `fs.list` | 確定 |
+| `file_info` | `fs.info` | 確定 |
+| `file_mkdir` | `fs.mkdir` | 確定 |
+| `file_remove` | `fs.remove` | 確定 |
+| `file_remove_all` | `fs.remove_all` | 確定 |
+| `file_rename` | `fs.rename` | 確定 |
+| `file_copy` | `fs.copy` | 確定 |
+| `file_walk` | `fs.walk` | 確定 |
+| `file_glob` | `fs.glob` | 確定 |
+| `file_temp` | `fs.temp` | 確定 |
+| `file_temp_dir` | `fs.temp_dir` | 確定 |
+| `file_chmod` | `fs.chmod` | 確定 |
+
+乱数は `std:random` に寄せる。`std:random` の乱数列とシードは今までと同じものを使う（`random.seed` は新旧どちらの呼び出しにも効く）。
+
+| 旧名（グローバル） | 新名 | 状態 |
+|---|---|---|
+| `random[]` | `random.float[]`（0 以上 1 未満） | 確定 |
+| `random_int[min, max]` | `random.int[min, max]`（`min` 以上 `max` 以下） | 確定 |
+
+そのほか、直すと決めたもの。
+
+| 旧名 | 新名 | 理由 | 状態 |
+|---|---|---|---|
+| `str_to_bytes` | `bytes_from_str` | `bytes_*` の中で 1 つだけ `str_` で始まっていた。`bytes_from_arr` `bytes_to_str` と並ぶ | 確定 |
+| `os.exe` | `os.exe_path` | 他の関数は動詞か名詞で何を返すかが分かるが、`exe` は実行ファイルの**パス**を返すことが分からない | 確定 |
+| `ui.quit` | `ui.stop` | 動詞の規則（下）。イベントループを止める | 確定 |
+| `canvas.quit` | `canvas.stop` | 同上 | 確定 |
+| `worker.terminate` | `worker.kill` | 動詞の規則（下）。ワーカーを強制終了する | 確定 |
+
+#### 動詞の規則
+
+| 動詞 | 意味 | 使っているもの | 状態 |
+|---|---|---|---|
+| `close` | 開いている**資源**（接続・ストリーム・ハンドル）を閉じる | `net.close` `stream.close` `sqlite.close` `ws.close` `postgres.close`（すでに統一されているので変更なし） | 確定 |
+| `stop` | **イベントループ・サービス・再生・タイマー**を止める。止めたあとにプログラムの残りは続く | `async.stop` `audio.stop` `audio.stop_all`（変更なし）、`ui.stop` `canvas.stop`（`quit` から改名） | 確定 |
+| `exit` | **このプロセス**を終える（終了コードを持つ） | `os.exit`（変更なし） | 確定 |
+| `kill` | **ほかのプロセスやワーカー**を強制終了する | `os.kill`（変更なし）、`worker.kill`（`terminate` から改名） | 確定 |
+| `remove` | 1 つ取り除く（ファイル・要素・キー） | `fs.remove` `arr_remove` `map_remove`。接頭辞が違うだけで動詞は揃っているので、動詞は変えない（`file_remove` は上の表で `fs.remove` になる） | 確定 |
+
+#### 直さなかった揺れ
+
+| 揺れ | 直さない理由 | 状態 |
+|---|---|---|
+| 失敗の返し方（`to_num` はエラー値、`map_get` と `arr_find` は `nil`、`str_find` は `-1`） | 戻り値の意味が変わり、既存のプログラムが黙って壊れるため。名前の整理ではなく別の判断（1.0 までに決める）。ここでは**文書化だけ**する: 「ない」ことが普通の検索（`map_get` `arr_find` `str_find`）は番兵（`nil` か `-1`）、「失敗」であるもの（`to_num` と、ファイル・通信・データ形式の関数）はエラー値 | 据え置き |
+| `err_kind` `err_message` `err_new` `err_data` | 上の「接頭辞の規則」のとおり、型名の短縮形（`str` `arr` と同じ）。`error_*` にしても別の名前が増えるだけで得るものがない | 据え置き |
+| `abs` `min` `max` `floor` `ceil` `round` `sqrt` `pow` `to_str` `to_num` `type_of` `log` `len` 系 | 日常で頻出し、グローバルに残す（規則 1 行目）。`std:math` と重複していない | 据え置き |
+| `trunc` `sign` `clamp` `num_fixed` `num_group` | 数値の基本の関数で、`std:math` には同名がない。動かす理由がない | 据え置き |
+| `arr_remove` `map_remove` | 動詞の規則のとおり | 据え置き |
+| `os.exit` と `os.kill` | 動詞の規則のとおり、意味が違う | 据え置き |
+
+#### 旧名の扱い
+
+| 項目 | 内容 | 状態 |
+|---|---|---|
+| 旧名の残し方 | 改名した旧名は**この版では動き続ける**（同じ引数・同じ戻り値）。次の版で削除する。1.0 で名前を凍結する | 確定 |
+| 警告 | 旧名を**初めて呼んだとき**、標準エラーに 1 行出す: `警告: file_read は非推奨です。std:fs の read を使ってください`。グローバルから別のグローバルへの改名は `警告: str_to_bytes は非推奨です。bytes_from_str を使ってください`。同じ旧名の 2 回目以降は出さない（プログラムの実行ごとに旧名ごとに 1 回） | 確定 |
+| 警告のしくみ | 警告の出力・重複の管理・旧名の一覧（対応表）は `stdlib/deprecated.rs` の 1 か所にまとめる。旧名は元の関数を呼ぶ薄い入り口で、呼ばれたときに警告を出してから元の関数に渡す | 確定 |
+| 関数値として使う | `@f := file_read` のように関数値にしただけでは警告せず、**呼んだとき**に警告する | 確定 |
+| 標準出力 | 警告は標準エラーだけに出す。標準出力・終了コード・戻り値は変わらない | 確定 |
+| 補完 | LSP の補完には旧名を出さない（`dolphin lsp` は組み込み関数を実行時の登録表から取るが、非推奨の一覧にあるものは除く）。ただし旧名のまま書いたコードの動作・定義の検査は変わらない | 確定 |
+| `dolphin check` | 実行前の警告は**出さない**。Resolver はエラーだけを返す設計で、警告の経路がなく、モジュールの関数（`@ui.quit[]`）は静的に解決していないため。実行時の警告だけにする | 据え置き |
+| テスト | 旧名を使い続けるのは、警告を確かめる専用のテスト（`tests/cli.rs`）だけ。それ以外の `tests/cases/` `examples/` `bench/` README、docs のコード例は新名に書き換える | 確定 |
+
+#### 選択肢と採った理由
+
+- **旧名をすぐ削除する**: 採らない。0.x でも既存のプログラム（`examples/`）が動かなくなる。1 版の猶予を置く。
+- **警告を毎回出す**: 採らない。ループの中で呼ばれると標準エラーが埋まる。旧名ごとに 1 回で気づける。
+- **`std:math` に `abs` `floor` などを寄せる**: 採らない。頻出で、`@math.abs[x]` と書かせると既存のコードがすべて壊れる。`std:math` は定数・三角関数・対数・統計の置き場として残す。
+- **`err_*` を `error_*` に**: 採らない（上の表）。
+- **`random[]` を `random.random[]` に**: 採らない。モジュール名と同じ名前が続いて読みにくいので、`float` `int` と型で名付ける。
+
 ---
 
 ## 6. 旧実装からの主な変更（確定）
