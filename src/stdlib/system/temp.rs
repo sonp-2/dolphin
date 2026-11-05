@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
-use crate::stdlib::fs::{classify, io_error};
+use crate::stdlib::fs::io_error;
 use crate::stdlib::path::to_slash;
 use crate::stdlib::{error_value, expect_args, num_arg, str_arg, type_error};
 
@@ -181,6 +181,7 @@ fn file_chmod(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
 
 #[cfg(unix)]
 fn chmod(path: &str, mode: u32) -> Result<Value, String> {
+    use crate::stdlib::fs::classify;
     use std::os::unix::fs::PermissionsExt;
     Ok(
         match fs::set_permissions(path, fs::Permissions::from_mode(mode)) {
