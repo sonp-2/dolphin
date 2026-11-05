@@ -1,0 +1,5 @@
+// ループの中の無名関数から continue はできない
+for @e in {1, 2} (
+    @f := [] ( continue )
+    @f[]
+)

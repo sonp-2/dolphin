@@ -1,0 +1,4 @@
+core_err_undefined_in_func.dol:4:7: エラー: 未定義の変数 `@nowhere`
+  |
+4 |     # @nowhere
+  |       ^

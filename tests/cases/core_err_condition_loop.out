@@ -1,0 +1,4 @@
+core_err_condition_loop.dol:3:7: エラー: 条件は真偽値である必要があります（数値でした）
+  |
+3 | while @n (
+  |       ^

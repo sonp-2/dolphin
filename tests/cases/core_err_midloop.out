@@ -1,0 +1,6 @@
+acc 2
+acc 6
+core_err_midloop.dol:5:21: エラー: 0 で割ることはできません
+  |
+5 |     @acc = @acc + 8 / @x
+  |                     ^
