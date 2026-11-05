@@ -142,6 +142,11 @@ pub enum HandleKind {
     Sqlite(SqliteConn),
     #[cfg(feature = "sqlite")]
     SqliteClosed,
+    /// PostgreSQL の接続（`std:postgres`。design.md 5.47）
+    #[cfg(feature = "postgres")]
+    Postgres(Box<PgConn>),
+    #[cfg(feature = "postgres")]
+    PostgresClosed,
     Closed,
 }
 
@@ -217,6 +222,17 @@ pub struct SqliteConn {
     pub ints: bool,
 }
 
+#[cfg(feature = "postgres")]
+pub struct PgConn {
+    pub client: ::postgres::Client,
+    /// 表示用（パスワードは含めない）。`localhost:5432/appdb`
+    pub label: String,
+    /// 整数の列を int で返すか（design.md 5.47）
+    pub ints: bool,
+    /// 準備済みの文（SQL の文字列ごと）
+    pub statements: std::collections::HashMap<String, ::postgres::Statement>,
+}
+
 pub struct Handle {
     pub inner: RefCell<HandleKind>,
 }
@@ -242,6 +258,8 @@ impl Handle {
         *inner = match &*inner {
             #[cfg(feature = "sqlite")]
             HandleKind::Sqlite(_) | HandleKind::SqliteClosed => HandleKind::SqliteClosed,
+            #[cfg(feature = "postgres")]
+            HandleKind::Postgres(_) | HandleKind::PostgresClosed => HandleKind::PostgresClosed,
             HandleKind::Stream(_) | HandleKind::StreamClosed => HandleKind::StreamClosed,
             HandleKind::Worker(_) | HandleKind::WorkerClosed => HandleKind::WorkerClosed,
             _ => HandleKind::Closed,
@@ -281,6 +299,10 @@ impl fmt::Display for Handle {
             HandleKind::Sqlite(db) => write!(f, "<sqlite 接続 {}>", db.path),
             #[cfg(feature = "sqlite")]
             HandleKind::SqliteClosed => write!(f, "<sqlite 閉じています>"),
+            #[cfg(feature = "postgres")]
+            HandleKind::Postgres(db) => write!(f, "<postgres 接続 {}>", db.label),
+            #[cfg(feature = "postgres")]
+            HandleKind::PostgresClosed => write!(f, "<postgres 閉じています>"),
             HandleKind::Closed => write!(f, "<tcp 閉じています>"),
         }
     }

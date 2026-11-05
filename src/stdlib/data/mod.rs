@@ -6,6 +6,8 @@ pub mod crypto;
 pub mod csv;
 pub mod encoding;
 pub mod json;
+#[cfg(feature = "postgres")]
+pub mod postgres;
 #[cfg(feature = "regex")]
 pub mod regex;
 #[cfg(feature = "sqlite")]
