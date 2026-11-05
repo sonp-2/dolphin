@@ -24,6 +24,10 @@ pub enum Op {
     PopCheckError,
     PushScope,
     PopScope,
+    /// 関数のローカル変数（スロット）を読んで積む。スロットは枠の `base` からの位置
+    LoadLocal(u32),
+    /// スタックの値を、ローカル変数（スロット）に入れる（宣言も代入も）
+    StoreLocal(u32),
 
     // ---- ジャンプ ----
     Jump(u32),
@@ -131,6 +135,11 @@ pub enum Op {
         end: u32,
         var: u32,
     },
+    /// `ForNext` のスロット版。次の要素をローカル変数に入れる（スコープは作らない）
+    ForNextLocal {
+        end: u32,
+        slot: u32,
+    },
 }
 
 /// コンパイルした 1 つのまとまり（関数 1 つ、またはファイルの本体）
@@ -148,4 +157,7 @@ pub struct Chunk {
     /// `MakeClosure` が作る無名関数の定義
     pub defs: Vec<Rc<FuncDef>>,
     pub patterns: Vec<Pattern>,
+    /// ローカル変数をスロットに置く関数なら、そのスロットの数（引数を含む）。
+    /// `None` なら、従来どおり名前で引く `Env` に置く
+    pub locals: Option<u32>,
 }

@@ -1,0 +1,94 @@
+// 関数のローカル変数（スロット）の境界
+@g := 1
+@h := 5
+
+// 宣言より前の読みは外側の変数、宣言のあとは自分の変数
+before_after[] (
+    @r := {@g}
+    @g := 100
+    arr_push[@r, @g]
+    # @r
+)
+log[before_after[], @g]
+
+// 外側の変数への代入は残る。ローカルの代入は残らない
+bump[] (
+    @g = @g + 1
+    @h := 0
+    @h = @h + 1
+    # @h
+)
+log[bump[], bump[], @g, @h]
+
+// ブロックの変数は外に出ない。同じ名前の外側のローカルは隠れるだけ
+shadow[@x] (
+    if true (
+        @x := @x + 1
+        @y := @x * 10
+        log[@x, @y]
+    )
+    log[@x]
+    @y := "外"
+    # @y
+)
+log[shadow[1]]
+
+// ループ: 変数は繰り返しごとに新しい。break と continue と入れ子
+loops[@n] (
+    @total := 0
+    for @i in range[0, @n] (
+        if @i == 2 ( continue )
+        @sq := @i * @i
+        for @j in {1, 2, 3} (
+            if @j == 3 ( break )
+            @total = @total + @sq * @j
+        )
+        if @i == 6 ( break )
+    )
+    @k := 0
+    while @k < 5 (
+        @k = @k + 1
+        @w := @k * 2
+        if @w == 4 ( continue )
+        @total = @total + @w
+    )
+    # @total
+)
+log[loops[10]]
+
+// 既定値が後ろの引数を読む（渡されていればその値、なければ外側）
+@b := "外の b"
+later[@a = @b, @b = 7] ( # {@a, @b} )
+log[later[], later[1], later[1, 2]]
+
+// 分割代入と、残りの引数
+destr[@pair, ...@rest] (
+    {@x, @y} := @pair
+    {@p, @q} := {@x + @y, arr_len[@rest]}
+    # {@p, @q}
+)
+log[destr[{1, 2}], destr[{3, 4}, 5, 6]]
+
+// 再帰と配列
+build[@n] (
+    if @n == 0 ( # {} )
+    @a := build[@n - 1]
+    arr_push[@a, @n]
+    # @a
+)
+log[build[5]]
+
+// 関数値を引数に取る関数が、ローカルを持つ関数を呼ぶ
+twice[@f, @x] ( # @f[@f[@x]] )
+inc[@v] (
+    @t := @v + 1
+    # @t
+)
+log[twice[inc, 1], arr_map[{1, 2, 3}, inc]]
+
+// 実行時エラーはローカルがあっても位置が同じ
+oops[@a] (
+    @b := @a + 1
+    # @b + "x"
+)
+log[oops[1]]
