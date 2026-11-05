@@ -45,6 +45,8 @@ pub enum StmtKind {
     Break,
     /// `while` の次の繰り返しへ進む
     Continue,
+    /// `defer expr`。いまの関数を抜けるとき、登録の逆順に `expr` を評価する（design.md 5.53）
+    Defer(Expr),
     /// `@x := expr`。いま入っているスコープに新しい変数を作る
     Declare {
         target: Var,
@@ -318,6 +320,7 @@ impl fmt::Display for Stmt {
             StmtKind::Return(None) => write!(f, "(#)"),
             StmtKind::Break => write!(f, "(break)"),
             StmtKind::Continue => write!(f, "(continue)"),
+            StmtKind::Defer(expr) => write!(f, "(defer {expr})"),
             StmtKind::Declare { target, value } => write!(f, "(:= {target} {value})"),
             StmtKind::Destructure {
                 pattern,

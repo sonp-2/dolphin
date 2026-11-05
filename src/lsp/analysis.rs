@@ -374,7 +374,7 @@ impl<'a> Walker<'a> {
                 self.expr(value);
                 self.pattern(pattern, stmt.span, *declare);
             }
-            StmtKind::Expr(expr) => self.expr(expr),
+            StmtKind::Expr(expr) | StmtKind::Defer(expr) => self.expr(expr),
         }
     }
 

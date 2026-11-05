@@ -319,6 +319,15 @@ impl<'a> Resolver<'a> {
                 Ok(())
             }
             StmtKind::Expr(expr) => self.expr(expr, ctx),
+            StmtKind::Defer(expr) => {
+                // 抜けるときに呼ばれる無名関数の中と同じ規則で調べる（`await` は書けない）
+                let inner = Ctx {
+                    scopes: ctx.scopes.clone(),
+                    in_func: true,
+                    in_async: false,
+                };
+                self.expr(expr, &inner)
+            }
         }
     }
 
@@ -449,6 +458,37 @@ add[@a, @b] (
     # @sum
 )";
         assert_eq!(check(src), Ok(()));
+    }
+
+    #[test]
+    fn defer_is_checked_like_a_closure() {
+        assert_eq!(
+            check(
+                "f[] (
+    @a := 1
+    defer log[@a]
+)"
+            ),
+            Ok(())
+        );
+        assert_eq!(
+            check(
+                "f[] (
+    defer log[@zzz]
+)"
+            ),
+            Err("未定義の変数 `@zzz`".into())
+        );
+        assert!(
+            check(
+                "async f[] (
+    defer log[await g[]]
+)
+async g[] ( # 1 )"
+            )
+            .unwrap_err()
+            .contains("await")
+        );
     }
 
     #[test]

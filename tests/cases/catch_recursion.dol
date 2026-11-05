@@ -1,0 +1,6 @@
+// 深すぎる再帰も捕まえられる
+down[@n] ( # down[@n + 1] )
+@e := catch[[] ( # down[0] )]
+log[err_kind[@e]]
+log[str_contains[err_message[@e], "深すぎ"]]
+log[catch[[] ( # 7 )]]

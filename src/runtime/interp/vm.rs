@@ -46,6 +46,8 @@ pub(super) struct VmFrame {
     given: usize,
     /// `PushScope` で入る前のスコープ（`PopScope` で戻る）
     scopes: Vec<Rc<Env>>,
+    /// `defer` で登録した後始末（関数値と登録位置）。抜けるとき、逆順に呼ぶ（design.md 5.53）
+    defers: Vec<(Value, Span)>,
     /// 呼び出し元のモジュールとスコープ。枠を抜けるときに戻す
     caller_module: Rc<Module>,
     caller_env: Rc<Env>,
@@ -104,6 +106,7 @@ impl Interpreter<'_> {
             module: Rc::clone(&self.current),
             given: 0,
             scopes: Vec::new(),
+            defers: Vec::new(),
             caller_module: Rc::clone(&self.current),
             caller_env: Rc::clone(&self.env),
         });
@@ -189,6 +192,7 @@ impl Interpreter<'_> {
             module: Rc::clone(module),
             given,
             scopes: Vec::new(),
+            defers: Vec::new(),
             caller_module: Rc::clone(&self.current),
             caller_env: Rc::clone(&self.env),
         }
@@ -304,6 +308,13 @@ impl Interpreter<'_> {
     /// エラーはそのファイルの行を引用し、呼び出し履歴に「f の中」を足す
     fn unwind(&mut self, mut e: RuntimeError, target: usize) -> RuntimeError {
         while self.vm_frames.len() > target {
+            // 実行時エラーで抜ける枠の後始末。元のエラーを残す（`os.exit` のときは走らない）
+            if !e.exit
+                && let Some(d) = self.run_defers()
+                && d.exit
+            {
+                e = d;
+            }
             let frame = self.pop_frame();
             if let FrameKind::Function { def, call_span } = frame.kind {
                 if e.origin.is_none() {
@@ -549,6 +560,9 @@ impl Interpreter<'_> {
                 self.events.cancel(id);
             }
             let outcome = match (&outcome, forward.replace) {
+                (FutureOutcome::Failed(e), _) if forward.catch => {
+                    FutureOutcome::Resolved(crate::stdlib::error::runtime_error_value(e))
+                }
                 (FutureOutcome::Resolved(_), Some(value)) => FutureOutcome::Resolved(value),
                 _ => outcome.clone(),
             };
@@ -636,14 +650,35 @@ impl Interpreter<'_> {
         }
     }
 
-    fn do_return(&mut self, value: Value, target: usize) -> Step {
+    fn do_return(&mut self, value: Value, target: usize) -> RResult<Step> {
+        if self.vm_frames.last().is_some_and(|f| !f.defers.is_empty())
+            && let Some(e) = self.run_defers()
+        {
+            return Err(e);
+        }
         self.pop_frame();
-        if self.vm_frames.len() == target {
+        Ok(if self.vm_frames.len() == target {
             Step::Done(value)
         } else {
             self.stack.push(value);
             Step::Reload
+        })
+    }
+
+    /// いまの枠の `defer` を、登録の逆順にすべて呼ぶ（design.md 5.53）。値は捨てる。
+    /// 戻り値は、最初に起きたエラー。`os.exit` の合図はすぐに返す（残りは走らない）
+    fn run_defers(&mut self) -> Option<RuntimeError> {
+        let mut first = None;
+        while let Some((f, span)) = self.vm_frames.last_mut().and_then(|fr| fr.defers.pop()) {
+            match self.call_function(&f, Vec::new(), span, span) {
+                Ok(_) => {}
+                Err(e) if e.exit => return Some(e),
+                Err(e) => {
+                    first.get_or_insert(e);
+                }
+            }
         }
+        first
     }
 
     #[allow(clippy::too_many_lines)]
@@ -912,7 +947,7 @@ impl Interpreter<'_> {
                     );
                     if in_func {
                         // いまの関数から、そのエラー値を返す
-                        return Ok(self.do_return(Value::Error(e), target));
+                        return self.do_return(Value::Error(e), target);
                     }
                     // 関数の外では、エラーで止まる
                     return Err(RuntimeError::new(span, &*e.message));
@@ -921,7 +956,15 @@ impl Interpreter<'_> {
             },
             Op::Return => {
                 let value = self.pop();
-                return Ok(self.do_return(value, target));
+                return self.do_return(value, target);
+            }
+            Op::Defer => {
+                let f = self.pop();
+                self.vm_frames
+                    .last_mut()
+                    .expect("枠がある")
+                    .defers
+                    .push((f, span));
             }
             Op::Call { name, argc } => {
                 let name = &chunk.names[*name as usize];

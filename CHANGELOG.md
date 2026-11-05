@@ -14,6 +14,8 @@
 - 組み込み関数 `record_name[v]`（型名か `nil`）と `record_from[Point, @map]`（`json.parse` の結果を型に当てはめる。足りないフィールドはエラー値 `invalid`）
 - `record` を予約語にした（識別子としての `record` は使えなくなる。`@record` は変数なので影響しない）
 - `examples/shapes.dol`
+- `catch[f]`（組み込み関数。[design.md 5.53](docs/design.md)）: 関数値 `f` を引数なしで呼び、実行時エラー（`assert` の失敗・型違い・0 で割る・深すぎる再帰など）が起きたら、種類 `"runtime"` のエラー値にして返す（`err_message` はメッセージ、`err_data` は `line` `col` `file` `trace`）。起きなければ `f` の戻り値をそのまま返す。`os.exit` は捕まえない。`async` 関数を渡すと、必ず成功する future を返す。`dolphin test` の `assert_raises` 相当に使える
+- `defer 式`（文。予約語 `defer` が増える）: いまの関数（ファイルの最上位ならファイルの実行）を抜けるとき、`#`・最後まで実行・`?`・実行時エラーのどれでも、登録の逆順に式を評価する。ループの中の `defer` は繰り返しごとに登録される。`defer` の中のエラーは、すべて走らせたうえで、関数が普通に終わろうとしていたなら最初のものが関数のエラーになる
 
 ## [0.55.0] - 2026-11-05
 

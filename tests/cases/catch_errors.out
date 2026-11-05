@@ -1,0 +1,4 @@
+catch_errors.dol:2:5: エラー: catch の 1 番目の引数は関数です（数値が渡されました）
+  |
+2 | log[catch[1]]
+  |     ^

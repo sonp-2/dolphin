@@ -5,6 +5,7 @@
 //! 位置情報は、評価器が使っていた式・文の位置をそのまま命令に付ける
 
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::bytecode::{Chunk, Op};
 use super::env::intern;
@@ -440,6 +441,26 @@ impl Compiler {
                 if let Some(ctx) = self.loops.last_mut() {
                     ctx.continues.push(at);
                 }
+            }
+            StmtKind::Defer(expr) => {
+                // 式を、抜けるときに呼ぶ無名関数にする。変数を捕まえるのでスロットにはできない
+                self.bail();
+                let body = Stmt {
+                    kind: StmtKind::Return(Some(expr.clone())),
+                    span,
+                };
+                self.chunk.defs.push(Rc::new(FuncDef {
+                    name: String::new(),
+                    is_async: false,
+                    params: Vec::new(),
+                    rest: None,
+                    body: vec![body],
+                    span,
+                    record: false,
+                }));
+                let i = (self.chunk.defs.len() - 1) as u32;
+                self.emit(Op::MakeClosure(i), span);
+                self.emit(Op::Defer, span);
             }
             StmtKind::Declare { target, value } => {
                 self.expr(value);

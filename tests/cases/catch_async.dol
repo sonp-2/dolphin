@@ -1,0 +1,25 @@
+// catch と async（design.md 5.53）
+async risky[@n] (
+    if @n > 1 (
+        # @n / 0
+    )
+    # @n
+)
+
+async main[] (
+    // async 関数を渡すと future が返り、必ず成功する
+    @ok := await catch[async [] ( # await risky[1] )]
+    log[@ok]
+    @f := async [] ( # await risky[2] )
+    @bad := await catch[@f]
+    log[err_kind[@bad], err_message[@bad]]
+    // 普通の関数を、async の中で捕まえる
+    @e := catch[[] ( # 1 / 0 )]
+    log[err_kind[@e]]
+    // 引数の数が合わない async 関数
+    @g := async [@a] ( # @a )
+    @e2 := await catch[@g]
+    log[err_kind[@e2], err_message[@e2]]
+    # "done"
+)
+log[await main[]]

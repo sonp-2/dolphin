@@ -92,6 +92,8 @@ pub enum Op {
     /// future が終わるまで待って、その値にする（design.md 5.46）
     Await,
     Return,
+    /// スタックの関数値（`defer` の式を包んだもの）を、いまの枠の後始末に登録する（design.md 5.53）
+    Defer,
     /// `name[args]`。スタックは [args...]
     Call {
         name: u32,

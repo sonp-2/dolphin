@@ -1,0 +1,20 @@
+// async 関数の中の defer は、その流れが終わるときに走る（await で止まっている間は走らない）
+@async := import["std:async"]
+
+async work[@name, @fail] (
+    defer log["後始末 @name"]
+    log["開始 @name"]
+    await @async.sleep[0.01]
+    log["再開 @name"]
+    if @fail (
+        # 1 / 0
+    )
+    # @name
+)
+
+async main[] (
+    log[await work["a", false]]
+    @e := await catch[async [] ( # await work["b", true] )]
+    log[err_kind[@e]]
+)
+await main[]

@@ -191,7 +191,7 @@ fn scan(src: &str) -> Vec<Tok> {
                 }
                 let class = match word.as_str() {
                     "if" | "else" | "while" | "for" | "in" | "break" | "continue" | "async"
-                    | "await" | "record" => Class::Keyword,
+                    | "await" | "record" | "defer" => Class::Keyword,
                     _ => Class::Word,
                 };
                 push(&mut toks, class, word);
@@ -414,6 +414,20 @@ mod tests {
         assert_eq!(
             fmt("log[ @a{0}{1} , f[ 1 ]  ,@u.name[ 2 ] ]\n"),
             "log[@a{0}{1}, f[1], @u.name[2]]\n"
+        );
+    }
+
+    #[test]
+    fn defer_is_a_keyword() {
+        assert_eq!(
+            fmt("f[]  (
+defer   log[ 1 ]
+)
+"),
+            "f[] (
+    defer log[1]
+)
+"
         );
     }
 

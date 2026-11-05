@@ -1,0 +1,27 @@
+// クロージャとの組み合わせ
+make[] (
+    @count := 0
+    @inc := [] ( @count = @count + 1 )
+    defer log["count = @count"]
+    @inc[]
+    # @inc
+)
+@f := make[]
+@f[]
+
+// 無名関数の中の defer は、その無名関数を抜けるときに走る
+@g := [@name] (
+    defer log["g 終わり @name"]
+    log["g 本体 @name"]
+)
+@g["A"]
+@g["B"]
+
+// defer が捕まえた変数は、あとから書き換えられる
+k[] (
+    @items := {}
+    defer log[@items]
+    arr_push[@items, 1]
+    arr_push[@items, 2]
+)
+k[]
