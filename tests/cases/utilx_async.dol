@@ -1,0 +1,44 @@
+// std:async の race と timeout（design.md 5.50）。時間の間隔は広くとって、順序だけを確かめる
+@async := import["std:async"]
+
+async slow[@name, @sec] (
+    await @async.sleep[@sec]
+    # @name
+)
+
+async fail_after[@sec] (
+    await @async.sleep[@sec]
+    log[1 / 0]
+)
+
+async err_result[] ( # err_new["custom", "x"] )
+
+async main[] (
+    // race: 最初に終わったもの
+    @r := await @async.race[{slow["遅い", 0.4], slow["速い", 0.05]}]
+    log[@r]
+
+    // すでに終わっているものがあれば、配列で先のものが勝つ
+    @done1 := slow["a", 0]
+    @done2 := slow["b", 0]
+    await @async.sleep[0.05]
+    log[await @async.race[{@done1, @done2}], await @async.race[{@done2, @done1}]]
+
+    // 失敗が最初なら、失敗が勝つ（await で同じエラーが起きる）。値が先なら失敗は報告されない
+    @r2 := await @async.race[{slow["ok", 0.05], fail_after[0.4]}]
+    log[@r2]
+
+    // timeout: 間に合えば結果
+    log[await @async.timeout[slow["間に合う", 0.05], 5]]
+    // 間に合わなければ timeout のエラー値
+    @t := await @async.timeout[slow["間に合わない", 0.4], 0.05]
+    log[is_error[@t], err_kind[@t], err_message[@t]]
+    // すでに終わっている future
+    log[await @async.timeout[@done1, 1]]
+    // エラー値を返す future は、そのまま
+    @c := await @async.timeout[err_result[], 1]
+    log[err_kind[@c]]
+)
+
+await main[]
+log["done"]

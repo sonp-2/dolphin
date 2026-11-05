@@ -1,0 +1,4 @@
+utilx_log_fields_error.dol:2:1: エラー: log.info の 2 番目の引数はマップです（数値が渡されました）
+  |
+2 | @lg.info["x", 5]
+  | ^

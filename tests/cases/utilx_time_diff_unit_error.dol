@@ -1,0 +1,2 @@
+@t := import["std:time"]
+log[@t.diff[1, 0, "years"]]

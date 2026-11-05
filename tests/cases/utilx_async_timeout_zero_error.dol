@@ -1,0 +1,2 @@
+@a := import["std:async"]
+log[@a.timeout[@a.sleep[1], 0]]

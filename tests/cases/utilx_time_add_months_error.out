@@ -1,0 +1,4 @@
+utilx_time_add_months_error.dol:2:5: エラー: time.add の `months` は整数です（絶対値 1000000 以下。1.5 が渡されました）
+  |
+2 | log[@t.add[0, {"months": 1.5}]]
+  |     ^

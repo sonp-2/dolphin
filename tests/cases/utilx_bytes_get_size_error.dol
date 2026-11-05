@@ -1,0 +1,1 @@
+log[bytes_get_int[bytes_new[16], 0, 9, "be"]]

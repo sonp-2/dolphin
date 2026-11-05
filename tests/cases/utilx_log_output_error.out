@@ -1,0 +1,4 @@
+utilx_log_output_error.dol:2:1: エラー: log.set_output の 1 番目の引数はストリームか nilです（数値が渡されました）
+  |
+2 | @lg.set_output[42]
+  | ^

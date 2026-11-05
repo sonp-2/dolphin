@@ -1,0 +1,4 @@
+utilx_bytes_get_size_error.dol:1:5: エラー: bytes_get_int の大きさは 1〜8 バイトです（9）
+  |
+1 | log[bytes_get_int[bytes_new[16], 0, 9, "be"]]
+  |     ^

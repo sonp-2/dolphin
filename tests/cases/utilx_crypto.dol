@@ -1,0 +1,13 @@
+// std:crypto の uuid7（design.md 5.50）。時刻と乱数なので、形だけ確かめる
+@c := import["std:crypto"]
+@u := @c.uuid7[]
+@v := @c.uuid7[]
+log[str_len[@u], str_sub[@u, 8, 9], str_sub[@u, 13, 14], str_contains["89ab", str_sub[@u, 19, 20]]]
+log[@u != @v]
+// 時刻が上位 48 ビットにある（今の時刻は 2024 年以降 = 0x018d… 以上）
+log[str_sub[@u, 0, 3] >= "018d"]
+// 少し置いて作ったものは、文字列として後ろに並ぶ
+@a := @c.uuid7[]
+import["std:time"].sleep[0.01]
+@b := @c.uuid7[]
+log[@a < @b]
