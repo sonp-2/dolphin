@@ -147,7 +147,12 @@ impl Compiler {
     }
 
     /// 新しいスコープに入ってブロックを実行する
+    /// 変数を作る文を直接含まないブロックは、スコープを作らなくても意味が変わらないので省く
     fn scoped_block(&mut self, stmts: &[Stmt], span: Span) {
+        if !stmts.iter().any(declares_variable) {
+            self.block(stmts);
+            return;
+        }
         self.emit(Op::PushScope, span);
         self.scope_depth += 1;
         self.block(stmts);
@@ -531,4 +536,14 @@ impl Compiler {
 
 fn has_spread(items: &[Expr]) -> bool {
     items.iter().any(|e| matches!(e.kind, ExprKind::Spread(_)))
+}
+
+/// その文が、いまのスコープに変数を作るか
+fn declares_variable(stmt: &Stmt) -> bool {
+    matches!(
+        &stmt.kind,
+        StmtKind::FuncDef(_)
+            | StmtKind::Declare { .. }
+            | StmtKind::Destructure { declare: true, .. }
+    )
 }

@@ -2,17 +2,36 @@
 
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hasher};
 use std::mem;
 use std::rc::Rc;
 
 use super::gc;
 use super::value::Value;
 
+/// 変数名のための軽いハッシュ（FxHash 相当）。外から来るキーではないので、衝突攻撃への備えは要らない
+#[derive(Default)]
+pub struct NameHasher(u64);
+
+impl Hasher for NameHasher {
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.0 = (self.0.rotate_left(5) ^ u64::from(b)).wrapping_mul(0x517c_c1b7_2722_0a95);
+        }
+    }
+
+    fn finish(&self) -> u64 {
+        self.0
+    }
+}
+
+type NameMap = HashMap<String, Value, BuildHasherDefault<NameHasher>>;
+
 /// スコープ 1 つ分の変数表。外側のスコープへの参照を持ち、名前は内側から順に探す。
 /// トップレベルのスコープ（ファイルの変数）は `parent` を持たない
 #[derive(Debug, Default)]
 pub struct Env {
-    vars: RefCell<HashMap<String, Value>>,
+    vars: RefCell<NameMap>,
     parent: Option<Rc<Env>>,
 }
 
