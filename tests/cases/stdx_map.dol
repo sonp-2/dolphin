@@ -1,0 +1,9 @@
+// マップの関数の追加（design.md 5.48）
+@m := {"a": 1, "b": 2, "c": 3}
+log[map_from_items[map_items[@m]] == @m]
+log[map_from_items[{{"x", 1}, {"y", 2}, {"x", 9}}], map_from_items[{}]]
+log[map_map_values[@m, [@v] ( # @v * 10 )], @m]
+log[map_filter[@m, [@k, @v] ( # @v >= 2 &&@k != "c" )]]
+log[map_filter[@m, [@k, @v] ( # false )]]
+// 値の並べ替えと組み合わせる
+log[map_from_items[arr_sort_key[map_items[@m], [@p] ( # -@p{1} )]]]

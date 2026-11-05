@@ -1,0 +1,10 @@
+// 文字列の関数の追加（design.md 5.48）
+log["[" + str_center["ab", 6] + "]", "[" + str_center["abc", 6, "*"] + "]", str_center["abcdef", 3], str_center["", 3, "-"]]
+log[str_center["イルカ", 7, "・"]]
+log[str_capitalize["hELLO wORLD"], str_capitalize[""], str_capitalize["éa"]]
+log[str_title["hello wORLD-foo it's"], str_title["  "], str_title["イルカ abc"]]
+log[str_split_n["a,b,c,d", ",", 2], str_split_n["a,b,c,d", ",", 0], str_split_n["a,b", ",", 5], str_split_n["", ",", 1]]
+log[str_split_n["a--b--c", "--", 1]]
+log[str_is_digit["123"], str_is_digit["12a"], str_is_digit[""], str_is_digit["１２"]]
+log[str_is_alpha["abc"], str_is_alpha["イルカ"], str_is_alpha["a1"], str_is_alpha[""]]
+log[str_is_space[" \t\n"], str_is_space[" a"], str_is_space[""]]

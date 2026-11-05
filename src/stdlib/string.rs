@@ -29,6 +29,19 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("str_code_at", str_code_at);
     interp.register("str_from_code", str_from_code);
     interp.register("str_rfind", str_rfind);
+    interp.register("str_center", str_center);
+    interp.register("str_capitalize", str_capitalize);
+    interp.register("str_title", str_title);
+    interp.register("str_split_n", str_split_n);
+    interp.register("str_is_digit", |_, a| {
+        is_all("str_is_digit", a, |c| c.is_ascii_digit())
+    });
+    interp.register("str_is_alpha", |_, a| {
+        is_all("str_is_alpha", a, char::is_alphabetic)
+    });
+    interp.register("str_is_space", |_, a| {
+        is_all("str_is_space", a, char::is_whitespace)
+    });
     interp.register("to_str", to_str);
     interp.register("to_num", to_num);
     interp.register("to_int", to_int);
@@ -316,4 +329,96 @@ fn str_rfind(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
         None => -1.0,
     };
     Ok(Value::Num(pos))
+}
+
+/// 左右に `fill`（1 文字。省略は空白）を足して、文字数を `width` にする。
+/// 足りない数が奇数なら、余りの 1 文字は右に足す。すでに `width` 以上ならそのまま
+fn str_center(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    let name = "str_center";
+    if !(2..=3).contains(&args.len()) {
+        return Err(format!(
+            "{name} の引数は 2 個か 3 個です（{} 個渡されました）",
+            args.len()
+        ));
+    }
+    let s = str_arg(name, args, 0)?;
+    let width = int_arg(name, args, 1)?;
+    let fill = match args.get(2) {
+        Some(_) => {
+            let fill = str_arg(name, args, 2)?;
+            let mut chars = fill.chars();
+            match (chars.next(), chars.next()) {
+                (Some(c), None) => c,
+                _ => return Err(format!("{name} の 3 番目の引数は 1 文字です（{fill:?}）")),
+            }
+        }
+        None => ' ',
+    };
+    if !(0..=STR_MAX as i64).contains(&width) {
+        return Err(format!("{name} の幅は 0〜{STR_MAX} です（{width}）"));
+    }
+    let missing = (width as usize).saturating_sub(s.chars().count());
+    let left = missing / 2;
+    let pad = |n: usize| std::iter::repeat_n(fill, n).collect::<String>();
+    Ok(string(format!("{}{s}{}", pad(left), pad(missing - left))))
+}
+
+/// 先頭の 1 文字を大文字、残りを小文字にする
+fn str_capitalize(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("str_capitalize", args, 1)?;
+    let s = str_arg("str_capitalize", args, 0)?;
+    let mut chars = s.chars();
+    let out = match chars.next() {
+        Some(first) => first
+            .to_uppercase()
+            .chain(chars.flat_map(char::to_lowercase))
+            .collect(),
+        None => String::new(),
+    };
+    Ok(string(out))
+}
+
+/// 文字（英字など）の連なりごとに、先頭を大文字、残りを小文字にする
+fn str_title(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("str_title", args, 1)?;
+    let s = str_arg("str_title", args, 0)?;
+    let mut out = String::with_capacity(s.len());
+    let mut in_word = false;
+    for c in s.chars() {
+        if c.is_alphabetic() {
+            if in_word {
+                out.extend(c.to_lowercase());
+            } else {
+                out.extend(c.to_uppercase());
+            }
+            in_word = true;
+        } else {
+            out.push(c);
+            in_word = false;
+        }
+    }
+    Ok(string(out))
+}
+
+/// 区切り文字で、最大 `max` 回まで分けた配列（要素は最大 `max + 1` 個。残りは最後の要素に残る）
+fn str_split_n(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("str_split_n", args, 3)?;
+    let s = str_arg("str_split_n", args, 0)?;
+    let sep = str_arg("str_split_n", args, 1)?;
+    let max = int_arg("str_split_n", args, 2)?;
+    if sep.is_empty() {
+        return Err("str_split_n の 2 番目の引数に空文字列は使えません".into());
+    }
+    if max < 0 {
+        return Err(format!("str_split_n の回数は 0 以上です（{max}）"));
+    }
+    let limit = usize::try_from(max).unwrap_or(usize::MAX).saturating_add(1);
+    Ok(new_array(s.splitn(limit, sep).map(string).collect()))
+}
+
+/// 空でなく、すべての文字が条件を満たすか
+fn is_all(name: &str, args: &[Value], pred: fn(char) -> bool) -> Result<Value, String> {
+    expect_args(name, args, 1)?;
+    let s = str_arg(name, args, 0)?;
+    Ok(Value::Bool(!s.is_empty() && s.chars().all(pred)))
 }
