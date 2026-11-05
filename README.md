@@ -294,6 +294,15 @@ time target/release/dolphin bench/fib.dol
 
 `cargo build --release` でビルドすると、実行ファイルは `target/release/dolphin`（Windows は `dolphin.exe`）にできます。
 
+## 安定性
+
+1.0 以降の約束です（詳しくは [docs/design.md](docs/design.md) の 5.56・5.57。いまは 0.x なので、この約束はまだ守る義務のない予告です）。
+
+- **変えないもの**: 言語（構文と意味）、組み込み関数、主要な `std:*`（関数名・引数・戻り値の型）、エラー値の kind（`err_kind` の文字列。一覧は 5.57）、仕様に書いた数値上限（呼び出し 1000 段、`range` 1000 万要素、JSON の入れ子 512 など）。破壊的変更は MAJOR を上げるときだけです。
+- **変えてよいもの**: エラーメッセージの日本語、内部実装、性能、`dolphin` コマンドの出力の細部。プログラムは文面で分岐せず、`is_error` と `err_kind` で分岐してください。
+- **実験的**: `std:ui` `std:canvas`（GUI）、`std:audio`、`std:ffi`、`std:sqlite`、`std:postgres` は、1.x でも変わることがあります（いずれも既定で無効の feature です）。
+- 実行時エラー（`assert` の失敗・型違いなど、プログラムの間違い）はエラー値にならず、`catch` で捕まえたときだけ kind `"runtime"` のエラー値になります。
+
 ## ブランチ構成
 
 | ブランチ | 内容 |

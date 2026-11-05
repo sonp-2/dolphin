@@ -236,6 +236,9 @@ session.eval("@x + 1")?;          // 最後の文が式なら Some(値) を返�
 |---|---|---|
 | `Diagnostic` | 全層の共通の形 | メッセージ、位置、補足 |
 | `RuntimeError` | Interpreter | メッセージ、位置、呼び出し履歴。`Diagnostic` に変換して表示する |
+| エラー値（`Value::Error`） | 標準ライブラリ（`stdlib::error_value`） | `kind`・`message`・任意の `data`。実行時エラーとは別で、`catch` が捕まえた `RuntimeError` だけが kind `"runtime"` のエラー値になる |
+
+エラー値の `kind` は、1.0 以降の互換性の約束の対象で、一覧は design.md 5.57 に 1 か所でまとめている。`tests/error_kinds.rs` が、`src/` が返す kind と 5.57 の表を照合する（kind を足すときは、先に表を直す）。メッセージの文面は約束しない（5.56）。
 
 ```
 main.dol:2:6: エラー: 文字列が閉じられていません

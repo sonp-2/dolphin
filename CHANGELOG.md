@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+### 追加
+- 1.0 に向けた方針を設計書に書いた（[design.md 5.56・5.57](docs/design.md)）。凍結の対象（言語・組み込み関数・主要な `std:*`・エラー値の kind・数値上限）と、実験的なもの（`std:ui` `std:canvas` `std:audio` `std:ffi` `std:sqlite` `std:postgres`）、SemVer での破壊的変更の定義、非推奨にする手順、予約語を増やす変更の扱い、エラー値の kind の一覧と、kind の揺れの整理。実装は変えていない
+- `tests/error_kinds.rs`: 実装が返すエラー値の kind が設計書 5.57 の表にあること、表の kind が実装に残っていることを照合する。`tests/cases/err_kind_table.dol`（kind の golden）
+
 ## [0.56.0] - 2026-11-06
 
 言語の拡張（`catch` / `defer`、`for` のパターンとマップ・文字列、レコード）と、HTTP サーバー用のルーター `std:router`。あわせて、大きかったファイルを分けた（挙動は同じ）。
