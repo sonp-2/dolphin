@@ -306,7 +306,10 @@ impl Interpreter<'_> {
         while self.vm_frames.len() > target {
             let frame = self.pop_frame();
             if let FrameKind::Function { def, call_span } = frame.kind {
-                if e.origin.is_none() {
+                // 出どころは、いちばん内側の関数のファイルで決まる（メインのファイルは出どころ `None` なので、
+                // 呼び出し履歴が空かどうかで「まだ決めていない」を見分ける。決まった後に、外側の
+                // `import` したファイルの関数が上書きしないように）
+                if e.origin.is_none() && e.trace.is_empty() {
                     e.origin = frame.module.origin.clone();
                 }
                 e.trace.push(TraceEntry {

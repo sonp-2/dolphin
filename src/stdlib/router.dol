@@ -1,0 +1,539 @@
+// std:router（design.md 5.52）。Dolphin で書いた関数だけのモジュールで、`import["std:router"]` のときに取り込む。
+// 先頭が `_` の関数は内部用（`@router._find` のように呼べてしまうが、使わないこと）。
+// ルーターは、`kind` が "router" のマップ:
+//   {"kind": "router", "routes": {経路...}, "mws": {ミドルウェア...}, "groups": {グループ...}, "not_found": 関数か nil}
+// 経路は {"method", "segs", "pattern", "key", "handler"}。segs は {"t": "lit" か "param" か "wild", "v": 文字列} の配列。
+
+// ---- 検査 ----
+
+_check_router[@who, @r] (
+    assert[type_of[@r] == "map" && map_get[@r, "kind", ""] == "router", "@{@who}: 最初の引数は router.new[] で作ったルーターです（@{type_of[@r]}が渡されました）"]
+)
+
+_check_handler[@who, @h] (
+    assert[type_of[@h] == "function", "@{@who}: ハンドラは関数です（@{type_of[@h]}が渡されました）"]
+)
+
+_is_name[@s] (
+    if @s == "" ( # false )
+    for @c in str_split[@s, ""] (
+        if !str_contains["abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_", @c] ( # false )
+    )
+    # true
+)
+
+// ---- 経路の解析 ----
+
+// "/users/:id" を {"t", "v"} の配列にする。`:名前` は 1 区間、`*` か `*名前` は残り全部（最後にだけ）
+_parse_pattern[@who, @pattern, @allow_wild] (
+    assert[type_of[@pattern] == "string", "@{@who}: パスは文字列です（@{type_of[@pattern]}が渡されました）"]
+    assert[str_starts_with[@pattern, "/"], "@{@who}: パスは / で始めてください（\"@{@pattern}\"）"]
+    @segs := {}
+    @names := {:}
+    @parts := str_split[@pattern, "/"]
+    @n := arr_len[@parts]
+    for @i in range[1, @n] (
+        @p := @parts{@i}
+        if @p == "" (
+            assert[@i == @n - 1, "@{@who}: パスに空の区間があります（\"@{@pattern}\"）"]
+            continue
+        )
+        assert[arr_len[@segs] == 0 || @segs{arr_len[@segs] - 1}{"t"} != "wild", "@{@who}: * は最後の区間にだけ書けます（\"@{@pattern}\"）"]
+        if str_starts_with[@p, ":"] (
+            @name := str_sub[@p, 1, str_len[@p]]
+            assert[_is_name[@name], "@{@who}: :の後ろは英数字と _ の名前です（\"@{@pattern}\"）"]
+            assert[!map_has[@names, @name], "@{@who}: パラメータ名 @{@name} が重複しています（\"@{@pattern}\"）"]
+            @names{@name} = true
+            arr_push[@segs, {"t": "param", "v": @name}]
+            continue
+        )
+        if str_starts_with[@p, "*"] (
+            assert[@allow_wild, "@{@who}: ここには * を書けません（\"@{@pattern}\"）"]
+            @name := str_sub[@p, 1, str_len[@p]]
+            assert[@name == "" || _is_name[@name], "@{@who}: *の後ろは英数字と _ の名前です（\"@{@pattern}\"）"]
+            assert[@name == "" || !map_has[@names, @name], "@{@who}: パラメータ名 @{@name} が重複しています（\"@{@pattern}\"）"]
+            @names{@name} = true
+            arr_push[@segs, {"t": "wild", "v": @name}]
+            continue
+        )
+        arr_push[@segs, {"t": "lit", "v": @p}]
+    )
+    # @segs
+)
+
+// 同じ経路かを調べる鍵（パラメータの名前は無視する）
+_shape[@method, @segs] (
+    @out := {}
+    for @s in @segs (
+        if @s{"t"} == "lit" ( arr_push[@out, "=" + @s{"v"}] )
+        else if @s{"t"} == "param" ( arr_push[@out, ":"] )
+        else ( arr_push[@out, "*"] )
+    )
+    # @method + " /" + str_join[@out, "/"]
+)
+
+_pattern_of[@segs] (
+    @out := {}
+    for @s in @segs (
+        if @s{"t"} == "lit" ( arr_push[@out, @s{"v"}] )
+        else if @s{"t"} == "param" ( arr_push[@out, ":" + @s{"v"}] )
+        else ( arr_push[@out, "*" + @s{"v"}] )
+    )
+    # "/" + str_join[@out, "/"]
+)
+
+// 特異性の点数: リテラル 2、:param 1、*rest 0
+_score[@segs] (
+    @out := {}
+    for @s in @segs (
+        if @s{"t"} == "lit" ( arr_push[@out, 2] )
+        else if @s{"t"} == "param" ( arr_push[@out, 1] )
+        else ( arr_push[@out, 0] )
+    )
+    # @out
+)
+
+_segments[@path] (
+    @out := {}
+    for @s in str_split[@path, "/"] (
+        if @s != "" ( arr_push[@out, @s] )
+    )
+    # @out
+)
+
+// 経路が合えばパラメータのマップ、合わなければ nil
+_match[@segs, @parts] (
+    @params := {:}
+    @n := arr_len[@segs]
+    @m := arr_len[@parts]
+    for @i in range[0, @n] (
+        @s := @segs{@i}
+        if @s{"t"} == "wild" (
+            @rest := str_join[arr_slice[@parts, if @i < @m ( @i ) else ( @m ), @m], "/"]
+            @params{"*"} = @rest
+            if @s{"v"} != "" ( @params{@s{"v"}} = @rest )
+            # @params
+        )
+        if @i >= @m ( # nil )
+        if @s{"t"} == "lit" (
+            if @s{"v"} != @parts{@i} ( # nil )
+        )
+        else (
+            @params{@s{"v"}} = @parts{@i}
+        )
+    )
+    if @n != @m ( # nil )
+    # @params
+)
+
+// a のほうが特異なら 1、b なら -1、同じなら 0
+_cmp[@a, @b] (
+    @x := @a{"score"}
+    @y := @b{"score"}
+    @n := max[arr_len[@x], arr_len[@y]]
+    for @i in range[0, @n] (
+        @u := if @i < arr_len[@x] ( @x{@i} ) else ( 3 )
+        @v := if @i < arr_len[@y] ( @y{@i} ) else ( 3 )
+        if @u > @v ( # 1 )
+        if @u < @v ( # -1 )
+    )
+    if @a{"method"} != "*" && @b{"method"} == "*" ( # 1 )
+    if @a{"method"} == "*" && @b{"method"} != "*" ( # -1 )
+    # 0
+)
+
+// 方法が合い、経路が合う中でいちばん特異なもの。{"route", "params"} か nil
+_find[@entries, @parts, @method] (
+    @best := nil
+    @best_params := nil
+    for @e in @entries (
+        if @e{"method"} == @method || @e{"method"} == "*" (
+            @p := _match[@e{"segs"}, @parts]
+            if @p != nil (
+                if @best == nil || _cmp[@e, @best] > 0 (
+                    @best = @e
+                    @best_params = @p
+                )
+            )
+        )
+    )
+    if @best == nil ( # nil )
+    # {"route": @best, "params": @best_params}
+)
+
+// 経路だけが合う経路の方法（Allow ヘッダの元）
+_allowed[@entries, @parts] (
+    @methods := {}
+    for @e in @entries (
+        if !arr_contains[@methods, @e{"method"}] && _match[@e{"segs"}, @parts] != nil (
+            arr_push[@methods, @e{"method"}]
+        )
+    )
+    if arr_len[@methods] == 0 ( # @methods )
+    if arr_contains[@methods, "GET"] && !arr_contains[@methods, "HEAD"] ( arr_push[@methods, "HEAD"] )
+    if !arr_contains[@methods, "OPTIONS"] ( arr_push[@methods, "OPTIONS"] )
+    # @methods
+)
+
+// ---- 応答の形と、ミドルウェアの合成 ----
+
+_norm[@v] (
+    @t := type_of[@v]
+    if @t == "map" ( # @v )
+    if @t == "string" ( # {"body": @v} )
+    if @t == "error" ( # @v )
+    assert[@t != "future", "router: ハンドラが future を返しました（async のハンドラは使えません。http.serve はハンドラを同期で呼びます）"]
+    assert[false, "router: ハンドラ（かミドルウェア）は応答のマップか文字列を返してください（@{@t}が返りました。# で値を返し忘れていませんか）"]
+)
+
+_guard[@h] (
+    # [@rq] ( # _norm[@h[@rq]] )
+)
+
+_wrap[@mw, @next] (
+    # [@rq] ( # _norm[@mw[@rq, @next]] )
+)
+
+// chain（外側から順のミドルウェア）で final（req を受け取る関数）を包んだ関数
+_compose[@chain, @final] (
+    @next := _guard[@final]
+    @i := arr_len[@chain] - 1
+    while @i >= 0 (
+        @next = _wrap[@chain{@i}, @next]
+        @i = @i - 1
+    )
+    # @next
+)
+
+// ---- ルーターを作る・足す ----
+
+new[] (
+    # {"kind": "router", "routes": {}, "mws": {}, "groups": {}, "not_found": nil}
+)
+
+route[@r, @method, @pattern, @handler] (
+    _check_router["router.route", @r]
+    assert[type_of[@method] == "string" && @method != "", "router.route: 方法は文字列です（GET など。全部なら *）"]
+    @method = str_upper[@method]
+    _check_handler["router.route", @handler]
+    @segs := _parse_pattern["router.route", @pattern, true]
+    @key := _shape[@method, @segs]
+    for @old in @r{"routes"} (
+        assert[@old{"key"} != @key, "router.route: 経路が重複しています（@{@method} @{@pattern}）"]
+    )
+    arr_push[@r{"routes"}, {"method": @method, "segs": @segs, "key": @key, "handler": @handler}]
+    # @r
+)
+
+get[@r, @pattern, @handler] ( # route[@r, "GET", @pattern, @handler] )
+post[@r, @pattern, @handler] ( # route[@r, "POST", @pattern, @handler] )
+put[@r, @pattern, @handler] ( # route[@r, "PUT", @pattern, @handler] )
+delete[@r, @pattern, @handler] ( # route[@r, "DELETE", @pattern, @handler] )
+patch[@r, @pattern, @handler] ( # route[@r, "PATCH", @pattern, @handler] )
+any[@r, @pattern, @handler] ( # route[@r, "*", @pattern, @handler] )
+
+use[@r, @mw] (
+    _check_router["router.use", @r]
+    assert[type_of[@mw] == "function", "router.use: ミドルウェアは [req, next] を受け取る関数です（@{type_of[@mw]}が渡されました）"]
+    arr_push[@r{"mws"}, @mw]
+    # @r
+)
+
+group[@r, @prefix, @sub] (
+    _check_router["router.group", @r]
+    _check_router["router.group", @sub]
+    @segs := _parse_pattern["router.group", @prefix, false]
+    arr_push[@r{"groups"}, {"segs": @segs, "router": @sub}]
+    # @r
+)
+
+not_found[@r, @handler] (
+    _check_router["router.not_found", @r]
+    _check_handler["router.not_found", @handler]
+    @r{"not_found"} = @handler
+    # @r
+)
+
+// ---- handler ----
+
+// グループを平らにした、全経路の配列。chain は外側のルーターから順のミドルウェア
+_flatten[@r, @depth] (
+    assert[@depth < 32, "router.handler: group が深すぎます（自分自身を含んでいませんか）"]
+    @out := {}
+    for @x in @r{"routes"} (
+        arr_push[@out, {"method": @x{"method"}, "segs": @x{"segs"}, "handler": @x{"handler"}, "chain": arr_copy[@r{"mws"}]}]
+    )
+    for @g in @r{"groups"} (
+        for @e in _flatten[@g{"router"}, @depth + 1] (
+            arr_push[@out, {"method": @e{"method"}, "segs": arr_concat[@g{"segs"}, @e{"segs"}], "handler": @e{"handler"}, "chain": arr_concat[@r{"mws"}, @e{"chain"}]}]
+        )
+    )
+    # @out
+)
+
+_default_not_found[@req] (
+    # {"status": 404, "body": "Not Found"}
+)
+
+_dispatch[@ctx, @req] (
+    @method := @req{"method"}
+    @parts := _segments[@req{"path"}]
+    @found := _find[@ctx{"entries"}, @parts, @method]
+    if @found == nil && @method == "HEAD" (
+        @found = _find[@ctx{"entries"}, @parts, "GET"]
+    )
+    if @found != nil (
+        @req{"params"} = @found{"params"}
+        # @found{"route"}{"run"}[@req]
+    )
+    @req{"params"} = {:}
+    @allow := _allowed[@ctx{"entries"}, @parts]
+    @final := @ctx{"not_found"}
+    if arr_len[@allow] > 0 (
+        @allow_text := str_join[@allow, ", "]
+        if @method == "OPTIONS" (
+            @final = [@rq] ( # {"status": 204, "headers": {"Allow": @allow_text}} )
+        )
+        else (
+            @final = [@rq] ( # {"status": 405, "headers": {"Allow": @allow_text}, "body": "Method Not Allowed"} )
+        )
+    )
+    # _compose[@ctx{"mws"}, @final][@req]
+)
+
+// http.serve にそのまま渡せる関数を返す。経路・ミドルウェア・グループはここで固めるので、作った後に足した分は反映されない
+handler[@r] (
+    _check_router["router.handler", @r]
+    @entries := _flatten[@r, 0]
+    @seen := {:}
+    for @e in @entries (
+        @key := _shape[@e{"method"}, @e{"segs"}]
+        @shown := @e{"method"} + " " + _pattern_of[@e{"segs"}]
+        assert[!map_has[@seen, @key], "router.handler: 経路が重複しています（@{@shown}）"]
+        @seen{@key} = true
+        @e{"score"} = _score[@e{"segs"}]
+        @e{"run"} = _compose[@e{"chain"}, @e{"handler"}]
+    )
+    @not_found := @r{"not_found"}
+    if @not_found == nil ( @not_found = _default_not_found )
+    @ctx := {"entries": @entries, "mws": arr_copy[@r{"mws"}], "not_found": @not_found}
+    # [@req] ( # _dispatch[@ctx, @req] )
+)
+
+// ---- 応答の補助 ----
+
+_check_status[@who, @status] (
+    assert[(type_of[@status] == "number") && @status >= 200 && @status <= 599 && @status == floor[@status], "@{@who}: status は 200〜599 の整数です"]
+)
+
+json[@status, @value] (
+    _check_status["router.json", @status]
+    # {"status": @status, "json": @value}
+)
+
+text[@status, @s] (
+    _check_status["router.text", @status]
+    assert[type_of[@s] == "string", "router.text: 本文は文字列です（@{type_of[@s]}が渡されました）"]
+    # {"status": @status, "body": @s}
+)
+
+redirect[@url, @status = 302] (
+    assert[type_of[@url] == "string" && @url != "", "router.redirect: 行き先は空でない文字列です"]
+    assert[!str_contains[@url, "\n"] && !str_contains[@url, "\r"], "router.redirect: 行き先に改行は入れられません"]
+    assert[arr_contains[{301, 302, 303, 307, 308}, @status], "router.redirect: status は 301・302・303・307・308 のどれかです"]
+    # {"status": @status, "headers": {"Location": @url}}
+)
+
+// ---- 静的ファイル ----
+
+_mime[@ext] (
+    @types := {
+        "html": "text/html; charset=utf-8", "htm": "text/html; charset=utf-8",
+        "css": "text/css; charset=utf-8", "js": "text/javascript; charset=utf-8",
+        "mjs": "text/javascript; charset=utf-8", "json": "application/json",
+        "txt": "text/plain; charset=utf-8", "md": "text/markdown; charset=utf-8",
+        "csv": "text/csv; charset=utf-8", "xml": "application/xml",
+        "svg": "image/svg+xml", "png": "image/png", "jpg": "image/jpeg",
+        "jpeg": "image/jpeg", "gif": "image/gif", "webp": "image/webp",
+        "ico": "image/x-icon", "avif": "image/avif", "woff": "font/woff",
+        "woff2": "font/woff2", "ttf": "font/ttf", "otf": "font/otf",
+        "wasm": "application/wasm", "pdf": "application/pdf",
+        "mp3": "audio/mpeg", "wav": "audio/wav", "mp4": "video/mp4",
+        "webm": "video/webm", "zip": "application/zip", "map": "application/json"
+    }
+    # map_get[@types, str_lower[@ext], "application/octet-stream"]
+)
+
+_not_found_response[] (
+    # {"status": 404, "body": "Not Found"}
+)
+
+_serve_static[@dir, @req] (
+    @method := @req{"method"}
+    if @method != "GET" && @method != "HEAD" (
+        # {"status": 405, "headers": {"Allow": "GET, HEAD"}, "body": "Method Not Allowed"}
+    )
+    @params := map_get[@req, "params", {:}]
+    assert[map_has[@params, "*"], "router.static: ワイルドカードの経路（\"/static/*\" など）にマウントしてください"]
+    @parts := {}
+    for @seg in str_split[@params{"*"}, "/"] (
+        if @seg != "" (
+            // .. も ドットファイルも、バックスラッシュも、: も（Windows のドライブ）、NUL も通さない
+            if str_starts_with[@seg, "."] || str_contains[@seg, "\\"] || str_contains[@seg, ":"] || str_contains[@seg, str_from_code[0]] (
+                # _not_found_response[]
+            )
+            arr_push[@parts, @seg]
+        )
+    )
+    @full := @dir
+    if arr_len[@parts] > 0 ( @full = @dir + "/" + str_join[@parts, "/"] )
+    @name := if arr_len[@parts] > 0 ( @parts{arr_len[@parts] - 1} ) else ( "" )
+    @info := file_info[@full]
+    if is_error[@info] ( # _not_found_response[] )
+    if @info{"is_dir"} (
+        @full = @full + "/index.html"
+        @name = "index.html"
+        @info = file_info[@full]
+        if is_error[@info] ( # _not_found_response[] )
+    )
+    if !@info{"is_file"} ( # _not_found_response[] )
+    @bytes := file_read_bytes[@full]
+    if is_error[@bytes] (
+        if err_kind[@bytes] == "permission" ( # {"status": 403, "body": "Forbidden"} )
+        if err_kind[@bytes] == "not_found" ( # _not_found_response[] )
+        # @bytes
+    )
+    @dot := str_rfind[@name, "."]
+    @ext := if @dot >= 0 ( str_sub[@name, @dot + 1, str_len[@name]] ) else ( "" )
+    # {"headers": {"Content-Type": _mime[@ext]}, "body": @bytes}
+)
+
+static[@dir] (
+    assert[type_of[@dir] == "string" && @dir != "", "router.static: ディレクトリは空でない文字列です"]
+    # [@req] ( # _serve_static[@dir, @req] )
+)
+
+// ---- CORS ----
+
+cors[@options = {:}] (
+    assert[type_of[@options] == "map", "router.cors: オプションはマップです"]
+    for @k in map_keys[@options] (
+        assert[arr_contains[{"origin", "methods", "headers", "expose", "max_age", "credentials"}, @k], "router.cors: オプション `@{@k}` は知りません"]
+    )
+    @origin := map_get[@options, "origin", "*"]
+    assert[@origin == "*" || type_of[@origin] == "string" || type_of[@origin] == "array", "router.cors: origin は文字列か文字列の配列です"]
+    @cfg := {
+        "origin": @origin,
+        "methods": map_get[@options, "methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS"],
+        "headers": map_get[@options, "headers", nil],
+        "expose": map_get[@options, "expose", nil],
+        "max_age": map_get[@options, "max_age", 600],
+        "credentials": map_get[@options, "credentials", false]
+    }
+    # [@req, @next] ( # _cors[@cfg, @req, @next] )
+)
+
+// 許す Origin なら Access-Control-Allow-Origin の値、許さないなら nil
+_cors_origin[@cfg, @origin] (
+    @allowed := @cfg{"origin"}
+    if @allowed == "*" (
+        if @cfg{"credentials"} ( # @origin )
+        # "*"
+    )
+    if type_of[@allowed] == "array" (
+        if arr_contains[@allowed, @origin] ( # @origin )
+        # nil
+    )
+    if @allowed == @origin ( # @origin )
+    # nil
+)
+
+_cors[@cfg, @req, @next] (
+    @in := map_get[@req, "headers", {:}]
+    @origin := map_get[@in, "origin", nil]
+    if @origin == nil ( # @next[@req] )
+    @allow := _cors_origin[@cfg, @origin]
+    if @allow == nil ( # @next[@req] )
+    @h := {"Access-Control-Allow-Origin": @allow}
+    if @allow != "*" ( @h{"Vary"} = "Origin" )
+    if @cfg{"credentials"} ( @h{"Access-Control-Allow-Credentials"} = "true" )
+    if @req{"method"} == "OPTIONS" && map_has[@in, "access-control-request-method"] (
+        @h{"Access-Control-Allow-Methods"} = @cfg{"methods"}
+        @h{"Access-Control-Allow-Headers"} = if @cfg{"headers"} != nil ( @cfg{"headers"} ) else ( map_get[@in, "access-control-request-headers", "Content-Type, Authorization"] )
+        @h{"Access-Control-Max-Age"} = to_str[@cfg{"max_age"}]
+        # {"status": 204, "headers": @h}
+    )
+    if @cfg{"expose"} != nil ( @h{"Access-Control-Expose-Headers"} = @cfg{"expose"} )
+    @resp := @next[@req]
+    if is_error[@resp] ( # @resp )
+    if !map_has[@resp, "headers"] ( @resp{"headers"} = {:} )
+    @out := @resp{"headers"}
+    for @k in map_keys[@h] (
+        if @k == "Vary" && map_has[@out, "Vary"] (
+            @out{"Vary"} = @out{"Vary"} + ", Origin"
+        )
+        else (
+            @out{@k} = @h{@k}
+        )
+    )
+    # @resp
+)
+
+// ---- クッキー ----
+
+// リクエストの Cookie ヘッダーを、名前から値のマップにする（同じ名前は最初のもの。値はパーセントデコードする）
+cookies[@req] (
+    @enc := import["std:encoding"]
+    @out := {:}
+    @header := map_get[map_get[@req, "headers", {:}], "cookie", ""]
+    for @pair in str_split[@header, ";"] (
+        @pair = str_trim[@pair]
+        @i := str_find[@pair, "="]
+        if @i > 0 (
+            @name := str_sub[@pair, 0, @i]
+            @value := str_sub[@pair, @i + 1, str_len[@pair]]
+            if str_len[@value] >= 2 && str_starts_with[@value, "\""] && str_ends_with[@value, "\""] (
+                @value = str_sub[@value, 1, str_len[@value] - 1]
+            )
+            @decoded := @enc.url_decode[@value]
+            if !is_error[@decoded] ( @value = @decoded )
+            if !map_has[@out, @name] ( @out{@name} = @value )
+        )
+    )
+    # @out
+)
+
+// Set-Cookie ヘッダーの値を作る
+set_cookie[@name, @value, @options = {:}] (
+    @enc := import["std:encoding"]
+    assert[type_of[@name] == "string" && @name != "", "router.set_cookie: 名前は空でない文字列です"]
+    for @c in {";", "=", ",", " ", "\t", "\r", "\n", "\""} (
+        assert[!str_contains[@name, @c], "router.set_cookie: 名前に使えない文字があります（\"@{@name}\"）"]
+    )
+    assert[type_of[@value] == "string", "router.set_cookie: 値は文字列です"]
+    assert[type_of[@options] == "map", "router.set_cookie: オプションはマップです"]
+    for @k in map_keys[@options] (
+        assert[arr_contains[{"path", "domain", "max_age", "secure", "http_only", "same_site"}, @k], "router.set_cookie: オプション `@{@k}` は知りません"]
+    )
+    @parts := {@name + "=" + @enc.url_encode[@value]}
+    @path := map_get[@options, "path", "/"]
+    @domain := map_get[@options, "domain", nil]
+    @same_site := map_get[@options, "same_site", "Lax"]
+    assert[arr_contains[{"Lax", "Strict", "None"}, @same_site], "router.set_cookie: same_site は \"Lax\" \"Strict\" \"None\" のどれかです"]
+    assert[type_of[@path] == "string" && !str_contains[@path, ";"] && !str_contains[@path, "\n"], "router.set_cookie: path が正しくありません"]
+    arr_push[@parts, "Path=" + @path]
+    if @domain != nil (
+        assert[type_of[@domain] == "string" && !str_contains[@domain, ";"] && !str_contains[@domain, "\n"], "router.set_cookie: domain が正しくありません"]
+        arr_push[@parts, "Domain=" + @domain]
+    )
+    if map_has[@options, "max_age"] (
+        assert[type_of[@options{"max_age"}] == "number", "router.set_cookie: max_age は秒数（数値）です"]
+        arr_push[@parts, "Max-Age=" + to_str[floor[@options{"max_age"}]]]
+    )
+    @secure := map_get[@options, "secure", false]
+    assert[@same_site != "None" || @secure, "router.set_cookie: same_site が \"None\" のときは secure: true が要ります"]
+    if @secure ( arr_push[@parts, "Secure"] )
+    if map_get[@options, "http_only", true] ( arr_push[@parts, "HttpOnly"] )
+    arr_push[@parts, "SameSite=" + @same_site]
+    # str_join[@parts, "; "]
+)
