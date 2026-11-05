@@ -392,7 +392,8 @@ impl Interpreter<'_> {
                     }
                     Op::Binary(bop) => {
                         let len = self.stack.len();
-                        if let Some(value) = fast_binary(*bop, &self.stack[len - 2], &self.stack[len - 1])
+                        if let Some(value) =
+                            fast_binary(*bop, &self.stack[len - 2], &self.stack[len - 1])
                         {
                             self.stack.truncate(len - 2);
                             self.stack.push(value);
@@ -1198,9 +1199,7 @@ fn fast_binary(op: BinaryOp, l: &Value, r: &Value) -> Option<Value> {
             B::Add => Value::Num(a + b),
             B::Sub => Value::Num(a - b),
             B::Mul => Value::Num(a * b),
-            B::Lt | B::LtEq | B::Gt | B::GtEq => {
-                Value::Bool(super::compare(op, a.partial_cmp(b)))
-            }
+            B::Lt | B::LtEq | B::Gt | B::GtEq => Value::Bool(super::compare(op, a.partial_cmp(b))),
             _ => return None,
         }),
         _ => None,

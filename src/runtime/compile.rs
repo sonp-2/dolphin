@@ -6,8 +6,8 @@
 
 use std::collections::HashMap;
 
-use super::env::intern;
 use super::bytecode::{Chunk, Op};
+use super::env::intern;
 use super::value::Value;
 use crate::syntax::ast::{BinaryOp, Expr, ExprKind, FuncDef, Stmt, StmtKind, StrSegment};
 use crate::syntax::span::Span;
