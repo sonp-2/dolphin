@@ -26,6 +26,8 @@ pub mod worker;
 // 階層を分けても、`stdlib::http` のように 1 段で呼べるようにする
 #[cfg(feature = "crypto")]
 pub use data::crypto;
+#[cfg(feature = "postgres")]
+pub use data::postgres;
 #[cfg(feature = "regex")]
 pub use data::regex;
 #[cfg(feature = "sqlite")]
@@ -90,6 +92,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
     regex::register(interp);
     #[cfg(feature = "sqlite")]
     sqlite::register(interp);
+    #[cfg(feature = "postgres")]
+    postgres::register(interp);
     os::register(interp);
     time::register(interp);
 }

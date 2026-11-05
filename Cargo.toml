@@ -34,6 +34,12 @@ ureq = { version = "3.4", optional = true }
 # WebSocket の TLS（`wss://`）。ルート証明書は std:http と同じ webpki-roots
 rustls = { version = "0.23", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
 webpki-roots = { version = "1", optional = true }
+# PostgreSQL（`import["std:postgres"]`）。純 Rust の同期クライアント。TLS は rustls（`tls` feature と同じ webpki-roots）
+postgres = { version = "0.19", optional = true, default-features = false }
+postgres-protocol = { version = "0.6", optional = true }
+tokio-postgres-rustls = { version = "0.14", optional = true, default-features = false, features = ["ring"] }
+bytes = { version = "1", optional = true }
+fallible-iterator = { version = "0.2", optional = true }
 
 [features]
 default = ["repl", "http", "crypto", "regex", "tls", "image"]
@@ -57,3 +63,5 @@ audio = ["dep:rodio"]
 ffi = ["dep:libloading", "dep:libffi"]
 # SQLite（`import["std:sqlite"]`）。ソースを同梱するのでビルドが長くなる。既定では無効（`--features sqlite`）
 sqlite = ["dep:rusqlite"]
+# PostgreSQL（`import["std:postgres"]`）。`tls` を含む。既定では無効（`--features postgres`）
+postgres = ["dep:postgres", "dep:postgres-protocol", "dep:tokio-postgres-rustls", "dep:bytes", "dep:fallible-iterator", "tls"]

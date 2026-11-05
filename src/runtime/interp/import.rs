@@ -122,6 +122,7 @@ impl Interpreter<'_> {
                 "std:ui" if !cfg!(feature = "ui") => Some("ui"),
                 "std:audio" if !cfg!(feature = "audio") => Some("audio"),
                 "std:sqlite" if !cfg!(feature = "sqlite") => Some("sqlite"),
+                "std:postgres" if !cfg!(feature = "postgres") => Some("postgres"),
                 "std:ffi" if !cfg!(feature = "ffi") => Some("ffi"),
                 "std:image" if !cfg!(feature = "image") => Some("image"),
                 _ => None,

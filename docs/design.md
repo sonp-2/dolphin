@@ -1932,6 +1932,64 @@ await main[]
 | 深さ | 呼び出しの入れ子の深さは、`async` 関数がその場で別の `async` 関数を呼ぶ連なり（Rust の再帰を使う）も含めて、普通の関数と同じ 1000 段まで（超えたら同じエラー） | 確定 |
 | 作らないもの | future のキャンセル、先に終わったものを取る `race`・`timeout`（必要になったら足す）、`async` 関数でない場所で止まること、`async` な `for`（`for` の中で普通に `await` できる） | 確定 |
 
+### 5.47 PostgreSQL（`std:postgres`、確定 2026-11-05）
+
+SQLite（5.28）の次に、サーバー型の DB である PostgreSQL に接続する。API の形・エラー値・ハンドルの扱い・feature の切り方は `std:sqlite` に揃える。純 Rust の `postgres` クレート（同期版。内部で `tokio-postgres` を使う）を使い、利用者が `libpq` を入れる必要はない。**`postgres` feature（既定では無効）**。
+
+```
+@pg := import["std:postgres"]
+@c := @pg.connect["postgres://app:secret@localhost:5432/appdb"]?
+@pg.exec[@c, "CREATE TABLE IF NOT EXISTS u (id serial PRIMARY KEY, name text NOT NULL, tags text[])"]?
+@r := @pg.query[@c, "INSERT INTO u (name, tags) VALUES ($1, $2) RETURNING id", {"alice", {"a", "b"}}]?
+log[@r{0}.id]                              // 1
+@pg.exec[@c, "BEGIN"]?
+@n := @pg.exec[@c, "UPDATE u SET name = $1 WHERE id = $2", {"bob", 1}]?
+log[@n.changes]                            // 1
+@pg.exec[@c, "COMMIT"]?
+@pg.close[@c]
+```
+
+| 関数 | 内容 |
+|---|---|
+| `connect[target]` `connect[target, options]` | 接続のハンドル（`handle` 型）。`target` は URL の文字列（`postgres://user:password@host:port/dbname?sslmode=require`。`postgresql://` も可）か、マップ `{"host", "port", "user", "password", "dbname"}`（すべて省略可。既定は `host` が `localhost`、`port` が 5432、`user` が `postgres`。`password` と `dbname` は省略すれば送らない）。`options` は `{"timeout": 秒, "tls": 文字列, "int": 真偽値, "application_name": 文字列}` |
+| `exec[c, sql]` `exec[c, sql, params]` | 1 つの文を実行して、`{"changes": 影響した行数}` を返す（`INSERT` `UPDATE` `DELETE` は変更した行数、`SELECT` は取得した行数、`CREATE` などの DDL は 0）。結果の行は捨てる |
+| `query[c, sql]` `query[c, sql, params]` | 1 つの文を実行して、結果の行を**マップの配列**で返す（列名がキー。行がなければ空の配列）。同じ名前の列があれば、後のものが前のものを上書きする。`INSERT ... RETURNING` もこれで受ける（`last_id` はない） |
+| `run_script[c, sql]` | `;` で区切られた複数の文をまとめて実行する（パラメータなし。単純問い合わせ。スキーマの作成などに使う）。戻り値は `nil` |
+| `close[c]` | 閉じる。何度呼んでもよい |
+
+`params` は**配列**で、`$1` `$2` … に順番に入れる（PostgreSQL に名前付きのパラメータはない。マップを渡すのは実行時エラー）。数が合わなければエラー値（種類 `sql`）。値は SQL の文字列に埋め込まれず、サーバーに別に送られる（SQL インジェクションにならない）。文は接続ごとに準備して覚えておき（最大 64 個）、同じ SQL を繰り返すと準備を省く。専用の `prepare` 関数は作らない。
+
+#### 値の対応
+
+| Dolphin → PostgreSQL（パラメータ） | PostgreSQL → Dolphin（結果） |
+|---|---|
+| `nil` → NULL（どの型でも） | NULL → `nil` |
+| 真偽値 → `bool` | `bool` → 真偽値 |
+| 整数の数値・整数 → `int2` `int4` `int8` `oid`（範囲を出たらエラー値 `sql`）。`float4` `float8` `numeric` にも入る | `int2` `int4` `oid` `float4` `float8` → 数値。`int8` → 数値（2^53 を超える値は丸める） |
+| 整数でない数値 → `float4` `float8` `numeric` | `numeric` → **文字列**（`"12.340"`。桁を失わないため。`NaN` も文字列） |
+| 文字列 → `text` `varchar` `bpchar` `name` `uuid`（`"xxxxxxxx-xxxx-…"`）`numeric`（`"12.34"`）と enum | `text` `varchar` `bpchar` `name` `"char"` `uuid` と enum → 文字列 |
+| バイト列 → `bytea` | `bytea` → バイト列 |
+| 数値（Unix 時刻の秒）→ `timestamp` `timestamptz`（`timestamp` は UTC とみなす） | `timestamp` `timestamptz` → 数値（Unix 時刻の秒。`std:time` と同じ。マイクロ秒まで）。`infinity` と `-infinity` は文字列 |
+| 文字列 `"2026-10-20"` → `date`、`"10:30:00.5"` → `time` | `date` → 文字列 `"2026-10-20"`、`time` → 文字列 `"10:30:00.5"`（小数があるときだけ小数を付ける） |
+| 任意の値 → `json` `jsonb`（マップ・配列は JSON の文書に、文字列は JSON の文字列に。JSON にできない値はエラー値 `sql`） | `json` `jsonb` → 値（マップ・配列・文字列・数値・真偽値・`nil`。`std:json` の `parse` と同じ） |
+| 配列 → 配列型（`int4[]` `text[]` `jsonb[]` など。要素は上の規則で、要素に `nil` も入れられる） | 配列型 → 配列（多次元は入れ子の配列。空の配列は `{}`） |
+
+`options` の `"int": true` にすると、`int2` `int4` `int8` `oid` が数値でなく**整数**（5.40）で返り、`changes` も整数になる（`sqlite.open` の `int` と同じ考え方。JSON の中は対象外）。上の表にない型（`interval` `inet` `money` `timetz` など）を結果に含めると、その列を読めずエラー値（種類 `sql`、`::text` で文字列にキャストするよう案内する）。パラメータにそれらを渡すのも同じエラー値。`nil`・真偽値・数値・整数・文字列・バイト列・配列・マップ以外（関数値など）をパラメータに渡すのは、プログラムの間違いとして実行時エラー。
+
+| 項目 | 内容 | 状態 |
+|---|---|---|
+| ハンドル | 表示は `<postgres 接続 localhost:5432/appdb>`（パスワードは出さない。閉じていれば `<postgres 閉じています>`）。`==` は同じハンドルかを比べる。JSON にはできない。参照されなくなれば自動で閉じる | 確定 |
+| 失敗 | エラー値。種類は `sql`（構文の間違い、制約違反、パラメータの数の違い、型が合わないなど）、`busy`（ロックが取れない `55P03`、デッドロック `40P01`、直列化の失敗 `40001`。やり直せば通ることがある）、`auth`（認証の失敗。SQLSTATE が `28` で始まる）、`network`（接続できない・名前が引けない・時間切れ・TLS の失敗・途中で切れた）、`parse`（URL やパラメータの指定が読めない）、`closed`（閉じた接続の使用）。サーバーが返したエラーのメッセージには SQLSTATE を `[42P01]` の形で含める | 確定 |
+| 型の間違い | 引数の型、知らないオプション、`tls` の値、範囲外の `timeout` は、プログラムの間違いとして実行時エラー | 確定 |
+| トランザクション | 専用の関数は作らない。`exec[c, "BEGIN"]` `exec[c, "COMMIT"]` `exec[c, "ROLLBACK"]`（`SAVEPOINT` も）を書く。何もしなければ、各文が自動で確定する。トランザクション中に文が失敗したら、PostgreSQL の規則どおり `ROLLBACK` までほかの文は失敗する（サーバーの状態をそのまま見せる） | 確定 |
+| TLS | `options` の `"tls"` は `"disable"`（使わない）`"prefer"`（サーバーが対応していれば使う。既定）`"require"`（使えなければ失敗）。URL の `?sslmode=` も同じ（`options` が優先。それ以外の値は `parse` のエラー値）。TLS は `rustls` で、証明書は `std:http` と同じ組み込みのルート証明書（`tls` feature の `webpki-roots`）で**常に検証する**。自己署名の証明書のサーバーには TLS で接続できないので、ローカルの開発用は `"tls": "disable"` にする。クライアント証明書・独自の CA は今回は作らない | 確定 |
+| タイムアウト | `options` の `"timeout"`（秒、0 より大きい数。既定 10）は、TCP の接続の待ち時間。TLS と認証の応答は含まない。問い合わせの実行時間の上限は設けない（必要なら `exec[c, "SET statement_timeout = 5000"]`）。時間切れは `network` | 確定 |
+| 待ち方 | ブロッキング（8.3）。`sqlite` と同じく、問い合わせの間はインタプリタのスレッドが止まり、イベントループ（5.23）やほかの `async` の流れ（5.46）も進まない。接続はインタプリタのスレッドの外へは持ち出さない（`std:worker`（5.43）へハンドルは渡せない。ワーカーの中で `connect` する）。非同期版（`*_async`）は作らない | 確定 |
+| 接続の再利用 | 接続のプールは作らない。1 つの接続で 1 つずつ実行する。サーバーに切られた接続は `network` のエラー値になり、`connect` し直す | 確定 |
+| ビルド | `postgres` feature（既定では無効、`cargo build --features postgres`）。`tls` feature（`rustls` と `webpki-roots`）を含む。外した版で `import["std:postgres"]` すると、含まれていないことを案内する | 確定 |
+| 検証 | URL・パラメータの検査、引数の型、接続の失敗の種類、値の変換（`numeric` の符号化、日時、配列、JSON）は、サーバーがなくても通る単体テストにする。サーバーが要るテストは、環境変数 `DOLPHIN_TEST_PG_URL`（接続先の URL）があるときだけ動かし、なければ飛ばす | 確定 |
+| 作らないもの | `LISTEN` / `NOTIFY`、`COPY`、カーソルや大きな結果のストリーム（結果は全部メモリに読む）、`interval` `inet` `cidr` `macaddr` `money` `timetz` `xml` と範囲型・複合型の対応（`::text` で文字列にして受ける）、接続のプール、クライアント証明書・独自 CA、Unix ドメインソケット、非同期版、名前付きパラメータ | 確定 |
+
 ### 5.48 配列・マップ・文字列の関数の追加（確定 2026-11-05）
 
 Python・Node と比べて足りなかった、よく使う関数を足す。命名と形は今までどおり（`arr_` `map_` `str_` + 動詞、対象を最初の引数、`f[a, b]`）。新しい型・外部クレートはない。新しい配列・マップ・文字列を返すだけで、元の値は書き換えない。引数の型の間違いと、ここに書いた「エラー」は実行時エラー（エラー値は返さない）。

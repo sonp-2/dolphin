@@ -1,0 +1,17 @@
+// std:postgres（design.md 5.47）。サーバーがなくても通る範囲: 接続先の指定と失敗の種類
+@pg := import["std:postgres"]
+
+// 読めない接続先は parse
+log[err_kind[@pg.connect["postgres://h/db?sslmode=bogus"]]]
+log[err_kind[@pg.connect["postgres://h:notaport/db"]]]
+
+// つながらないのは network（127.0.0.1 のポート 1 は誰も待ち受けていない）
+log[err_kind[@pg.connect["postgres://u:p@127.0.0.1:1/db"]]]
+log[err_kind[@pg.connect["postgres://u:p@127.0.0.1:1/db", {"tls": "disable", "timeout": 2}]]]
+log[err_kind[@pg.connect["postgres://u:p@127.0.0.1:1/db", {"tls": "require"}]]]
+log[err_kind[@pg.connect[{"host": "127.0.0.1", "port": 1, "user": "u", "password": "p", "dbname": "db"}]]]
+log[err_kind[@pg.connect[{"host": "127.0.0.1", "port": 1i}, {"int": true, "application_name": "dolphin"}]]]
+
+// 接続のエラーメッセージにパスワードは出ない
+@e := @pg.connect["postgres://u:s3cr3t-pass@127.0.0.1:1/db"]
+log[str_contains[err_message[@e], "s3cr3t-pass"]]
