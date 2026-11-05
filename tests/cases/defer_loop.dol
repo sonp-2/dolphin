@@ -1,0 +1,37 @@
+// ループの中の defer は、繰り返しごとに登録され、関数を抜けるとき逆順に走る
+loop[] (
+    for @i in {1, 2, 3} (
+        defer log["後始末 @i"]
+        log["繰り返し @i"]
+    )
+    @n := 0
+    while @n < 2 (
+        @n = @n + 1
+        if @n == 1 (
+            continue
+        )
+        defer log["while @n"]
+        break
+    )
+    log["ループの後"]
+)
+loop[]
+
+// ブロックを抜けても走らない（関数単位）
+blk[] (
+    if true (
+        defer log["if の中の defer"]
+        log["if の中"]
+    )
+    log["if の後"]
+)
+blk[]
+
+// 呼び出しごとに別の登録
+rec[@n] (
+    defer log["rec @n 終わり"]
+    if @n > 0 (
+        rec[@n - 1]
+    )
+)
+rec[2]

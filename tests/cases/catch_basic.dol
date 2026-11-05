@@ -1,0 +1,58 @@
+// catch: 実行時エラーを捕まえる（design.md 5.53）
+ok[] ( # 41 + 1 )
+boom[] ( # 1 / 0 )
+typo[] ( # 1 + "a" )
+
+log[catch[ok]]
+@e := catch[boom]
+log[is_error[@e], err_kind[@e], err_message[@e]]
+log[err_data[@e]{"line"}, err_data[@e]{"col"}]
+log[catch[typo]]
+
+// エラー値を返す関数は、そのまま返る（実行時エラーではない）
+fails[] ( # err_new["not_found", "ない"] )
+@r := catch[fails]
+log[err_kind[@r]]
+
+// ? による早期 return は普通の戻り値
+early[] (
+    @x := fails[]?
+    # "ここには来ない"
+)
+log[err_kind[catch[early]]]
+
+// 無名関数・assert
+@r2 := catch[[] ( assert[false, "だめ"] )]
+log[err_kind[@r2]]
+log[err_message[@r2]]
+
+// 引数の数が合わない関数は、呼んだときのエラーとして捕まる
+need[@a] ( # @a )
+log[err_message[catch[need]]]
+
+// 入れ子: 内側が先に捕まえる
+@o := catch[[] (
+    @i := catch[[] ( # 1 / 0 )]
+    log["内側で捕まえた:", err_kind[@i]]
+    # 5
+)]
+log[@o]
+@o2 := catch[[] (
+    @i := catch[[] ( # 1 )]
+    # 1 / 0
+)]
+log[err_kind[@o2]]
+
+// 呼び出し履歴
+inner[] ( # nil{0} )
+outer[] ( # inner[] )
+@t := err_data[catch[outer]]{"trace"}
+log[arr_len[@t]]
+log[@t{0}{"what"}, @t{1}{"what"}]
+
+// 組み込み関数が呼ぶ関数の中のエラー
+@e3 := catch[[] ( # arr_map[{1, 2}, [@x] ( # @x / 0 )] )]
+log[err_message[@e3]]
+
+// 捕まえたあとも続けられる
+log["続く"]

@@ -1,0 +1,16 @@
+f の後始末 a
+runtime
+inner
+outer
+runtime
+g-3
+g-1
+runtime 0 で割ることはできません
+文字列と数値に `+` は使えません
+i の値
+j の後始末
+defer_error.dol:48:5: エラー: 止まる
+   |
+48 |     assert[false, "止まる"]
+   |     ^
+  = j の中（50:1 から呼び出し）

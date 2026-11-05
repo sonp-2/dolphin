@@ -1,0 +1,50 @@
+// 実行時エラーで抜けるときも defer が走る（catch で確かめる）
+f[@m] (
+    defer log["f の後始末 @m"]
+    # 1 / 0
+)
+@e := catch[[] ( # f["a"] )]
+log[err_kind[@e]]
+
+// 入れ子の関数: 内側から順に
+inner[] (
+    defer log["inner"]
+    # nil{0}
+)
+outer[] (
+    defer log["outer"]
+    inner[]
+    log["来ない"]
+)
+log[err_kind[catch[outer]]]
+
+// defer の中のエラー: すべて走り、普通に終わるなら最初のエラーが関数のエラーになる
+g[] (
+    defer log["g-1"]
+    defer ( 1 / 0 )
+    defer log["g-3"]
+    # "g の値"
+)
+@e2 := catch[g]
+log[err_kind[@e2], err_message[@e2]]
+
+// すでにエラーで抜けるなら、元のエラーが残る
+h[] (
+    defer ( nil{0} )
+    # "x" + 1
+)
+log[err_message[catch[h]]]
+
+// defer の値は捨てる（エラー値でも）
+i[] (
+    defer err_new["k", "後始末の失敗"]
+    # "i の値"
+)
+log[i[]]
+
+// 捕まえなければ、エラーは通常どおり表示され、defer も走る
+j[] (
+    defer log["j の後始末"]
+    assert[false, "止まる"]
+)
+j[]

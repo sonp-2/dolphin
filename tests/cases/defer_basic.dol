@@ -1,0 +1,45 @@
+// defer: 関数を抜けるとき、登録の逆順に走る（design.md 5.53）
+a[] (
+    defer log["後始末 1"]
+    defer log["後始末 2"]
+    log["本体"]
+)
+a[]
+
+// return で抜けても走る。戻り値は変わらない
+b[] (
+    defer log["b の後始末"]
+    # "b の値"
+)
+log[b[]]
+
+// 式は抜けるときに評価される（その時点の値を読む）
+c[] (
+    @x := 1
+    defer log["x は @x"]
+    @x = 2
+)
+c[]
+
+// ? による早期 return でも走る
+fails[] ( # err_new["k", "m"] )
+d[] (
+    defer log["d の後始末"]
+    @v := fails[]?
+    log["来ない"]
+)
+log[err_kind[d[]]]
+
+// 複数の文を後始末にする
+e[] (
+    defer [] (
+        log["1 行目"]
+        log["2 行目"]
+    )[]
+    log["e の本体"]
+)
+e[]
+
+// ファイルの最上位の defer は、ファイルの最後で走る
+defer log["最上位の後始末"]
+log["最上位の本体"]

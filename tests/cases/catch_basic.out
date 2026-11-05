@@ -1,0 +1,16 @@
+42
+true runtime 0 で割ることはできません
+3 14
+<エラー runtime: 数値と文字列に `+` は使えません>
+not_found
+not_found
+runtime
+だめ
+`need` の引数は 1 個です（0 個渡されました）
+内側で捕まえた: runtime
+5
+runtime
+2
+inner の中 outer の中
+0 で割ることはできません
+続く

@@ -288,6 +288,73 @@ fn test_runs_test_functions() {
     assert!(stdout(&output).contains("テストが見つかりません"));
 }
 
+/// `catch` と `defer` を、`dolphin test` の `assert_raises` 相当に使う（design.md 5.53）
+#[test]
+fn test_uses_catch_and_defer() {
+    let dir = std::env::temp_dir().join("dolphin-test-catch");
+    let _ = fs::remove_dir_all(&dir);
+    fs::create_dir_all(&dir).unwrap();
+    fs::write(
+        dir.join("raises_test.dol"),
+        r#"assert_raises[@f, @text] (
+    @e := catch[@f]
+    assert[is_error[@e], "実行時エラーになるはずです"]
+    assert_eq[err_kind[@e], "runtime"]
+    assert[str_contains[err_message[@e], @text], err_message[@e]]
+)
+test_div_zero[] (
+    assert_raises[[] ( # 1 / 0 ), "0 で割る"]
+)
+test_no_error[] (
+    assert_raises[[] ( # 1 + 1 ), "なにか"]
+)
+fail_with_defer[@seen] (
+    defer arr_push[@seen, "後始末"]
+    # nil{0}
+)
+test_defer_runs_when_failing[] (
+    @seen := {}
+    @r := catch[[] ( fail_with_defer[@seen] )]
+    assert[is_error[@r]]
+    assert_eq[@seen, {"後始末"}]
+)
+"#,
+    )
+    .unwrap();
+    let output = dolphin().arg("test").arg(&dir).output().unwrap();
+    let out = stdout(&output);
+    assert_eq!(output.status.code(), Some(1), "{out}");
+    assert!(
+        out.contains(
+            "  ok   test_div_zero
+"
+        ),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "  FAIL test_no_error
+"
+        ),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "  ok   test_defer_runs_when_failing
+"
+        ),
+        "{out}"
+    );
+    assert!(out.contains("実行時エラーになるはずです"), "{out}");
+    assert!(
+        out.ends_with(
+            "2 件成功、1 件失敗
+"
+        ),
+        "{out}"
+    );
+}
+
 #[test]
 fn fmt_rewrites_checks_and_prints() {
     let messy = "@x:=1+2   // c\nf[@a](\n# @a\n)\n";

@@ -1,0 +1,4 @@
+// os.exit は catch を素通りする
+@os := import["std:os"]
+@r := catch[[] ( @os.exit[3] )]
+log["ここには来ない"]
