@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+## [0.57.0] - 2026-11-06
+
+パターンマッチ `match`、標準ライブラリの名前の整理（`std:fs` の新設と、旧名の非推奨）、1.0 に向けた安定性とエラー kind の方針。
+
 ### 追加
 - 1.0 に向けた方針を設計書に書いた（[design.md 5.56・5.57](docs/design.md)）。凍結の対象（言語・組み込み関数・主要な `std:*`・エラー値の kind・数値上限）と、実験的なもの（`std:ui` `std:canvas` `std:audio` `std:ffi` `std:sqlite` `std:postgres`）、SemVer での破壊的変更の定義、非推奨にする手順、予約語を増やす変更の扱い、エラー値の kind の一覧と、kind の揺れの整理。実装は変えていない
 - `tests/error_kinds.rs`: 実装が返すエラー値の kind が設計書 5.57 の表にあること、表の kind が実装に残っていることを照合する。`tests/cases/err_kind_table.dol`（kind の golden）
@@ -653,7 +657,8 @@ C++ 版から Rust での作り直しを始めた最初のバージョン。
 - 行・列と呼び出し履歴つきのエラー表示。実行前の検査（未定義の関数、引数の数、関数の外での `$x` など）
 - ゴールデンテスト（`tests/cases/*.dol` と期待出力の比較）
 
-[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.56.0...HEAD
+[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.57.0...HEAD
+[0.57.0]: https://github.com/sonp-2/dolphin/compare/v0.56.0...v0.57.0
 [0.56.0]: https://github.com/sonp-2/dolphin/compare/v0.55.0...v0.56.0
 [0.55.0]: https://github.com/sonp-2/dolphin/compare/v0.54.0...v0.55.0
 [0.54.0]: https://github.com/sonp-2/dolphin/compare/v0.53.0...v0.54.0

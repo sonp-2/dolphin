@@ -203,6 +203,7 @@ count: 3
 | [v0.54.0](https://github.com/sonp-2/dolphin/tree/v0.54.0) | `async` と `await`（止めて再開できる関数、`future`） | [v0.53.0...v0.54.0](https://github.com/sonp-2/dolphin/compare/v0.53.0...v0.54.0) |
 | [v0.55.0](https://github.com/sonp-2/dolphin/tree/v0.55.0) | 標準ライブラリの拡充（PostgreSQL・YAML・TOML・zip・ログ・ファイル操作・引数解析・`str_format` など）と VM の高速化 | [v0.54.0...v0.55.0](https://github.com/sonp-2/dolphin/compare/v0.54.0...v0.55.0) |
 | [v0.56.0](https://github.com/sonp-2/dolphin/tree/v0.56.0) | `catch` / `defer`、`for` のパターンとマップ・文字列、レコード（`record`）、ルーター `std:router` | [v0.55.0...v0.56.0](https://github.com/sonp-2/dolphin/compare/v0.55.0...v0.56.0) |
+| [v0.57.0](https://github.com/sonp-2/dolphin/tree/v0.57.0) | パターンマッチ `match`、標準ライブラリの名前の整理（`std:fs`、旧名の非推奨）、安定性とエラー kind の方針 | [v0.56.0...v0.57.0](https://github.com/sonp-2/dolphin/compare/v0.56.0...v0.57.0) |
 
 差分は、まず `docs/design.md`（仕様）から読み、次に `tests/cases/`（使い方の実例）、最後に `src/` を読むと流れがつかめます。手元では `git diff v0.2.0 v0.3.0 --stat` のように見られます。
 
