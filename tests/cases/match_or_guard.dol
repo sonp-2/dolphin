@@ -1,0 +1,55 @@
+// match: or パターンとガード
+// or: どの選択肢が合っても、同じ変数に値が入る
+point[@v] (
+    # match @v (
+        {"x": @n, "y": 0} | {"x": 0, "y": @n} => "軸の上: @n"
+        {@n, 0} | {0, @n} => "軸の上（配列）: @n"
+        {@a, @b} | {@b, @a} if @a > 100 => "大きい: @a @b"
+        {"kind": "a" | "b" | "c", "id": @id} => "abc: @id"
+        _ => "他"
+    )
+)
+log[point[{"x": 5, "y": 0}]]
+log[point[{"x": 0, "y": 7}]]
+log[point[{3, 0}]]
+log[point[{0, 4}]]
+log[point[{1, 2}]]
+log[point[{500, 2}]]
+log[point[{"kind": "b", "id": 9}]]
+log[point[{"kind": "d", "id": 9}]]
+
+// ガードが偽なら次の腕へ。ガードの中でパターンの変数が見える
+grade[@score] (
+    # match @score (
+        @s if @s >= 90 => "A"
+        @s if @s >= 80 => "B"
+        @s if @s >= 70 => "C"
+        _ => "D"
+    )
+)
+log[grade[95], grade[85], grade[75], grade[10]]
+
+// ガードは合ったときだけ評価される（副作用の確認）
+@calls := {}
+probe[@name, @ok] (
+    arr_push[@calls, @name]
+    # @ok
+)
+match 1 (
+    2 if probe["a", true] => log["a"]
+    @x if probe["b", false] => log["b"]
+    @x if probe["c", true] => log["c @x"]
+    @x if probe["d", true] => log["d"]
+)
+log[@calls]
+
+// 型のテストはガードと type_of で書く
+describe[@v] (
+    # match @v (
+        @n if type_of[@n] == "number" => "number @n"
+        @s if type_of[@s] == "string" => "string @s"
+        {@h, ...@_} => "array"
+        _ => "other"
+    )
+)
+log[describe[1], describe["a"], describe[{1}], describe[nil]]

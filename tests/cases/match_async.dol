@@ -1,0 +1,53 @@
+// match と async / await。対象・ガード・本体で await でき、止まっている間も束縛は保たれる
+@async := import["std:async"]
+
+fetch[@n] (
+    # {"id": @n, "tags": {"a", "b"}}
+)
+
+async load[@n] (
+    await @async.sleep[0.01]
+    # fetch[@n]
+)
+
+async main[] (
+    // 対象で await
+    match await load[1] (
+        {"id": @id, "tags": {@first, ...@rest}} => (
+            await @async.sleep[0.01]
+            log["id @id first @first rest @rest"]
+        )
+        _ => log["?"]
+    )
+
+    // ガードで await（別の流れが動いても束縛は保たれる）
+    @r := match 5 (
+        @n if (await load[@n]){"id"} == 6 => "six"
+        @n if (await load[@n]){"id"} == 5 => "five @n"
+        _ => "none"
+    )
+    log[@r]
+
+    // 式の本体で await
+    @v := match "x" (
+        "y" => 0
+        @s => (await load[7]){"id"} + 1
+    )
+    log[@v]
+
+    // 並行して動く流れでも、それぞれの束縛を持つ
+    @f1 := slow["a", 0.03]
+    @f2 := slow["b", 0.01]
+    log[await @f1, await @f2]
+)
+
+async slow[@name, @t] (
+    match @name (
+        @k => (
+            await @async.sleep[@t]
+            # "done @k"
+        )
+    )
+)
+
+await main[]

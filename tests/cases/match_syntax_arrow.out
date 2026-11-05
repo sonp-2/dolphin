@@ -1,0 +1,4 @@
+match_syntax_arrow.dol:3:7: エラー: `=>`が必要です（`log`がありました）
+  |
+3 |     1 log["one"]
+  |       ^

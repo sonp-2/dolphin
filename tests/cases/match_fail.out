@@ -1,0 +1,8 @@
+one
+pair
+ここまでは動く
+match_fail.dol:3:5: エラー: match に合う腕がありません（値: "x"）
+  |
+3 |     match @v (
+  |     ^
+  = describe の中（11:1 から呼び出し）

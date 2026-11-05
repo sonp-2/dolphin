@@ -1,0 +1,52 @@
+// match: 配列のパターン。...@rest がなければ長さがちょうど合う必要がある
+shape[@v] (
+    # match @v (
+        {} => "empty"
+        {@a} => "one: @a"
+        {@a, @b} => "two: @a @b"
+        {@a, @b, ...@rest} => "many: @a @b rest=@{arr_len[@rest]}"
+        _ => "not an array"
+    )
+)
+
+log[shape[{}]]
+log[shape[{1}]]
+log[shape[{1, 2}]]
+log[shape[{1, 2, 3}]]
+log[shape[{1, 2, 3, 4, 5}]]
+log[shape["x"]]
+log[shape[{:}]]
+
+// 先頭と残り
+sum[@xs] (
+    # match @xs (
+        {} => 0
+        {@h, ...@t} => @h + sum[@t]
+    )
+)
+log[sum[{1, 2, 3, 4}]]
+
+// 残りは新しい配列（元の配列は変わらない）
+@orig := {1, 2, 3}
+match @orig (
+    {@a, ...@r} => (
+        arr_push[@r, 99]
+        log[@r]
+    )
+)
+log[@orig]
+
+// 入れ子とリテラル
+match {{1, 2}, {3, 4}} (
+    {{@a, _}, {_, @d}} => log[@a + @d]
+)
+match {"add", 1, 2} (
+    {"sub", @a, @b} => log["sub", @a - @b]
+    {"add", @a, @b} => log["add", @a + @b]
+    _ => log["?"]
+)
+
+// 残りを捨てる
+match {1, 2, 3} (
+    {@first, ...@_} => log[@first]
+)

@@ -1,0 +1,4 @@
+match_record_arity.dol:5:5: エラー: レコード `Point` のフィールドは 2 個です（パターンは 1 個）
+  |
+5 |     Point[@x] => log[@x]
+  |     ^

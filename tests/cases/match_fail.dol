@@ -1,0 +1,12 @@
+// match: どの腕にも合わなければ実行時エラー（`_` を最後に置けば起こらない）
+describe[@v] (
+    match @v (
+        1 => log["one"]
+        {@a, @b} => log["pair"]
+    )
+)
+describe[1]
+describe[{1, 2}]
+log["ここまでは動く"]
+describe["x"]
+log["ここには来ない"]

@@ -1,0 +1,94 @@
+// match と break / continue / # / defer / ? / ネスト
+// ループの中で break と continue
+for @i in range[0, 10] (
+    match @i (
+        2 | 4 => continue
+        6 => break
+        _ => log["i = @i"]
+    )
+)
+
+// while の中
+@n := 0
+while true (
+    @n = @n + 1
+    match @n (
+        1 => continue
+        4 => break
+        @k => log["while @k"]
+    )
+)
+
+// 式の match の値を # で返す／文の match の中で # で返す
+find[@xs, @want] (
+    for @x in @xs (
+        match @x (
+            {@k, @v} if @k == @want => # @v
+            _ => continue
+        )
+    )
+    # "なし"
+)
+log[find[{{"a", 1}, {"b", 2}}, "b"], find[{{"a", 1}}, "z"]]
+
+// defer は関数に登録される
+withdefer[@v] (
+    defer log["後始末 @v"]
+    match @v (
+        0 => (
+            defer log["0 の腕の defer"]
+            # "zero"
+        )
+        _ => log["本体 @v"]
+    )
+    # "end"
+)
+log[withdefer[0]]
+log[withdefer[1]]
+
+// ? : エラー値を返す関数から早期 return
+parse[@s] (
+    @n := to_num[@s]?
+    # match @n (
+        0 => "zero"
+        @k if @k < 0 => "negative"
+        _ => "positive"
+    )
+)
+log[parse["0"], parse["-3"], parse["7"], is_error[parse["x"]]]
+
+// 腕の中の ?
+twice[@s] (
+    match @s (
+        "" => # "empty"
+        _ => (
+            @n := to_num[@s]?
+            # @n * 2
+        )
+    )
+)
+log[twice[""], twice["21"], is_error[twice["x"]]]
+
+// ネスト
+classify[@a, @b] (
+    # match @a (
+        0 => match @b (
+            0 => "both zero"
+            _ => "a zero"
+        )
+        _ => match @b (
+            0 => "b zero"
+            _ => "none zero"
+        )
+    )
+)
+log[classify[0, 0], classify[0, 1], classify[1, 0], classify[1, 1]]
+
+// 対象に match を書く
+log[match match 1 ( 1 => 2, _ => 3 ) ( 2 => "two", _ => "other" )]
+
+// 腕の本体が空のブロック
+match 1 (
+    1 => ()
+)
+log["done"]

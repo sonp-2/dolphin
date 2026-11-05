@@ -1,0 +1,13 @@
+empty
+one: 1
+two: 1 2
+many: 1 2 rest=1
+many: 1 2 rest=3
+not an array
+not an array
+10
+{2, 3, 99}
+{1, 2, 3}
+5
+add 3
+1

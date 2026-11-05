@@ -644,6 +644,27 @@ mod tests {
     }
 
     #[test]
+    fn match_tokens() {
+        assert_eq!(
+            kinds("match 1 | 2 => _ || 3 == 4"),
+            vec![
+                Match,
+                Number(1.0),
+                Pipe,
+                Number(2.0),
+                FatArrow,
+                Ident("_".into()),
+                OrOr,
+                Number(3.0),
+                Eq,
+                Number(4.0),
+                Eof,
+            ]
+        );
+        assert!(tokenize("1 & 2").is_err());
+    }
+
+    #[test]
     fn assignment() {
         assert_eq!(
             kinds("@x = 1.5 + @y"),

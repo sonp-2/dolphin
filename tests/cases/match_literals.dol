@@ -1,0 +1,43 @@
+// match: リテラルのパターン（design.md 5.59）。数値と整数は別の型
+kind[@v] (
+    # match @v (
+        0 => "zero"
+        1 | 2 | 3 => "small"
+        -1 => "minus one"
+        2.5 => "two and a half"
+        7i => "int seven"
+        -8i => "int minus eight"
+        "" => "empty string"
+        "hi" => "greeting"
+        true => "yes"
+        false => "no"
+        nil => "nil"
+        _ => "other"
+    )
+)
+
+for @v in {0, 1, 3, -1, 2.5, 7i, -8i, 7, 1i, "", "hi", "Hi", true, false, nil, {}, {1}} (
+    log[kind[@v]]
+)
+
+// 1 行に書く（腕は `,` でも区切れる）
+for @n in range[0, 4] (
+    log[match @n ( 0 => "a", 1 => "b", _ => "c" )]
+)
+
+// 文の match
+for @s in {"go", "stop", "wait"} (
+    match @s (
+        "go" => log["進む"]
+        "stop" => log["止まる"]
+        _ => log["待つ: @s"]
+    )
+)
+
+// `@match` は普通の変数、`_` は関数名にできる
+@match := 5
+log[@match]
+_[@x] (
+    # @x * 2
+)
+log[_[4]]

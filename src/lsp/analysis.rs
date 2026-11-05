@@ -670,6 +670,31 @@ if @total > 0 (
     }
 
     #[test]
+    fn match_bindings_are_definitions() {
+        let a = analyze(
+            "@v := {1, 2}
+@r := match @v (
+    {@a, @b} if @a > 0 => @a + @b
+    _ => 0
+)
+match @v (
+    {@c, ...@d} => log[@c, @d]
+)
+",
+        )
+        .unwrap();
+        // ガードと式の本体の `@a` は、パターンの `@a`（3 行目の 6 列）を指す
+        assert_eq!(target_span(&a, 3, 17), Some(Span { line: 3, col: 6 }));
+        assert_eq!(target_span(&a, 3, 27), Some(Span { line: 3, col: 6 }));
+        assert_eq!(target_span(&a, 3, 32), Some(Span { line: 3, col: 10 }));
+        // 文の match の本体の `@c` `@d`
+        assert_eq!(target_span(&a, 7, 24), Some(Span { line: 7, col: 6 }));
+        assert_eq!(target_span(&a, 7, 28), Some(Span { line: 7, col: 13 }));
+        // 対象の `@v`
+        assert_eq!(target_span(&a, 2, 13), Some(Span { line: 1, col: 1 }));
+    }
+
+    #[test]
     fn interpolation_expressions_are_walked() {
         let a = analyze(
             "@x := 1

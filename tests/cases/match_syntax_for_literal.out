@@ -1,0 +1,4 @@
+match_syntax_for_literal.dol:2:6: エラー: このパターンは `match` の中でだけ書けます
+  |
+2 | for {1, @a} in {{1, 2}} (
+  |      ^
