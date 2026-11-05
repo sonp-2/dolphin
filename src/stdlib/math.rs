@@ -1,9 +1,10 @@
-//! 数学: abs, floor, ceil, round, sqrt, pow, min, max, random, random_int,
+//! 数学: abs, floor, ceil, round, sqrt, pow, min, max,
 //! trunc, sign, clamp, num_fixed。`std:math`（定数・三角関数・対数。design.md 5.12）
 
 use std::cell::Cell;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use super::deprecated::legacy;
 use super::{array_arg, expect_args, int_arg, num_arg, str_arg, type_error};
 use crate::runtime::interp::{Const, Interpreter};
 use crate::runtime::value::Value;
@@ -18,8 +19,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("pow", pow);
     interp.register("min", |_, args| fold("min", args, f64::min, i64::min));
     interp.register("max", |_, args| fold("max", args, f64::max, i64::max));
-    interp.register("random", random);
-    interp.register("random_int", random_int);
+    interp.register("random", legacy!("random", super::random::float));
+    interp.register("random_int", legacy!("random_int", super::random::int));
     interp.register("trunc", |_, args| unary("trunc", args, f64::trunc));
     interp.register("sign", sign_value);
     interp.register("clamp", clamp);
@@ -385,26 +386,6 @@ pub(super) fn below(n: u64) -> u64 {
             return r % n;
         }
     }
-}
-
-/// 0 以上 1 未満の数
-fn random(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("random", args, 0)?;
-    Ok(Value::Num(next_f64()))
-}
-
-/// `min` 以上 `max` 以下の整数
-fn random_int(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("random_int", args, 2)?;
-    let min = int_arg("random_int", args, 0)?;
-    let max = int_arg("random_int", args, 1)?;
-    if min > max {
-        return Err(format!("random_int の範囲が逆です（{min} > {max}）"));
-    }
-    let span = i128::from(max) - i128::from(min) + 1;
-    // 範囲が u64 に収まらない（i64 の全体）ときは、64 ビットをそのまま使う
-    let offset = u64::try_from(span).map_or_else(|_| next_u64(), below);
-    Ok(Value::Num((i128::from(min) + i128::from(offset)) as f64))
 }
 
 #[cfg(test)]
