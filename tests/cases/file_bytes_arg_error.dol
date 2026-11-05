@@ -1,1 +1,2 @@
-file_write_bytes["target/x.bin", "text"]
+@fs := import["std:fs"]
+@fs.write_bytes["target/x.bin", "text"]

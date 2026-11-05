@@ -3,6 +3,7 @@
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::deprecated::legacy;
 use crate::stdlib::{expect_args, func_arg, new_map, num_arg, str_arg, type_error};
 
 pub fn register(interp: &mut Interpreter<'_>) {
@@ -11,7 +12,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
         &[
             ("ui.run", super::run),
             ("ui.refresh", super::refresh),
-            ("ui.quit", super::quit),
+            ("ui.stop", super::quit),
+            ("ui.quit", legacy!("ui.quit", super::quit)),
             ("ui.text", text),
             ("ui.button", button),
             ("ui.text_input", text_input),

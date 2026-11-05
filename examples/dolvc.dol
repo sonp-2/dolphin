@@ -1,3 +1,4 @@
+@fs := import["std:fs"]
 // dolvc — Dolphin で書いた、小さなバージョン管理ツール（git のミニ版）
 //
 // 使い方（作業したいディレクトリの中で実行する）:
@@ -39,7 +40,7 @@ sha256[@data] (
 )
 
 ensure_repo[] (
-    if !file_exists[@store] (
+    if !@fs.exists[@store] (
         die["リポジトリがありません（init してください）"]
     )
 )
@@ -48,13 +49,13 @@ ensure_repo[] (
 
 // .dolvc を除くすべてのファイルを、相対パスにして @out に足す
 walk[@dir, @prefix, @out] (
-    for @name in arr_sort[must[file_list[@dir]]] (
+    for @name in arr_sort[must[@fs.list[@dir]]] (
         if @name == @store (
             continue
         )
         @full := @path.join[@dir, @name]
         @rel := @path.join[@prefix, @name]
-        if must[file_info[@full]]{"is_dir"} (
+        if must[@fs.info[@full]]{"is_dir"} (
             walk[@full, @rel, @out]
         )
         else (
@@ -69,12 +70,12 @@ snapshot[@save] (
     walk[".", "", @paths]
     @files := {:}
     for @rel in @paths (
-        @data := must[file_read_bytes[@rel]]
+        @data := must[@fs.read_bytes[@rel]]
         @id := sha256[@data]
         if @save (
             @blob := @path.join[@store, "objects", @id]
-            if !file_exists[@blob] (
-                must[file_write_bytes[@blob, @data]]
+            if !@fs.exists[@blob] (
+                must[@fs.write_bytes[@blob, @data]]
             )
         )
         @files{@rel} = @id
@@ -86,21 +87,21 @@ snapshot[@save] (
 
 head[] (
     @file := @path.join[@store, "HEAD"]
-    if !file_exists[@file] (
+    if !@fs.exists[@file] (
         # nil
     )
-    # str_trim[must[file_read[@file]]]
+    # str_trim[must[@fs.read[@file]]]
 )
 
 load_commit[@id] (
-    @text := must[file_read[@path.join[@store, "commits", @id + ".json"]]]
+    @text := must[@fs.read[@path.join[@store, "commits", @id + ".json"]]]
     # must[@json.parse[@text]]
 )
 
 // 先頭だけの id から、完全な id を探す
 resolve[@prefix] (
     @found := {}
-    for @name in must[file_list[@path.join[@store, "commits"]]] (
+    for @name in must[@fs.list[@path.join[@store, "commits"]]] (
         @id := str_sub[@name, 0, str_len[@name] - 5]
         if str_starts_with[@id, @prefix] (
             arr_push[@found, @id]
@@ -178,7 +179,7 @@ diff_lines[@a, @b] (
 
 // コミットに記録された、そのファイルの行（バイナリなら nil）
 committed_lines[@hash] (
-    @text := bytes_to_str[must[file_read_bytes[@path.join[@store, "objects", @hash]]]]
+    @text := bytes_to_str[must[@fs.read_bytes[@path.join[@store, "objects", @hash]]]]
     if is_error[@text] (
         # nil
     )
@@ -186,7 +187,7 @@ committed_lines[@hash] (
 )
 
 working_lines[@rel] (
-    @text := bytes_to_str[must[file_read_bytes[@rel]]]
+    @text := bytes_to_str[must[@fs.read_bytes[@rel]]]
     if is_error[@text] (
         # nil
     )
@@ -196,11 +197,11 @@ working_lines[@rel] (
 // ---- コマンド ----
 
 cmd_init[] (
-    if file_exists[@store] (
+    if @fs.exists[@store] (
         die["すでに初期化されています"]
     )
-    must[file_mkdir[@path.join[@store, "objects"]]]
-    must[file_mkdir[@path.join[@store, "commits"]]]
+    must[@fs.mkdir[@path.join[@store, "objects"]]]
+    must[@fs.mkdir[@path.join[@store, "commits"]]]
     log["空のリポジトリを作りました（" + @store + "）"]
 )
 
@@ -215,8 +216,8 @@ cmd_commit[@message] (
     )
     @record := {"parent": @parent, "message": @message, "time": @time.iso[@time.now[]], "files": @files}
     @id := str_sub[sha256[@json.stringify[@record]], 0, 12]
-    must[file_write[@path.join[@store, "commits", @id + ".json"], @json.pretty[@record]]]
-    must[file_write[@path.join[@store, "HEAD"], @id + "\n"]]
+    must[@fs.write[@path.join[@store, "commits", @id + ".json"], @json.pretty[@record]]]
+    must[@fs.write[@path.join[@store, "HEAD"], @id + "\n"]]
     log["[" + @id + "] " + @message + "（" + to_str[map_len[@files]] + " ファイル）"]
 )
 
@@ -299,23 +300,23 @@ cmd_checkout[@prefix] (
     @target := load_commit[@id]{"files"}
     // いまのコミットにあって、移動先にないファイルは消す
     for @rel in map_keys[head_files[]] (
-        if !map_has[@target, @rel] && file_exists[@rel] (
-            must[file_remove[@rel]]
+        if !map_has[@target, @rel] && @fs.exists[@rel] (
+            must[@fs.remove[@rel]]
         )
     )
     for @rel in arr_sort[map_keys[@target]] (
-        @data := must[file_read_bytes[@path.join[@store, "objects", @target{@rel}]]]
+        @data := must[@fs.read_bytes[@path.join[@store, "objects", @target{@rel}]]]
         // 保存した中身が壊れていないか、sha256 で確かめる
         if !@crypto.equals[sha256[@data], @target{@rel}] (
             die["壊れています: " + @rel]
         )
         @dir := @path.dirname[@rel]
         if @dir != "" (
-            must[file_mkdir[@dir]]
+            must[@fs.mkdir[@dir]]
         )
-        must[file_write_bytes[@rel, @data]]
+        must[@fs.write_bytes[@rel, @data]]
     )
-    must[file_write[@path.join[@store, "HEAD"], @id + "\n"]]
+    must[@fs.write[@path.join[@store, "HEAD"], @id + "\n"]]
     log[@id + " に戻しました（" + to_str[map_len[@target]] + " ファイル）"]
 )
 

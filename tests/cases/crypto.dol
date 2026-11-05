@@ -7,7 +7,7 @@ log[hex["sha1", "abc"]]
 log[hex["sha256", "abc"]]
 log[hex["sha256", ""]]
 log[str_sub[hex["sha384", "abc"], 0, 32], str_sub[hex["sha512", "abc"], 0, 32]]
-log[@c.hash["sha256", str_to_bytes["abc"]] == @c.hash["sha256", "abc"], bytes_len[@c.hash["sha512", ""]]]
+log[@c.hash["sha256", bytes_from_str["abc"]] == @c.hash["sha256", "abc"], bytes_len[@c.hash["sha512", ""]]]
 
 // HMAC（RFC 4231 のテストケース 1・2）
 @key1 := bytes_from_arr[arr_map[range[0, 20], [@i] ( # 11 )]]
@@ -23,4 +23,4 @@ log[str_len[@u], str_sub[@u, 14, 15], arr_contains[{"8", "9", "a", "b"}, str_sub
 log[arr_map[str_split[@u, "-"], str_len]]
 
 // 時間が中身によらない比較
-log[@c.equals["abc", "abc"], @c.equals["abc", "abd"], @c.equals["abc", "ab"], @c.equals[str_to_bytes["a"], "a"]]
+log[@c.equals["abc", "abc"], @c.equals["abc", "abd"], @c.equals["abc", "ab"], @c.equals[bytes_from_str["a"], "a"]]

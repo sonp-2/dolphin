@@ -1,3 +1,4 @@
+@fs := import["std:fs"]
 // 関数の外の ? は、エラーで止まる
-@text := file_read["target/no_such_file.txt"]?
+@text := @fs.read["target/no_such_file.txt"]?
 log["ここには来ない"]

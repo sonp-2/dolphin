@@ -22,7 +22,7 @@ fn tcp_connection_as_a_stream() {
 @client := @net.connect["127.0.0.1", @port]?
 @server := @net.accept[@l]?
 @s.write[@client, "hello\nworld\n"]?
-@s.write[@client, str_to_bytes["tail"]]?
+@s.write[@client, bytes_from_str["tail"]]?
 @s.flush[@client]?
 log[@s.read_line[@server]?, @s.read_exact[@server, 5]?]
 @s.close[@client]?

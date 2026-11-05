@@ -10,6 +10,7 @@ use std::sync::{Arc, mpsc::Receiver};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use super::deprecated::legacy;
 use super::net::closed;
 use super::{error_value, new_map, str_arg, type_error};
 use crate::Session;
@@ -35,7 +36,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("worker.send", send),
             ("worker.recv", recv),
             ("worker.join", join),
-            ("worker.terminate", terminate),
+            ("worker.kill", terminate),
+            ("worker.terminate", legacy!("worker.terminate", terminate)),
             ("worker.arg", arg),
             ("worker.is_worker", is_worker),
         ],
@@ -375,12 +377,12 @@ fn join(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 fn terminate(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     if args.len() != 1 {
         return Err(format!(
-            "worker.terminate の引数は 1 個です（{} 個渡されました）",
+            "worker.kill の引数は 1 個です（{} 個渡されました）",
             args.len()
         ));
     }
     let Value::Handle(handle) = &args[0] else {
-        return Err(type_error("worker.terminate", 0, "ワーカー", &args[0]));
+        return Err(type_error("worker.kill", 0, "ワーカー", &args[0]));
     };
     let id = match &mut *handle.inner.borrow_mut() {
         HandleKind::Worker(w) => {
@@ -390,7 +392,7 @@ fn terminate(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Stri
         HandleKind::WorkerClosed | HandleKind::Closed => return Ok(Value::Nil),
         _ => {
             return Err(
-                "worker.terminate に渡せるのは worker.spawn が返したワーカーです（ほかの種類のハンドルでした）"
+                "worker.kill に渡せるのは worker.spawn が返したワーカーです（ほかの種類のハンドルでした）"
                     .into(),
             );
         }

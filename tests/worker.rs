@@ -61,7 +61,7 @@ for @n in {15, 16, 17, 18} (
 for @job in @jobs (
     @r := @w.recv[@job]?
     log[@r{"n"}, @r{"fib"}]
-    @w.terminate[@job]
+    @w.kill[@job]
 )
 "#);
     assert_eq!(out, "15 610\n16 987\n17 1597\n18 2584\n");
@@ -176,9 +176,9 @@ while @m != nil (
 @w.send[@job, "ping"]?
 log[@w.recv[@job]]
 log[err_kind[@w.recv[@job, 0.05]]]
-log[@w.terminate[@job]]
+log[@w.kill[@job]]
 log[err_kind[@w.send[@job, 1]], err_kind[@w.recv[@job]], @job]
-log[@w.terminate[@job]]
+log[@w.kill[@job]]
 "#);
     assert_eq!(
         out,

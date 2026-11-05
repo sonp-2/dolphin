@@ -11,6 +11,31 @@
 - 1.0 に向けた方針を設計書に書いた（[design.md 5.56・5.57](docs/design.md)）。凍結の対象（言語・組み込み関数・主要な `std:*`・エラー値の kind・数値上限）と、実験的なもの（`std:ui` `std:canvas` `std:audio` `std:ffi` `std:sqlite` `std:postgres`）、SemVer での破壊的変更の定義、非推奨にする手順、予約語を増やす変更の扱い、エラー値の kind の一覧と、kind の揺れの整理。実装は変えていない
 - `tests/error_kinds.rs`: 実装が返すエラー値の kind が設計書 5.57 の表にあること、表の kind が実装に残っていることを照合する。`tests/cases/err_kind_table.dol`（kind の golden）
 
+### 変更（非推奨）
+
+標準ライブラリの名前の揺れを、1.0 で凍結する前に整理した（[design.md 5.58](docs/design.md)）。引数・戻り値・挙動は変わらず、名前だけが変わる。旧名はこの版では動き続けるが、**初めて呼んだときに標準エラーへ警告を 1 行出す**（`警告: file_read は非推奨です。std:fs の read を使ってください`。同じ旧名の 2 回目以降は出さない）。**旧名は次の版で削除する。** LSP の補完には旧名を出さない。
+
+| 旧名 | 新名 |
+|---|---|
+| `file_read` `file_write` `file_append` `file_exists` | `std:fs` の `read` `write` `append` `exists` |
+| `file_read_bytes` `file_write_bytes` `file_append_bytes` | `std:fs` の `read_bytes` `write_bytes` `append_bytes` |
+| `file_list` `file_info` `file_mkdir` | `std:fs` の `list` `info` `mkdir` |
+| `file_remove` `file_remove_all` `file_rename` `file_copy` | `std:fs` の `remove` `remove_all` `rename` `copy` |
+| `file_walk` `file_glob` | `std:fs` の `walk` `glob` |
+| `file_temp` `file_temp_dir` `file_chmod` | `std:fs` の `temp` `temp_dir` `chmod` |
+| `random[]` | `std:random` の `float[]` |
+| `random_int[min, max]` | `std:random` の `int[min, max]` |
+| `str_to_bytes` | `bytes_from_str` |
+| `os.exe` | `os.exe_path` |
+| `ui.quit` `canvas.quit` | `ui.stop` `canvas.stop` |
+| `worker.terminate` | `worker.kill` |
+
+- `import["std:fs"]` を新設した。ファイル操作は `@fs := import["std:fs"]` のあと `@fs.read[path]` のように呼ぶ（エラーメッセージの名前も `fs.read` になる）
+- 動詞の規則を決めた: `close`（資源を閉じる）、`stop`（イベントループ・サービス・再生を止める）、`exit`（このプロセスを終える）、`kill`（ほかのプロセスやワーカーを強制終了する）
+- 直さなかったもの: 戻り値の揺れ（`to_num` はエラー値、`map_get` と `arr_find` は `nil`、`str_find` は `-1`。意味が変わるため）、`err_*`（`str_*` `arr_*` と同じ型名の短縮形）、`abs` `min` `max` `floor` `ceil` `round` `sqrt` `pow` などの数学のグローバル（頻出で、`std:math` とは重複していない）、`arr_remove` `map_remove`（動詞は `fs.remove` と同じ）
+- 実行前の警告（`dolphin check`）は出さない。実行時の警告だけ
+- `examples/`・`tests/cases/`・README を新名に書き換えた
+
 ## [0.56.0] - 2026-11-06
 
 言語の拡張（`catch` / `defer`、`for` のパターンとマップ・文字列、レコード）と、HTTP サーバー用のルーター `std:router`。あわせて、大きかったファイルを分けた（挙動は同じ）。

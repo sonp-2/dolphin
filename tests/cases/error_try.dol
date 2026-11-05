@@ -1,3 +1,4 @@
+@fs := import["std:fs"]
 // `?` は、エラーなら関数からそのエラーを返し、そうでなければ値になる
 parse_sum[@a, @b] (
     @x := to_num[@a]?
@@ -11,7 +12,7 @@ log[is_error[@r], err_kind[@r]]
 
 // 呼び出しの連なりの中を伝わる
 load_twice[@path] (
-    @text := file_read[@path]?
+    @text := @fs.read[@path]?
     # str_len[@text] * 2
 )
 report[@path] (
@@ -22,7 +23,7 @@ report[@path] (
     # "文字数の 2 倍: @n"
 )
 log[report["target/no_such_file.txt"]]
-file_write["target/golden_error_try.txt", "abc"]
+@fs.write["target/golden_error_try.txt", "abc"]
 log[report["target/golden_error_try.txt"]]
 
 // 無名関数の中の ? は、無名関数から返る

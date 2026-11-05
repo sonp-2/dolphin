@@ -9,7 +9,7 @@ CREATE TABLE t (x)"]?
 @r := @db.exec[@c, "INSERT INTO u (name, score) VALUES (?, ?)", {"alice", 1.5}]?
 log[@r.changes, @r.last_id]
 @r2 := @db.exec[@c, "INSERT INTO u (name, score, data, note) VALUES (:n, :s, :d, :x)",
-    {"n": "bob", "s": 2, "d": str_to_bytes["hi"], "x": nil}]?
+    {"n": "bob", "s": 2, "d": bytes_from_str["hi"], "x": nil}]?
 log[@r2.changes, @r2.last_id]
 @db.exec[@c, r"INSERT INTO u (name) VALUES (@a)", {"a": "carol"}]?
 

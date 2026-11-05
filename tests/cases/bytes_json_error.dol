@@ -1,2 +1,2 @@
 @j := import["std:json"]
-log[@j.stringify[{"b": str_to_bytes["x"]}]]
+log[@j.stringify[{"b": bytes_from_str["x"]}]]

@@ -1,1 +1,2 @@
-@x := file_walk[".", {"depth": 1}]
+@fs := import["std:fs"]
+@x := @fs.walk[".", {"depth": 1}]

@@ -1,1 +1,2 @@
-file_write["target/x.txt", 1]
+@fs := import["std:fs"]
+@fs.write["target/x.txt", 1]

@@ -96,10 +96,27 @@ impl<'a> Session<'a> {
 
     /// 組み込み関数と組み込みモジュールの名前（言語サーバーの補完用）
     pub fn catalog(&self) -> Catalog {
-        Catalog {
-            functions: self.interp.native_names(),
-            modules: self.interp.std_modules(),
-        }
+        // 非推奨の旧名（design.md 5.58）は補完に出さない
+        use stdlib::deprecated::is_deprecated;
+        let functions = self.interp.native_names();
+        let functions = functions
+            .into_iter()
+            .filter(|name| !is_deprecated(name))
+            .collect();
+        let modules = self
+            .interp
+            .std_modules()
+            .into_iter()
+            .map(|(module, members)| {
+                let prefix = module.strip_prefix("std:").unwrap_or(module);
+                let members = members
+                    .into_iter()
+                    .filter(|member| !is_deprecated(&format!("{prefix}.{member}")))
+                    .collect();
+                (module, members)
+            })
+            .collect();
+        Catalog { functions, modules }
     }
 
     /// 名前つきの関数を定義の順に（名前、引数の数）で返す（`dolphin test`）

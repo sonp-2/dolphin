@@ -10,6 +10,7 @@ use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
 use crate::stdlib::async_::{spawn_blocking_opt, split_callback_opt};
+use crate::stdlib::deprecated::legacy;
 use crate::stdlib::path::to_slash;
 use crate::stdlib::{error_value, expect_args, int_arg, new_array, new_map, str_arg, type_error};
 
@@ -25,7 +26,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("os.exit", exit),
             ("os.platform", platform),
             ("os.temp_dir", temp_dir),
-            ("os.exe", exe),
+            ("os.exe_path", exe),
+            ("os.exe", legacy!("os.exe", exe)),
             ("os.setenv", setenv),
             ("os.shell", shell),
             ("os.hostname", hostname),
@@ -127,7 +129,7 @@ fn platform(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 
 /// 実行中の `dolphin` の実行ファイルのパス（自分自身を子プロセスで動かすときに使う）
 fn exe(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("os.exe", args, 0)?;
+    expect_args("os.exe_path", args, 0)?;
     Ok(match std::env::current_exe() {
         Ok(path) => string(to_slash(&path)),
         Err(e) => io_failure("実行ファイルの場所を調べられません", None, &e),

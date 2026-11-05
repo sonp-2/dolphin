@@ -1,8 +1,8 @@
-//! `std:random`: seed, choice, shuffle, sample, uniform, normal（design.md 5.31）
+//! `std:random`: float, int, seed, choice, shuffle, sample, uniform, normal（design.md 5.31）
 //!
-//! 乱数列は `random[]` と同じもの（math.rs の xorshift64*）。暗号用途には使えない
+//! 乱数列は旧名の `random[]` `random_int[]` と同じもの（math.rs の xorshift64*）。暗号用途には使えない
 
-use super::math::{below, next_f64, reseed};
+use super::math::{below, next_f64, next_u64, reseed};
 use super::{array_arg, expect_args, int_arg, new_array, num_arg};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
@@ -11,6 +11,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module(
         "std:random",
         &[
+            ("random.float", float),
+            ("random.int", int),
             ("random.seed", seed),
             ("random.choice", choice),
             ("random.shuffle", shuffle),
@@ -104,4 +106,24 @@ fn normal(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     let u2 = next_f64();
     let z = (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos();
     Ok(Value::Num(mean + stddev * z))
+}
+
+/// 0 以上 1 未満の数
+pub(super) fn float(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("random.float", args, 0)?;
+    Ok(Value::Num(next_f64()))
+}
+
+/// `min` 以上 `max` 以下の整数
+pub(super) fn int(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("random.int", args, 2)?;
+    let min = int_arg("random.int", args, 0)?;
+    let max = int_arg("random.int", args, 1)?;
+    if min > max {
+        return Err(format!("random.int の範囲が逆です（{min} > {max}）"));
+    }
+    let span = i128::from(max) - i128::from(min) + 1;
+    // 範囲が u64 に収まらない（i64 の全体）ときは、64 ビットをそのまま使う
+    let offset = u64::try_from(span).map_or_else(|_| next_u64(), below);
+    Ok(Value::Num((i128::from(min) + i128::from(offset)) as f64))
 }

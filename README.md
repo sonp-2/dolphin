@@ -85,7 +85,7 @@ count: 3
   - [x] 実行モデル（イベントループ。タイマー・非同期の結果・`http.serve` のメッセージを 1 スレッドで順に処理する）
 - [x] **段階 3**: 複数ファイル、ファイル入出力
   - [x] `import`（名前空間つき。`@u := import["util.dol"]`、`@u.add[1, 2]`）
-  - [x] ファイル入出力（`file_read` `file_write` `file_append` `file_exists`）
+  - [x] ファイル入出力（`std:fs` の `read` `write` `append` `exists`）
 - [x] **段階 4**: HTTP、JSON → バックエンド API
   - [x] 組み込みモジュール（`import["std:..."]`）と JSON（`std:json`）
   - [x] HTTP クライアント（`std:http`）

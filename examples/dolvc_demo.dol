@@ -1,10 +1,11 @@
+@fs := import["std:fs"]
 // dolvc の動きを、一時ディレクトリの中で通して見せるデモ
 // リポジトリのルートで実行する:  cargo run -- examples/dolvc_demo.dol
 
 @os := import["std:os"]
 @path := import["std:path"]
 
-@exe := @os.exe[]
+@exe := @os.exe_path[]
 @script := @path.absolute["examples/dolvc.dol"]
 @sandbox := @path.join[@os.temp_dir[], "dolvc-demo"]
 
@@ -34,13 +35,13 @@ commit_id[@output] (
 )
 
 // ---- 準備 ----
-if file_exists[@sandbox] (
-    must[file_remove_all[@sandbox]]
+if @fs.exists[@sandbox] (
+    must[@fs.remove_all[@sandbox]]
 )
-must[file_mkdir[@path.join[@sandbox, "src"]]]
-must[file_write[@path.join[@sandbox, "hello.txt"], "こんにちは\nイルカです\n"]]
-must[file_write[@path.join[@sandbox, "src/main.dol"], "log[\"hello\"]\n"]]
-must[file_write_bytes[@path.join[@sandbox, "logo.bin"], bytes_from_arr[{137, 80, 78, 71, 0, 255}]]]
+must[@fs.mkdir[@path.join[@sandbox, "src"]]]
+must[@fs.write[@path.join[@sandbox, "hello.txt"], "こんにちは\nイルカです\n"]]
+must[@fs.write[@path.join[@sandbox, "src/main.dol"], "log[\"hello\"]\n"]]
+must[@fs.write_bytes[@path.join[@sandbox, "logo.bin"], bytes_from_arr[{137, 80, 78, 71, 0, 255}]]]
 log["作業ディレクトリ: " + @sandbox]
 log[""]
 
@@ -49,9 +50,9 @@ dolvc[{"init"}]
 @first := commit_id[dolvc[{"commit", "最初のコミット"}]]
 
 // ---- 変更してみる ----
-must[file_write[@path.join[@sandbox, "hello.txt"], "こんにちは\nイルカです\nよろしくね\n"]]
-must[file_write[@path.join[@sandbox, "src/lib.dol"], "add[\@a, \@b] ( # \@a + \@b )\n"]]
-must[file_remove[@path.join[@sandbox, "logo.bin"]]]
+must[@fs.write[@path.join[@sandbox, "hello.txt"], "こんにちは\nイルカです\nよろしくね\n"]]
+must[@fs.write[@path.join[@sandbox, "src/lib.dol"], "add[\@a, \@b] ( # \@a + \@b )\n"]]
+must[@fs.remove[@path.join[@sandbox, "logo.bin"]]]
 dolvc[{"status"}]
 dolvc[{"diff"}]
 @second := commit_id[dolvc[{"commit", "あいさつを増やして、lib を足す"}]]
@@ -65,8 +66,8 @@ dolvc[{"status"}]
 // 最初のコミットに戻す（id は先頭の 4 文字でよい）
 dolvc[{"checkout", str_sub[@first, 0, 4]}]
 log["（最初のコミットに戻した後のファイル）"]
-log[str_join[file_list[@sandbox], ", "]]
-log[file_read[@path.join[@sandbox, "hello.txt"]]]
-log["logo.bin の中身: " + to_str[file_read_bytes[@path.join[@sandbox, "logo.bin"]]]]
+log[str_join[@fs.list[@sandbox], ", "]]
+log[@fs.read[@path.join[@sandbox, "hello.txt"]]]
+log["logo.bin の中身: " + to_str[@fs.read_bytes[@path.join[@sandbox, "logo.bin"]]]]
 
-must[file_remove_all[@sandbox]]
+must[@fs.remove_all[@sandbox]]

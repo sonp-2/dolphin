@@ -1,5 +1,5 @@
-//! ファイル: file_read, file_write, file_append, file_exists（design.md 5.5）、
-//! file_list, file_info, file_mkdir, file_remove, file_remove_all, file_rename, file_copy（5.13）
+//! ファイル: fs.read, fs.write, fs.append, fs.exists（design.md 5.5）、
+//! fs.list, fs.info, fs.mkdir, fs.remove, fs.remove_all, fs.rename, fs.copy（5.13）
 //!
 //! パスは実行したときのカレントディレクトリからの相対パス（`import` と違い、
 //! 呼び出したファイルのあるディレクトリではない）。文字コードは UTF-8。
@@ -12,31 +12,74 @@ use std::time::UNIX_EPOCH;
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::deprecated::legacy;
 use crate::stdlib::{bytes_arg, error_value, expect_args, new_array, new_map, str_arg};
 
 pub fn register(interp: &mut Interpreter<'_>) {
-    interp.register("file_read", file_read);
-    interp.register("file_write", file_write);
-    interp.register("file_append", file_append);
-    interp.register("file_exists", file_exists);
-    interp.register("file_read_bytes", file_read_bytes);
-    interp.register("file_write_bytes", file_write_bytes);
-    interp.register("file_append_bytes", file_append_bytes);
-    interp.register("file_list", file_list);
-    interp.register("file_info", file_info);
-    interp.register("file_mkdir", file_mkdir);
-    interp.register("file_remove", file_remove);
-    interp.register("file_remove_all", file_remove_all);
-    interp.register("file_rename", file_rename);
-    interp.register("file_copy", file_copy);
-    super::walk::register(interp);
-    super::temp::register(interp);
+    interp.register_module(
+        "std:fs",
+        &[
+            ("fs.read", file_read),
+            ("fs.write", file_write),
+            ("fs.append", file_append),
+            ("fs.exists", file_exists),
+            ("fs.read_bytes", file_read_bytes),
+            ("fs.write_bytes", file_write_bytes),
+            ("fs.append_bytes", file_append_bytes),
+            ("fs.list", file_list),
+            ("fs.info", file_info),
+            ("fs.mkdir", file_mkdir),
+            ("fs.remove", file_remove),
+            ("fs.remove_all", file_remove_all),
+            ("fs.rename", file_rename),
+            ("fs.copy", file_copy),
+            ("fs.walk", super::walk::file_walk),
+            ("fs.glob", super::walk::file_glob),
+            ("fs.temp", super::temp::file_temp),
+            ("fs.temp_dir", super::temp::file_temp_dir),
+            ("fs.chmod", super::temp::file_chmod),
+        ],
+    );
+    interp.register("file_read", legacy!("file_read", file_read));
+    interp.register("file_write", legacy!("file_write", file_write));
+    interp.register("file_append", legacy!("file_append", file_append));
+    interp.register("file_exists", legacy!("file_exists", file_exists));
+    interp.register(
+        "file_read_bytes",
+        legacy!("file_read_bytes", file_read_bytes),
+    );
+    interp.register(
+        "file_write_bytes",
+        legacy!("file_write_bytes", file_write_bytes),
+    );
+    interp.register(
+        "file_append_bytes",
+        legacy!("file_append_bytes", file_append_bytes),
+    );
+    interp.register("file_list", legacy!("file_list", file_list));
+    interp.register("file_info", legacy!("file_info", file_info));
+    interp.register("file_mkdir", legacy!("file_mkdir", file_mkdir));
+    interp.register("file_remove", legacy!("file_remove", file_remove));
+    interp.register(
+        "file_remove_all",
+        legacy!("file_remove_all", file_remove_all),
+    );
+    interp.register("file_rename", legacy!("file_rename", file_rename));
+    interp.register("file_copy", legacy!("file_copy", file_copy));
+    interp.register("file_walk", legacy!("file_walk", super::walk::file_walk));
+    interp.register("file_glob", legacy!("file_glob", super::walk::file_glob));
+    interp.register("file_temp", legacy!("file_temp", super::temp::file_temp));
+    interp.register(
+        "file_temp_dir",
+        legacy!("file_temp_dir", super::temp::file_temp_dir),
+    );
+    interp.register("file_chmod", legacy!("file_chmod", super::temp::file_chmod));
 }
 
 /// ファイル全体を文字列で返す
-fn file_read(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_read", args, 1)?;
-    let path = str_arg("file_read", args, 0)?;
+pub(super) fn file_read(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.read", args, 1)?;
+    let path = str_arg("fs.read", args, 0)?;
     let bytes = match fs::read(path) {
         Ok(bytes) => bytes,
         Err(e) => return Ok(io_error("読み込めません", path, &e)),
@@ -51,10 +94,10 @@ fn file_read(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 }
 
 /// 文字列を書き込む。ファイルがなければ作り、あれば中身を置き換える
-fn file_write(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_write", args, 2)?;
-    let path = str_arg("file_write", args, 0)?;
-    let text = str_arg("file_write", args, 1)?;
+pub(super) fn file_write(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.write", args, 2)?;
+    let path = str_arg("fs.write", args, 0)?;
+    let text = str_arg("fs.write", args, 1)?;
     match fs::write(path, text) {
         Ok(()) => Ok(Value::Nil),
         Err(e) => Ok(io_error("書き込めません", path, &e)),
@@ -62,10 +105,10 @@ fn file_write(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
 }
 
 /// 文字列をファイルの末尾に足す。ファイルがなければ作る
-fn file_append(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_append", args, 2)?;
-    let path = str_arg("file_append", args, 0)?;
-    let text = str_arg("file_append", args, 1)?;
+pub(super) fn file_append(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.append", args, 2)?;
+    let path = str_arg("fs.append", args, 0)?;
+    let text = str_arg("fs.append", args, 1)?;
     let result = OpenOptions::new()
         .append(true)
         .create(true)
@@ -78,9 +121,9 @@ fn file_append(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String>
 }
 
 /// ファイルかディレクトリがあるか
-fn file_exists(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_exists", args, 1)?;
-    let path = str_arg("file_exists", args, 0)?;
+pub(super) fn file_exists(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.exists", args, 1)?;
+    let path = str_arg("fs.exists", args, 0)?;
     Ok(Value::Bool(fs::exists(path).unwrap_or(false)))
 }
 
@@ -110,9 +153,9 @@ pub(in crate::stdlib) fn classify(e: &io::Error) -> (&'static str, String) {
 }
 
 /// ファイル全体をバイト列で返す
-fn file_read_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_read_bytes", args, 1)?;
-    let path = str_arg("file_read_bytes", args, 0)?;
+pub(super) fn file_read_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.read_bytes", args, 1)?;
+    let path = str_arg("fs.read_bytes", args, 0)?;
     Ok(match fs::read(path) {
         Ok(bytes) => Value::bytes(bytes),
         Err(e) => io_error("読み込めません", path, &e),
@@ -120,10 +163,10 @@ fn file_read_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Str
 }
 
 /// バイト列を書き込む。ファイルがなければ作り、あれば中身を置き換える
-fn file_write_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_write_bytes", args, 2)?;
-    let path = str_arg("file_write_bytes", args, 0)?;
-    let bytes = bytes_arg("file_write_bytes", args, 1)?;
+pub(super) fn file_write_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.write_bytes", args, 2)?;
+    let path = str_arg("fs.write_bytes", args, 0)?;
+    let bytes = bytes_arg("fs.write_bytes", args, 1)?;
     Ok(match fs::write(path, &bytes[..]) {
         Ok(()) => Value::Nil,
         Err(e) => io_error("書き込めません", path, &e),
@@ -131,10 +174,10 @@ fn file_write_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, St
 }
 
 /// バイト列をファイルの末尾に足す。ファイルがなければ作る
-fn file_append_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_append_bytes", args, 2)?;
-    let path = str_arg("file_append_bytes", args, 0)?;
-    let bytes = bytes_arg("file_append_bytes", args, 1)?;
+pub(super) fn file_append_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.append_bytes", args, 2)?;
+    let path = str_arg("fs.append_bytes", args, 0)?;
+    let bytes = bytes_arg("fs.append_bytes", args, 1)?;
     let result = OpenOptions::new()
         .append(true)
         .create(true)
@@ -147,9 +190,9 @@ fn file_append_bytes(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, S
 }
 
 /// ディレクトリの中の名前を、文字コード順に並べた配列
-fn file_list(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_list", args, 1)?;
-    let path = str_arg("file_list", args, 0)?;
+pub(super) fn file_list(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.list", args, 1)?;
+    let path = str_arg("fs.list", args, 0)?;
     let entries = match fs::read_dir(path) {
         Ok(entries) => entries,
         Err(e) => return Ok(io_error("開けません", path, &e)),
@@ -168,9 +211,9 @@ fn file_list(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 }
 
 /// `{"is_file", "is_dir", "size", "modified"}`。シンボリックリンクはたどる
-fn file_info(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_info", args, 1)?;
-    let path = str_arg("file_info", args, 0)?;
+pub(super) fn file_info(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.info", args, 1)?;
+    let path = str_arg("fs.info", args, 0)?;
     let meta = match fs::metadata(path) {
         Ok(meta) => meta,
         Err(e) => return Ok(io_error("調べられません", path, &e)),
@@ -192,9 +235,9 @@ fn file_info(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 }
 
 /// ディレクトリを作る。途中のディレクトリもまとめて作り、すでにあれば何もしない
-fn file_mkdir(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_mkdir", args, 1)?;
-    let path = str_arg("file_mkdir", args, 0)?;
+pub(super) fn file_mkdir(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.mkdir", args, 1)?;
+    let path = str_arg("fs.mkdir", args, 0)?;
     match fs::create_dir_all(path) {
         Ok(()) => Ok(Value::Nil),
         Err(e) => Ok(io_error("作れません", path, &e)),
@@ -202,9 +245,9 @@ fn file_mkdir(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
 }
 
 /// ファイルか空のディレクトリを消す
-fn file_remove(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_remove", args, 1)?;
-    let path = str_arg("file_remove", args, 0)?;
+pub(super) fn file_remove(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.remove", args, 1)?;
+    let path = str_arg("fs.remove", args, 0)?;
     let result = fs::symlink_metadata(path).and_then(|meta| {
         if meta.is_dir() {
             fs::remove_dir(path)
@@ -219,9 +262,9 @@ fn file_remove(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String>
 }
 
 /// ディレクトリを中身ごと消す。ファイルも消せる。リンクは、リンク先をたどらずにリンクだけを消す
-fn file_remove_all(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_remove_all", args, 1)?;
-    let path = str_arg("file_remove_all", args, 0)?;
+pub(super) fn file_remove_all(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.remove_all", args, 1)?;
+    let path = str_arg("fs.remove_all", args, 0)?;
     let result = fs::symlink_metadata(path).and_then(|meta| {
         if meta.is_dir() {
             fs::remove_dir_all(path)
@@ -236,10 +279,10 @@ fn file_remove_all(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, Str
 }
 
 /// 名前を変える・移す。`to` が既にあるファイルなら置き換える
-fn file_rename(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_rename", args, 2)?;
-    let from = str_arg("file_rename", args, 0)?;
-    let to = str_arg("file_rename", args, 1)?;
+pub(super) fn file_rename(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.rename", args, 2)?;
+    let from = str_arg("fs.rename", args, 0)?;
+    let to = str_arg("fs.rename", args, 1)?;
     match fs::rename(from, to) {
         Ok(()) => Ok(Value::Nil),
         Err(e) => Ok(io_error2("移せません", from, to, &e)),
@@ -247,10 +290,10 @@ fn file_rename(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String>
 }
 
 /// ファイルをコピーする（ディレクトリは不可）。`to` が既にあれば置き換える
-fn file_copy(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_copy", args, 2)?;
-    let from = str_arg("file_copy", args, 0)?;
-    let to = str_arg("file_copy", args, 1)?;
+pub(super) fn file_copy(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.copy", args, 2)?;
+    let from = str_arg("fs.copy", args, 0)?;
+    let to = str_arg("fs.copy", args, 1)?;
     match fs::copy(from, to) {
         Ok(_) => Ok(Value::Nil),
         Err(e) => Ok(io_error2("コピーできません", from, to, &e)),
