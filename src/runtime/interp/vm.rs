@@ -383,6 +383,8 @@ impl Interpreter<'_> {
                         ip += 1;
                         continue;
                     }
+                    // 外側の match へまとめると、エラー値のときに下の処理へ落ちる流れが変わるのでまとめない
+                    #[allow(clippy::collapsible_match)]
                     Op::PopCheckError => {
                         if !matches!(self.stack.last(), Some(Value::Error(_))) {
                             self.stack.pop();

@@ -867,7 +867,10 @@ fn os_offset_minutes(ts: f64) -> Result<i64, String> {
     if result.is_null() {
         return Err("OS のタイムゾーンを取得できませんでした".into());
     }
-    Ok(i64::from(tm.gmtoff) / 60)
+    // c_long は 64 ビット Unix では i64、32 ビットでは i32 なので、変換は消さない
+    #[allow(clippy::useless_conversion)]
+    let gmtoff = i64::from(tm.gmtoff);
+    Ok(gmtoff / 60)
 }
 
 #[cfg(not(any(windows, all(unix, target_pointer_width = "64"))))]

@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
-use crate::stdlib::fs::io_error;
+use crate::stdlib::fs::{classify, io_error};
 use crate::stdlib::path::to_slash;
 use crate::stdlib::{error_value, expect_args, num_arg, str_arg, type_error};
 
@@ -185,7 +185,10 @@ fn chmod(path: &str, mode: u32) -> Result<Value, String> {
     Ok(
         match fs::set_permissions(path, fs::Permissions::from_mode(mode)) {
             Ok(()) => Value::Nil,
-            Err(e) => io_error("権限を変えられません", path, &e),
+            Err(e) => {
+                let (kind, reason) = classify(&e);
+                error_value(kind, format!("`{path}` の権限を変えられません: {reason}"))
+            }
         },
     )
 }
