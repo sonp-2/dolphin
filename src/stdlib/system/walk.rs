@@ -521,7 +521,12 @@ mod tests {
     fn walked(tree: &Tree, options: &WalkOptions) -> Vec<String> {
         let root = tree.root();
         let mut out = Vec::new();
-        walk(&root, &root, 1, options, &mut Vec::new(), &mut out).unwrap();
+        // 本体（file_walk）と同じく、リンクをたどるときは根の実パスを先祖に入れておく
+        let mut ancestors = Vec::new();
+        if options.follow_links {
+            ancestors.push(fs::canonicalize(&root).unwrap());
+        }
+        walk(&root, &root, 1, options, &mut ancestors, &mut out).unwrap();
         out.iter()
             .map(|p| p.strip_prefix(&format!("{root}/")).unwrap().to_string())
             .collect()
