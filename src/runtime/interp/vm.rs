@@ -1008,11 +1008,29 @@ impl Interpreter<'_> {
                         .push(Value::Array(Rc::new(RefCell::new(snapshot))));
                     self.stack.push(Value::Num(0.0));
                 }
+                // マップは {キー, 値} の組、文字列は 1 文字（コードポイント）ずつの配列にそろえる
+                Value::Map(map) => {
+                    let pairs: Vec<Value> = map
+                        .borrow()
+                        .iter()
+                        .map(|(k, v)| gc::new_array(vec![Value::Str(Rc::clone(k)), v.clone()]))
+                        .collect();
+                    self.stack.push(Value::Array(Rc::new(RefCell::new(pairs))));
+                    self.stack.push(Value::Num(0.0));
+                }
+                Value::Str(text) => {
+                    let chars: Vec<Value> = text
+                        .chars()
+                        .map(|c| Value::Str(Rc::from(c.to_string())))
+                        .collect();
+                    self.stack.push(Value::Array(Rc::new(RefCell::new(chars))));
+                    self.stack.push(Value::Num(0.0));
+                }
                 other => {
                     return Err(RuntimeError::new(
                         span,
                         format!(
-                            "for で回せるのは配列だけです（{}でした）。マップは `map_keys` でキーの配列にします",
+                            "for で回せるのは配列・マップ・文字列です（{}でした）",
                             other.type_name()
                         ),
                     ));

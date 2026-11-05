@@ -9,7 +9,9 @@ use std::collections::HashMap;
 use super::bytecode::{Chunk, Op};
 use super::env::intern;
 use super::value::Value;
-use crate::syntax::ast::{BinaryOp, Expr, ExprKind, FuncDef, Stmt, StmtKind, StrSegment};
+use crate::syntax::ast::{
+    BinaryOp, Expr, ExprKind, FuncDef, Pattern, Stmt, StmtKind, StrSegment, Var,
+};
 use crate::syntax::span::Span;
 
 /// ファイルの本体をコンパイルする。`keep_last` で最後の文が式なら、その値が戻り値になる
@@ -343,11 +345,22 @@ impl Compiler {
                     self.patch(at, start);
                 }
             }
-            StmtKind::For { var, iter, body } => {
+            StmtKind::For { target, iter, body } => {
                 self.expr(iter);
                 self.emit(Op::ForPrep, iter.span);
                 let next = self.here();
-                let for_next = if let Some(slots) = &mut self.slots {
+                // パターンのときは、隠した変数に要素を受け、同じスコープで分割代入する
+                // （分割代入があるので、その関数はスロットにしない）
+                let hidden;
+                let var = match target {
+                    Pattern::Var(var) => var,
+                    _ => {
+                        self.bail();
+                        hidden = Var("%for".into());
+                        &hidden
+                    }
+                };
+                let for_next = if let (Some(slots), Pattern::Var(_)) = (&mut self.slots, target) {
                     // 繰り返しごとの新しいスコープ（ループ変数と本体）は、コンパイル時だけのもの
                     slots.scopes.push(Vec::new());
                     let slot = slots.declare(&var.0);
@@ -361,8 +374,20 @@ impl Compiler {
                     breaks: Vec::new(),
                     continues: Vec::new(),
                 });
+                if !matches!(target, Pattern::Var(_)) {
+                    self.emit_load("%for", span);
+                    self.chunk.patterns.push(target.clone());
+                    let pattern = (self.chunk.patterns.len() - 1) as u32;
+                    self.emit(
+                        Op::Destructure {
+                            pattern,
+                            declare: true,
+                        },
+                        span,
+                    );
+                }
                 // 繰り返しごとの新しいスコープ（ループ変数と本体）
-                if self.slots.is_some() {
+                if self.slots.is_some() && matches!(target, Pattern::Var(_)) {
                     self.block(body);
                     self.pop_slot_scope();
                 } else {

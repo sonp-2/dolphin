@@ -1,4 +1,4 @@
-for_not_array.dol:2:11: エラー: for で回せるのは配列だけです（マップでした）。マップは `map_keys` でキーの配列にします
+for_not_array.dol:2:11: エラー: for で回せるのは配列・マップ・文字列です（数値でした）
   |
-2 | for @k in @m (
+2 | for @k in 5 (
   |           ^

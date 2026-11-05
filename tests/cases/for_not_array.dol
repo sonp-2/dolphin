@@ -1,4 +1,4 @@
 @m := {"a": 1}
-for @k in @m (
+for @k in 5 (
     log[@k]
 )

@@ -337,11 +337,10 @@ impl<'a> Walker<'a> {
                 self.expr(cond);
                 self.block(body);
             }
-            StmtKind::For { var, iter, body } => {
+            StmtKind::For { target, iter, body } => {
                 self.expr(iter);
                 self.scopes.push(HashMap::new());
-                let d = self.var_def(&var.0, stmt.span, None);
-                self.declare(d);
+                self.pattern(target, stmt.span, true);
                 self.stmts(body);
                 self.scopes.pop();
             }

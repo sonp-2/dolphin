@@ -221,11 +221,20 @@ impl<'a> Resolver<'a> {
                 self.expr(cond, ctx)?;
                 self.block(body, ctx, true)
             }
-            StmtKind::For { var, iter, body } => {
+            StmtKind::For { target, iter, body } => {
                 // 回す式は、ループ変数の外側で評価される
                 self.expr(iter, ctx)?;
                 // ループ変数と本体は同じスコープ（`@x` を本体で `:=` し直すとエラー）
-                ctx.scopes.push(HashSet::from([var.0.as_str()]));
+                let mut scope = HashSet::new();
+                for var in target.vars() {
+                    if !scope.insert(var.0.as_str()) {
+                        return Err(Diagnostic::new(
+                            stmt.span,
+                            format!("変数 `{var}` はすでに宣言されています"),
+                        ));
+                    }
+                }
+                ctx.scopes.push(scope);
                 let result = self.stmts(body, ctx, true);
                 ctx.scopes.pop();
                 result

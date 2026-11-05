@@ -52,7 +52,7 @@ count: 3
 | `# value` | 関数から値を返す |
 | `@x := f[…]?` | `f` が返したエラー値は、いまの関数からそのまま返す。`is_error[@r]` で見分ける |
 | `if 条件 ( … )` / `else ( … )` / `else if` | 条件分岐 |
-| `while 条件 ( … )` / `for @x in 配列 ( … )` / `break` / `continue` | 繰り返し |
+| `while 条件 ( … )` / `for @x in 配列・マップ・文字列 ( … )`（`for {@k, @v} in @m ( … )` のように分割代入も書ける）/ `break` / `continue` | 繰り返し |
 | `nil` | 値なし |
 | `{1, 2, 3}` / `@a{0}` | 配列。添字は `{ }` |
 | `{"key": value}` / `@m{"key"}` / `{:}` | マップ（`{:}` は空のマップ） |
@@ -255,7 +255,7 @@ dolphin lsp
 
 ### ベンチマーク
 
-`bench/` に、実行の速さを測る小さなスクリプトがあります（`fib.dol`: 再帰、`loop.dol`: `while` のループ、`array.dol`: 配列への追加と `for`）。速さを調べるときは、リリースビルドで測ります。
+`bench/` に、実行の速さを測る小さなスクリプトがあります（`fib.dol`: 再帰、`loop.dol`: `while` のループ、`array.dol`: 配列への追加と `for`、`forx.dol`: 分割代入・マップ・文字列の `for`）。速さを調べるときは、リリースビルドで測ります。
 
 ```sh
 cargo build --release

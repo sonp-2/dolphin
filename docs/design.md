@@ -102,7 +102,7 @@ param       = variable [ "=" expression ] ;                     (* 既定値の�
 if_stmt     = "if" expression block
               [ { NEWLINE } "else" ( block | if_stmt ) ] ;
 while_stmt  = "while" expression block ;
-for_stmt    = "for" variable "in" expression block ;
+for_stmt    = "for" pattern "in" expression block ;               (* pattern は 5.19、回せるのは配列・マップ・文字列（5.54） *)
 return_stmt = "#" [ expression ] ;
 expr_stmt   = expression ;
 

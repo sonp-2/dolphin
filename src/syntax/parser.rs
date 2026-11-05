@@ -119,18 +119,17 @@ impl<'t> Parser<'t> {
                 let body = self.block()?;
                 StmtKind::While { cond, body }
             }
-            // for_stmt = "for" variable "in" expression block
+            // for_stmt = "for" pattern "in" expression block
             TokenKind::For => {
                 self.advance();
-                let TokenKind::Var(name) = &self.peek().kind else {
-                    return Err(self.unexpected("変数（`@x`）"));
-                };
-                let var = Var(name.clone());
-                self.advance();
+                if !matches!(self.peek().kind, TokenKind::Var(_) | TokenKind::LBrace) {
+                    return Err(self.unexpected("変数（`@x`）かパターン（`{@k, @v}`）"));
+                }
+                let target = self.pattern()?;
                 self.expect(&TokenKind::In)?;
                 let iter = self.expression()?;
                 let body = self.block()?;
-                StmtKind::For { var, iter, body }
+                StmtKind::For { target, iter, body }
             }
             TokenKind::Hash => {
                 self.advance();
@@ -1072,9 +1071,26 @@ log[@f[1], @g[1, 2], make[][3]]"),
             "(for @x {1 2} ((log @x)))\n(:= @n nil)\n"
         );
         let e = error("for 1 in @a ( )");
-        assert_eq!(e.message, "変数（`@x`）が必要です（`1`がありました）");
+        assert_eq!(
+            e.message,
+            "変数（`@x`）かパターン（`{@k, @v}`）が必要です（`1`がありました）"
+        );
         let e = error("for @x @a ( )");
         assert_eq!(e.message, "`in`が必要です（`@a`がありました）");
+    }
+
+    #[test]
+    fn for_with_pattern() {
+        assert_eq!(
+            ast("for {@k, @v} in @m ( )"),
+            "(for (arr @k @v) @m ())
+"
+        );
+        assert_eq!(
+            ast("for {\"n\": @n, \"p\": {@a, ...@r}} in @xs ( )"),
+            "(for (map (\"n\" @n) (\"p\" (arr @a (... @r)))) @xs ())
+"
+        );
     }
 
     #[test]

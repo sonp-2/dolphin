@@ -32,9 +32,10 @@ pub enum StmtKind {
         cond: Expr,
         body: Block,
     },
-    /// `for @x in expr ( … )`。配列の要素を順に `var` に入れて本体を実行する
+    /// `for @x in expr ( … )` / `for {@k, @v} in expr ( … )`。配列・マップ・文字列の要素を
+    /// 順に `target`（変数か分割代入のパターン）に入れて本体を実行する（design.md 5.54）
     For {
-        var: Var,
+        target: Pattern,
         iter: Expr,
         body: Block,
     },
@@ -301,8 +302,8 @@ impl fmt::Display for Stmt {
                 write!(f, ")")
             }
             StmtKind::While { cond, body } => write!(f, "(while {cond} {})", BlockDisplay(body)),
-            StmtKind::For { var, iter, body } => {
-                write!(f, "(for {var} {iter} {})", BlockDisplay(body))
+            StmtKind::For { target, iter, body } => {
+                write!(f, "(for {target} {iter} {})", BlockDisplay(body))
             }
             StmtKind::Return(Some(value)) => write!(f, "(# {value})"),
             StmtKind::Return(None) => write!(f, "(#)"),
