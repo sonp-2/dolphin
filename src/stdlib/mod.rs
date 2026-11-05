@@ -8,6 +8,7 @@ pub mod bits;
 pub mod collections;
 pub mod data;
 pub mod debug;
+pub mod deprecated;
 pub mod error;
 pub mod format;
 pub mod gc;

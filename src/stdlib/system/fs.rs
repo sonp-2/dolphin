@@ -12,6 +12,7 @@ use std::time::UNIX_EPOCH;
 use crate::runtime::interp::Interpreter;
 use crate::runtime::map::Map;
 use crate::runtime::value::Value;
+use crate::stdlib::deprecated::legacy;
 use crate::stdlib::{bytes_arg, error_value, expect_args, new_array, new_map, str_arg};
 
 pub fn register(interp: &mut Interpreter<'_>) {
@@ -39,25 +40,40 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("fs.chmod", super::temp::file_chmod),
         ],
     );
-    interp.register("file_read", file_read);
-    interp.register("file_write", file_write);
-    interp.register("file_append", file_append);
-    interp.register("file_exists", file_exists);
-    interp.register("file_read_bytes", file_read_bytes);
-    interp.register("file_write_bytes", file_write_bytes);
-    interp.register("file_append_bytes", file_append_bytes);
-    interp.register("file_list", file_list);
-    interp.register("file_info", file_info);
-    interp.register("file_mkdir", file_mkdir);
-    interp.register("file_remove", file_remove);
-    interp.register("file_remove_all", file_remove_all);
-    interp.register("file_rename", file_rename);
-    interp.register("file_copy", file_copy);
-    interp.register("file_walk", super::walk::file_walk);
-    interp.register("file_glob", super::walk::file_glob);
-    interp.register("file_temp", super::temp::file_temp);
-    interp.register("file_temp_dir", super::temp::file_temp_dir);
-    interp.register("file_chmod", super::temp::file_chmod);
+    interp.register("file_read", legacy!("file_read", file_read));
+    interp.register("file_write", legacy!("file_write", file_write));
+    interp.register("file_append", legacy!("file_append", file_append));
+    interp.register("file_exists", legacy!("file_exists", file_exists));
+    interp.register(
+        "file_read_bytes",
+        legacy!("file_read_bytes", file_read_bytes),
+    );
+    interp.register(
+        "file_write_bytes",
+        legacy!("file_write_bytes", file_write_bytes),
+    );
+    interp.register(
+        "file_append_bytes",
+        legacy!("file_append_bytes", file_append_bytes),
+    );
+    interp.register("file_list", legacy!("file_list", file_list));
+    interp.register("file_info", legacy!("file_info", file_info));
+    interp.register("file_mkdir", legacy!("file_mkdir", file_mkdir));
+    interp.register("file_remove", legacy!("file_remove", file_remove));
+    interp.register(
+        "file_remove_all",
+        legacy!("file_remove_all", file_remove_all),
+    );
+    interp.register("file_rename", legacy!("file_rename", file_rename));
+    interp.register("file_copy", legacy!("file_copy", file_copy));
+    interp.register("file_walk", legacy!("file_walk", super::walk::file_walk));
+    interp.register("file_glob", legacy!("file_glob", super::walk::file_glob));
+    interp.register("file_temp", legacy!("file_temp", super::temp::file_temp));
+    interp.register(
+        "file_temp_dir",
+        legacy!("file_temp_dir", super::temp::file_temp_dir),
+    );
+    interp.register("file_chmod", legacy!("file_chmod", super::temp::file_chmod));
 }
 
 /// ファイル全体を文字列で返す
