@@ -1,11 +1,12 @@
+@fs := import["std:fs"]
 // std:zip の tar / tar.gz（design.md 5.51）。target/fmtx_tar の下だけを使う
 @zip := import["std:zip"]
 @dir := "target/fmtx_tar"
-@gone := file_remove_all[@dir]
-file_mkdir[@dir + "/src/sub"]
-file_write[@dir + "/src/a.txt", "alpha"]
-file_write[@dir + "/src/sub/b.txt", "bravo bravo bravo"]
-file_write_bytes[@dir + "/src/sub/c.bin", bytes_from_arr[{0, 255, 1, 254}]]
+@gone := @fs.remove_all[@dir]
+@fs.mkdir[@dir + "/src/sub"]
+@fs.write[@dir + "/src/a.txt", "alpha"]
+@fs.write[@dir + "/src/sub/b.txt", "bravo bravo bravo"]
+@fs.write_bytes[@dir + "/src/sub/c.bin", bytes_from_arr[{0, 255, 1, 254}]]
 
 // ファイルとディレクトリのパスの配列から作る
 @t1 := @dir + "/one.tar"
@@ -13,14 +14,14 @@ log[@zip.tar_create[@t1, {@dir + "/src"}]]
 for @e in @zip.tar_read[@t1]? (
     log[@e.name, @e.size, @e.is_dir]
 )
-log[bytes_len[file_read_bytes[@t1]?] % 512]
+log[bytes_len[@fs.read_bytes[@t1]?] % 512]
 
 // 取り出しと展開
 log[bytes_to_str[@zip.tar_get[@t1, @dir + "/src/sub/b.txt"]?]?]
 log[err_kind[@zip.tar_get[@t1, "nothing"]], err_kind[@zip.tar_get[@t1, @dir + "/src/sub/"]]]
 @out := @dir + "/out"
 log[@zip.tar_extract[@t1, @out]?]
-log[file_read[@out + "/" + @dir + "/src/a.txt"]?, file_read_bytes[@out + "/" + @dir + "/src/sub/c.bin"]? == bytes_from_arr[{0, 255, 1, 254}]]
+log[@fs.read[@out + "/" + @dir + "/src/a.txt"]?, @fs.read_bytes[@out + "/" + @dir + "/src/sub/c.bin"]? == bytes_from_arr[{0, 255, 1, 254}]]
 
 // マップから作る。gzip 付き（.tar.gz）は読むときに自動で見分ける
 @files := {"readme.txt": "hello", "data/bin": bytes_from_arr[{1, 2, 3}], "日本語/名前.txt": "こんにちは", "long/" + str_repeat["d", 120] + "/file.txt": "long name"}
@@ -28,26 +29,26 @@ log[file_read[@out + "/" + @dir + "/src/a.txt"]?, file_read_bytes[@out + "/" + @
 @t3 := @dir + "/three.tar.gz"
 @zip.tar_create[@t2, @files]?
 @zip.tar_create[@t3, @files, {"gzip": true}]?
-log[bytes_to_arr[file_read_bytes[@t3]?]{0}, bytes_to_arr[file_read_bytes[@t3]?]{1}]
-log[bytes_len[file_read_bytes[@t3]?] < bytes_len[file_read_bytes[@t2]?]]
+log[bytes_to_arr[@fs.read_bytes[@t3]?]{0}, bytes_to_arr[@fs.read_bytes[@t3]?]{1}]
+log[bytes_len[@fs.read_bytes[@t3]?] < bytes_len[@fs.read_bytes[@t2]?]]
 log[arr_len[@zip.tar_read[@t2]?], arr_len[@zip.tar_read[@t3]?], arr_map[@zip.tar_read[@t3]?, [@e] ( # str_len[@e.name] )]]
 log[@zip.tar_get[@t3, "data/bin"]? == @zip.tar_get[@t2, "data/bin"]?]
 
 // 往復: 作る → 展開 → 中身が同じ
 @back := @dir + "/back"
 log[arr_len[@zip.tar_extract[@t3, @back]?]]
-log[file_read[@back + "/readme.txt"]?, file_read[@back + "/日本語/名前.txt"]?]
-log[file_read[@back + "/long/" + str_repeat["d", 120] + "/file.txt"]?]
-log[file_read_bytes[@back + "/data/bin"]? == bytes_from_arr[{1, 2, 3}]]
+log[@fs.read[@back + "/readme.txt"]?, @fs.read[@back + "/日本語/名前.txt"]?]
+log[@fs.read[@back + "/long/" + str_repeat["d", 120] + "/file.txt"]?]
+log[@fs.read_bytes[@back + "/data/bin"]? == bytes_from_arr[{1, 2, 3}]]
 
 // 同じ入力からは同じバイト列
 @t4 := @dir + "/four.tar.gz"
 @zip.tar_create[@t4, @files, {"gzip": true}]?
-log[file_read_bytes[@t3]? == file_read_bytes[@t4]?]
+log[@fs.read_bytes[@t3]? == @fs.read_bytes[@t4]?]
 
 // 上限と失敗
 log[err_kind[@zip.tar_extract[@t2, @dir + "/limit", {"max_size": 5}]], err_kind[@zip.tar_get[@t2, "readme.txt", {"max_size": 2}]]]
 log[err_kind[@zip.tar_read[@dir + "/none.tar"]], err_kind[@zip.tar_extract[@dir + "/none.tar", @dir + "/x"]]]
-file_write[@dir + "/broken.tar", str_repeat["not a tar file. ", 100]]
+@fs.write[@dir + "/broken.tar", str_repeat["not a tar file. ", 100]]
 log[err_kind[@zip.tar_read[@dir + "/broken.tar"]]]
 log[err_kind[@zip.tar_create[@dir + "/no_such_dir/a.tar", {"x": "y"}]], err_kind[@zip.tar_create[@dir + "/z.tar", {@dir + "/missing"}]]]

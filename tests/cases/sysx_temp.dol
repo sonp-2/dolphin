@@ -1,44 +1,45 @@
-// file_temp / file_temp_dir / file_chmod（design.md 5.49）。名前は乱数なので、形だけを確かめる
+@fs := import["std:fs"]
+// fs.temp / fs.temp_dir / fs.chmod（design.md 5.49）。名前は乱数なので、形だけを確かめる
 @os := import["std:os"]
 @path := import["std:path"]
 
-@f := file_temp[]
-log[type_of[@f], file_exists[@f], file_info[@f]{"size"}, str_starts_with[@path.basename[@f], "tmp"]]
+@f := @fs.temp[]
+log[type_of[@f], @fs.exists[@f], @fs.info[@f]{"size"}, str_starts_with[@path.basename[@f], "tmp"]]
 log[@path.dirname[@f] == @path.normalize[@os.temp_dir[]]]
-file_write[@f, "hello"]
-log[file_read[@f]]
-file_remove[@f]
-log[file_exists[@f]]
+@fs.write[@f, "hello"]
+log[@fs.read[@f]]
+@fs.remove[@f]
+log[@fs.exists[@f]]
 
-@g := file_temp[{"prefix": "sysx_", "suffix": ".txt"}]
+@g := @fs.temp[{"prefix": "sysx_", "suffix": ".txt"}]
 @name := @path.basename[@g]
 log[str_starts_with[@name, "sysx_"], str_ends_with[@name, ".txt"], str_len[@name] == 5 + 16 + 4]
-@h := file_temp[{"prefix": "sysx_", "suffix": ".txt"}]
+@h := @fs.temp[{"prefix": "sysx_", "suffix": ".txt"}]
 log[@g == @h]
-file_remove[@g]
-file_remove[@h]
+@fs.remove[@g]
+@fs.remove[@h]
 
-@d := file_temp_dir[{"prefix": "sysxdir_"}]
-log[file_info[@d]{"is_dir"}, str_starts_with[@path.basename[@d], "sysxdir_"], file_list[@d]]
-file_write[@d + "/inner.txt", "x"]
-log[file_list[@d]]
+@d := @fs.temp_dir[{"prefix": "sysxdir_"}]
+log[@fs.info[@d]{"is_dir"}, str_starts_with[@path.basename[@d], "sysxdir_"], @fs.list[@d]]
+@fs.write[@d + "/inner.txt", "x"]
+log[@fs.list[@d]]
 
 // dir を指定する
-@inner := file_temp[{"dir": @d, "suffix": ".log"}]
+@inner := @fs.temp[{"dir": @d, "suffix": ".log"}]
 log[@path.dirname[@inner] == @d, @path.ext[@inner]]
-@missing := file_temp[{"dir": @d + "/none"}]
+@missing := @fs.temp[{"dir": @d + "/none"}]
 log[err_kind[@missing]]
-@cleared := file_remove_all[@d]
-log[file_exists[@d]]
+@cleared := @fs.remove_all[@d]
+log[@fs.exists[@d]]
 
-// file_chmod は Unix だけ。Windows は unsupported のエラー値
-@c := file_temp[]
-@r := file_chmod[@c, 420]
+// fs.chmod は Unix だけ。Windows は unsupported のエラー値
+@c := @fs.temp[]
+@r := @fs.chmod[@c, 420]
 @ok := false
 if @os.platform[] == "windows" (
     @ok = err_kind[@r] == "unsupported"
 ) else (
-    @ok = @r == nil && err_kind[file_chmod[@c + ".none", 420]] == "not_found"
+    @ok = @r == nil && err_kind[@fs.chmod[@c + ".none", 420]] == "not_found"
 )
 log[@ok]
-file_remove[@c]
+@fs.remove[@c]

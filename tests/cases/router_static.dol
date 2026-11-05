@@ -1,16 +1,17 @@
+@fs := import["std:fs"]
 // std:router の静的ファイルの配信（design.md 5.52）。一時ディレクトリに置いたファイルを返す
 @router := import["std:router"]
 
-@root := file_temp_dir[{"prefix": "router_static_"}]
+@root := @fs.temp_dir[{"prefix": "router_static_"}]
 @pub := @root + "/pub"
-file_mkdir[@pub + "/sub"]
-file_write[@pub + "/index.html", "<h1>home</h1>"]
-file_write[@pub + "/a.txt", "plain"]
-file_write[@pub + "/style.css", "body {}"]
-file_write[@pub + "/data.bin", "bin"]
-file_write[@pub + "/sub/index.html", "sub home"]
-file_write[@pub + "/.secret", "dot"]
-file_write[@root + "/outside.txt", "outside"]
+@fs.mkdir[@pub + "/sub"]
+@fs.write[@pub + "/index.html", "<h1>home</h1>"]
+@fs.write[@pub + "/a.txt", "plain"]
+@fs.write[@pub + "/style.css", "body {}"]
+@fs.write[@pub + "/data.bin", "bin"]
+@fs.write[@pub + "/sub/index.html", "sub home"]
+@fs.write[@pub + "/.secret", "dot"]
+@fs.write[@root + "/outside.txt", "outside"]
 
 call[@h, @method, @path] (
     @resp := @h[{"method": @method, "path": @path, "headers": {:}, "query": {:}}]
@@ -51,4 +52,4 @@ log[call[@h, "GET", "/s/a.txt:stream"]]
 log[call[@hu, "GET", "/up/a.txt"]]
 log[call[@hu, "POST", "/up/a.txt"]]
 
-file_remove_all[@root]
+@fs.remove_all[@root]

@@ -3,17 +3,17 @@
 
 @text := "hello hello hello hello hello hello hello hello hello hello"
 @gz := @zip.gzip[@text]
-log[type_of[@gz], bytes_len[@gz] < bytes_len[str_to_bytes[@text]]]
+log[type_of[@gz], bytes_len[@gz] < bytes_len[bytes_from_str[@text]]]
 // gzip のマジックナンバー
 log[bytes_to_arr[@gz]{0}, bytes_to_arr[@gz]{1}]
 log[bytes_to_str[@zip.gunzip[@gz]?]? == @text]
 
 // 同じ入力からは同じバイト列ができる
-log[@zip.gzip[@text] == @zip.gzip[str_to_bytes[@text]]]
+log[@zip.gzip[@text] == @zip.gzip[bytes_from_str[@text]]]
 
 // zlib
 @z := @zip.deflate[@text]
-log[bytes_to_arr[@z]{0}, bytes_len[@z] < bytes_len[str_to_bytes[@text]]]
+log[bytes_to_arr[@z]{0}, bytes_len[@z] < bytes_len[bytes_from_str[@text]]]
 log[bytes_to_str[@zip.inflate[@z]?]? == @text]
 
 // 空と、バイナリ
@@ -22,7 +22,7 @@ log[bytes_len[@zip.gunzip[@zip.gzip[""]]?], bytes_len[@zip.inflate[@zip.deflate[
 log[@zip.gunzip[@zip.gzip[@bin]]? == @bin, @zip.inflate[@zip.deflate[@bin]]? == @bin]
 
 // 強さ
-@big := str_to_bytes[str_repeat["abcdefgh", 500]]
+@big := bytes_from_str[str_repeat["abcdefgh", 500]]
 @fast := @zip.gzip[@big, {"level": 1}]
 @best := @zip.gzip[@big, {"level": 9}]
 @none := @zip.gzip[@big, {"level": 0}]
@@ -33,7 +33,7 @@ log[@zip.gunzip[@none]? == @big, @zip.gunzip[@best]? == @big]
 log[bytes_to_str[@zip.gunzip[bytes_concat[@zip.gzip["ab"], @zip.gzip["cd"]]]?]?]
 
 // 壊れたデータは parse、上限を超えると too_large
-log[err_kind[@zip.gunzip[str_to_bytes["not gzip"]]], err_kind[@zip.inflate[str_to_bytes["not zlib"]]]]
+log[err_kind[@zip.gunzip[bytes_from_str["not gzip"]]], err_kind[@zip.inflate[bytes_from_str["not zlib"]]]]
 log[err_kind[@zip.gunzip[@zip.deflate["x"]]], err_kind[@zip.inflate[@zip.gzip["x"]]]]
 log[err_kind[@zip.gunzip[bytes_slice[@gz, 0, 12]]]]
 log[err_kind[@zip.gunzip[@gz, {"max_size": 10}]], err_message[@zip.inflate[@z, {"max_size": 10}]]]

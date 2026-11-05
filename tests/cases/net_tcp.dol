@@ -13,7 +13,7 @@ log[@net.peer_addr[@client].port == @port, @net.peer_addr[@server].port == @net.
 // 行と、バイト列
 @net.write[@client, "こんにちは\r\nsecond line\nrest"]
 log[@net.read_line[@server], @net.read_line[@server], @net.read[@server, 100]]
-@net.write[@server, str_to_bytes["ab"]]
+@net.write[@server, bytes_from_str["ab"]]
 @net.write[@server, "cdef"]
 log[@net.read_exact[@client, 5], @net.read[@client, 10], @net.read[@client, 0]]
 

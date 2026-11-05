@@ -79,11 +79,11 @@ log[@buf, @ffi.size[@buf], @ffi.read[@buf, 0, 8]]
 log[@p == @ffi.address[@buf], @ffi.read[@buf, 0, 6]]
 
 @memcpy := @ffi.func[@c, "memcpy", {"buf", "bytes", "u64"}, "ptr"]?
-@ffi.call[@memcpy, {@buf, str_to_bytes["hey"], 3}]
+@ffi.call[@memcpy, {@buf, bytes_from_str["hey"], 3}]
 log[@ffi.read[@buf, 0, 4]]
-@ffi.write[@buf, 4, str_to_bytes["!?"]]
+@ffi.write[@buf, 4, bytes_from_str["!?"]]
 log[@ffi.read[@buf, 3, 4]]
-@copy := @ffi.buffer_from[str_to_bytes["abc"]]
+@copy := @ffi.buffer_from[bytes_from_str["abc"]]
 log[@ffi.read[@copy, 1, 2], @ffi.size[@copy]]
 
 // アドレスを返す関数と、アドレスから読む関数
@@ -141,7 +141,7 @@ fn mistakes_are_runtime_errors() {
         ("@ffi.read[@abs, 0, 1]", "バッファです"),
         ("@ffi.read[@b, 3, 2]", "大きさ 4 を出ています"),
         ("@ffi.read[@b, -1, 1]", "を出ています"),
-        (r#"@ffi.write[@b, 3, str_to_bytes["ab"]]"#, "を出ています"),
+        (r#"@ffi.write[@b, 3, bytes_from_str["ab"]]"#, "を出ています"),
         ("@ffi.buffer[-1]", "0〜"),
         ("@ffi.peek[0, 1]", "NULL"),
         ("@ffi.size[1]", "バッファです"),

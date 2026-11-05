@@ -1,9 +1,9 @@
 @s := import["std:stream"]
-@m := @s.from_bytes[str_to_bytes["one\ntwo\nthree"]]
+@m := @s.from_bytes[bytes_from_str["one\ntwo\nthree"]]
 log[@m]
 log[@s.read_exact[@m, 3]?, @s.read_line[@m]?]
 log[err_kind[@s.read_exact[@m, 100]]]
-@m2 := @s.from_bytes[str_to_bytes["hello world"]]
+@m2 := @s.from_bytes[bytes_from_str["hello world"]]
 @out := @s.stdout[]
 log[@out]
 @n := @s.copy[@m2, @out]?

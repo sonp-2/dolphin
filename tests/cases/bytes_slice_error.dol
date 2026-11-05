@@ -1,1 +1,1 @@
-log[bytes_slice[str_to_bytes["abc"], 1, 4]]
+log[bytes_slice[bytes_from_str["abc"], 1, 4]]

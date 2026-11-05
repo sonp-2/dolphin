@@ -1,3 +1,4 @@
+@fs := import["std:fs"]
 @s := import["std:stream"]
 @path := "target/dolphin_stream_file_test.txt"
 
@@ -5,7 +6,7 @@
 log[@w]
 @s.write[@w, "alpha\n"]?
 @s.write[@w, "beta\r\n"]?
-@s.write[@w, str_to_bytes["ガンマ\ndelta"]]?
+@s.write[@w, bytes_from_str["ガンマ\ndelta"]]?
 @s.flush[@w]?
 @s.close[@w]?
 @s.close[@w]
@@ -39,4 +40,4 @@ log[@lines]
 log["止めた", @n, @s.read_line[@r3]?]
 
 log[err_kind[@s.open["target/dolphin_no_such_dir/x"]]]
-file_remove[@path]
+@fs.remove[@path]

@@ -139,7 +139,7 @@ fn run_async_runs_a_command() {
     let (out, _) = run_script(
         "run.dol",
         r#"@os := import["std:os"]
-@os.run_async[@os.exe[], {"--nope"}, [@r] ( log["code", @r{"status"}, str_len[@r{"stderr"}] > 0] )]
+@os.run_async[@os.exe_path[], {"--nope"}, [@r] ( log["code", @r{"status"}, str_len[@r{"stderr"}] > 0] )]
 @os.run_async["definitely-not-a-command-xyz", {}, [@r] ( log[err_kind[@r]] )]
 log["started"]
 "#,

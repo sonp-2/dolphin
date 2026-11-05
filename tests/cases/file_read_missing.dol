@@ -1,1 +1,2 @@
-file_read["target/no_such_file.txt"]
+@fs := import["std:fs"]
+@fs.read["target/no_such_file.txt"]

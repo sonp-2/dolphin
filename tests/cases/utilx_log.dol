@@ -1,3 +1,4 @@
+@fs := import["std:fs"]
 // std:log（design.md 5.50）。時刻は毎回変わるので、ファイルに書いて時刻の部分を外して見る
 @lg := import["std:log"]
 @s := import["std:stream"]
@@ -24,7 +25,7 @@
 log[@lg.info["戻り値は nil"]]
 @s.close[@w]?
 
-for @line in str_lines[file_read[@path]?] (
+for @line in str_lines[@fs.read[@path]?] (
     if str_len[@line] > 0 (
         // 時刻の形だけ確かめる（2026-11-05T03:04:05.678Z）
         log[str_len[str_sub[@line, 0, 24]], str_sub[@line, 4, 5], str_sub[@line, 10, 11], str_sub[@line, 23, 24]]
@@ -38,7 +39,7 @@ for @line in str_lines[file_read[@path]?] (
 @lg.set_format["json"]
 @lg.info["json", {"n": 1, "time": "x", "list": {1, 2}, "f": [] ( # 1 )}]
 @s.close[@w2]?
-@text := file_read[@path]?
+@text := @fs.read[@path]?
 @rec := @j.parse[str_lines[@text]{0}]?
 log[@rec{"level"}, @rec{"msg"}, @rec{"n"}, @rec{"field_time"}, @rec{"list"}]
 log[str_len[@rec{"time"}], str_starts_with[@text, "{\"time\":\""]]
@@ -51,4 +52,4 @@ log[@rec{"f"}]
 @e := @lg.info["閉じている"]
 log[err_kind[@e]]
 @lg.set_output[nil]
-file_remove[@path]
+@fs.remove[@path]

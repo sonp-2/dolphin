@@ -263,7 +263,7 @@ log[type_of[@c]]
 log[@ws.recv[@c]]
 @ws.send[@c, "hello"]
 log[@ws.recv[@c]]
-@ws.send[@c, str_to_bytes["ab"]]
+@ws.send[@c, bytes_from_str["ab"]]
 log[@ws.recv[@c]]
 @ws.set_timeout[@c, 0.2]
 log[err_kind[@ws.recv[@c]]]
@@ -341,7 +341,7 @@ third[] (
             @ws.send[@c, "hello"]
         )
         if @m == "hello" (
-            @ws.send[@c, str_to_bytes["ab"]]
+            @ws.send[@c, bytes_from_str["ab"]]
         )
         if type_of[@m] == "bytes" (
             @ws.send[@c, "close"]

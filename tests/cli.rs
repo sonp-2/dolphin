@@ -480,3 +480,64 @@ fn unknown_option_exits_with_2() {
     assert_eq!(output.status.code(), Some(2));
     assert!(stderr(&output).contains("使い方: dolphin"));
 }
+
+#[test]
+fn deprecated_names_warn_once_on_stderr() {
+    let dir = std::env::temp_dir().join("dolphin-cli-tests");
+    fs::create_dir_all(&dir).unwrap();
+    let target = dir
+        .join("deprecated.txt")
+        .to_string_lossy()
+        .replace('\\', "/");
+    let path = script(
+        "deprecated.dol",
+        &format!(
+            r#"@os := import["std:os"]
+file_write["{target}", "hi"]
+log[file_read["{target}"]]
+log[file_read["{target}"]]
+log[type_of[random[]], type_of[random_int[1, 2]], str_to_bytes["a"] == bytes_from_str["a"]]
+log[type_of[@os.exe[]]]
+"#
+        ),
+    );
+    let output = dolphin().arg(&path).output().unwrap();
+    assert!(output.status.success(), "{}", stderr(&output));
+    // 標準出力は旧名でも新名でも同じ
+    assert_eq!(stdout(&output), "hi\nhi\nnumber number true\nstring\n");
+    // 警告は旧名ごとに 1 回だけ（file_read は 2 回呼んでも 1 行）
+    assert_eq!(
+        stderr(&output),
+        "警告: file_write は非推奨です。std:fs の write を使ってください\n\
+         警告: file_read は非推奨です。std:fs の read を使ってください\n\
+         警告: random は非推奨です。std:random の float を使ってください\n\
+         警告: random_int は非推奨です。std:random の int を使ってください\n\
+         警告: str_to_bytes は非推奨です。bytes_from_str を使ってください\n\
+         警告: os.exe は非推奨です。std:os の exe_path を使ってください\n"
+    );
+}
+
+#[test]
+fn new_names_do_not_warn() {
+    let dir = std::env::temp_dir().join("dolphin-cli-tests");
+    fs::create_dir_all(&dir).unwrap();
+    let target = dir
+        .join("new_names.txt")
+        .to_string_lossy()
+        .replace('\\', "/");
+    let path = script(
+        "new_names.dol",
+        &format!(
+            r#"@fs := import["std:fs"]
+@random := import["std:random"]
+@os := import["std:os"]
+@fs.write["{target}", "hi"]
+log[@fs.read["{target}"], type_of[@random.float[]], type_of[@random.int[1, 2]]]
+log[type_of[@os.exe_path[]], bytes_from_str["a"]]
+"#
+        ),
+    );
+    let output = dolphin().arg(&path).output().unwrap();
+    assert!(output.status.success(), "{}", stderr(&output));
+    assert_eq!(stderr(&output), "");
+}

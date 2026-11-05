@@ -4,7 +4,7 @@
 take[@n] (
     @out := {}
     for @i in range[0, @n] (
-        arr_push[@out, random[]]
+        arr_push[@out, @r.float[]]
     )
     # @out
 )
@@ -20,7 +20,7 @@ log[@a == @b, @a == @c]
 
 // random_int や std:random も、種で再現できる
 sample_all[] (
-    # {random_int[1, 100], @r.choice[{1, 2, 3, 4, 5}], @r.uniform[0, 10], @r.normal[0, 1], @r.shuffle[{1, 2, 3, 4, 5}], @r.sample[{1, 2, 3, 4, 5}, 3]}
+    # {@r.int[1, 100], @r.choice[{1, 2, 3, 4, 5}], @r.uniform[0, 10], @r.normal[0, 1], @r.shuffle[{1, 2, 3, 4, 5}], @r.sample[{1, 2, 3, 4, 5}, 3]}
 )
 @r.seed[7]
 @x := sample_all[]
@@ -31,14 +31,14 @@ log[@x == @y]
 // 範囲
 @ok := true
 for @i in range[0, 500] (
-    @n := random_int[-3, 3]
+    @n := @r.int[-3, 3]
     @u := @r.uniform[1.5, 2.5]
     if @n < -3 || @n > 3 || @n != floor[@n] || @u < 1.5 || @u > 2.5 (
         @ok = false
     )
 )
 log["範囲", @ok]
-log[random_int[5, 5], @r.uniform[2, 2], @r.normal[3, 0]]
+log[@r.int[5, 5], @r.uniform[2, 2], @r.normal[3, 0]]
 
 // 全部の値が出る（偏りなく選べているかの目安）
 @seen := {:}

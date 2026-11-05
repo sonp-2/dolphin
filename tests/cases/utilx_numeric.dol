@@ -15,7 +15,7 @@ log[err_kind[@m.mean[{}]], err_kind[@m.median[{}]], err_kind[@m.stdev[{}]], err_
 log[err_message[@m.mean[{}]]]
 
 // crc32
-log[@e.crc32[""], @e.crc32["123456789"], @e.crc32["a"], @e.crc32[str_to_bytes["hello"]]]
+log[@e.crc32[""], @e.crc32["123456789"], @e.crc32["a"], @e.crc32[bytes_from_str["hello"]]]
 log[@e.crc32["日本語"]]
 
 // 整数の読み書き

@@ -1,1 +1,2 @@
-file_write["target/no_such_dir/x.txt", "a"]
+@fs := import["std:fs"]
+@fs.write["target/no_such_dir/x.txt", "a"]
