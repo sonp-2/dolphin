@@ -79,7 +79,7 @@ dolphin/
 │  │  ├─ span.rs         位置情報（行・列）
 │  │  ├─ lexer.rs        字句解析
 │  │  ├─ ast.rs          Program / Stmt / Expr
-│  │  └─ parser/         構文解析（stmt・expr・pattern・func・record・lookahead・string）
+│  │  └─ parser/         構文解析（stmt・expr・pattern・matching・func・record・lookahead・string）
 │  ├─ sema/
 │  │  └─ resolver/       実行前の検査（func・stmt・expr・scope）
 │  ├─ runtime/

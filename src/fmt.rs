@@ -191,7 +191,7 @@ fn scan(src: &str) -> Vec<Tok> {
                 }
                 let class = match word.as_str() {
                     "if" | "else" | "while" | "for" | "in" | "break" | "continue" | "async"
-                    | "await" | "record" | "defer" => Class::Keyword,
+                    | "await" | "record" | "defer" | "match" => Class::Keyword,
                     _ => Class::Word,
                 };
                 push(&mut toks, class, word);
@@ -203,7 +203,7 @@ fn scan(src: &str) -> Vec<Tok> {
             _ => {
                 let two: String = chars[i..(i + 2).min(chars.len())].iter().collect();
                 let (class, len) = match two.as_str() {
-                    ":=" | "==" | "!=" | "<=" | ">=" | "&&" | "||" => (Class::Binary, 2),
+                    ":=" | "==" | "!=" | "<=" | ">=" | "&&" | "||" | "=>" => (Class::Binary, 2),
                     _ => (
                         match c {
                             '(' | '[' | '{' => Class::Open,
@@ -577,6 +577,18 @@ log[...@x, 1, ...{2}]
             format_source("@x := (\n"),
             Err(FmtError::Syntax(_))
         ));
+    }
+
+    #[test]
+    fn match_statement_and_expression() {
+        let src = "@k:=match @v(\n0=>\"zero\"\n1|2   =>\"small\"\n{@h,...@t}if @h>1=>\"head\"\nPoint[@x,@y]=>@x\n_=>(1+2)\n)\nmatch @v(\n{\"go\",@d}=>(\nlog[@d]\n)\n_=>log[1]\n)\n";
+        let want = "@k := match @v (\n    0 => \"zero\"\n    1 | 2 => \"small\"\n    {@h, ...@t} if @h > 1 => \"head\"\n    Point[@x, @y] => @x\n    _ => (1 + 2)\n)\nmatch @v (\n    {\"go\", @d} => (\n        log[@d]\n    )\n    _ => log[1]\n)\n";
+        assert_eq!(fmt(src), want);
+        assert_eq!(fmt(want), want);
+        assert_eq!(
+            fmt("match @n(0=>\"a\",_=>\"b\")\n"),
+            "match @n ( 0 => \"a\", _ => \"b\" )\n"
+        );
     }
 
     #[test]

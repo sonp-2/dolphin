@@ -1,0 +1,4 @@
+match_syntax_separator.dol:2:25: エラー: 改行か `,`が必要です（`2`がありました）
+  |
+2 | match 1 ( 1 => log["a"] 2 => log["b"] )
+  |                         ^

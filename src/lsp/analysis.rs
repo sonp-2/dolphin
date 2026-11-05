@@ -374,8 +374,33 @@ impl<'a> Walker<'a> {
                 self.expr(value);
                 self.pattern(pattern, stmt.span, *declare);
             }
+            StmtKind::Match { scrutinee, arms } => {
+                self.expr(scrutinee);
+                for arm in arms {
+                    self.match_arm(&arm.pattern, arm.span, arm.guard.as_ref(), |this| {
+                        this.stmts(&arm.body)
+                    });
+                }
+            }
             StmtKind::Expr(expr) | StmtKind::Defer(expr) => self.expr(expr),
         }
+    }
+
+    /// `match` の腕。パターンの変数・ガード・本体が同じスコープに入る
+    fn match_arm(
+        &mut self,
+        pattern: &Pattern,
+        span: Span,
+        guard: Option<&Expr>,
+        body: impl FnOnce(&mut Self),
+    ) {
+        self.scopes.push(HashMap::new());
+        self.pattern(pattern, span, true);
+        if let Some(guard) = guard {
+            self.expr(guard);
+        }
+        body(self);
+        self.scopes.pop();
     }
 
     fn pattern(&mut self, pattern: &Pattern, from: Span, declare: bool) {
@@ -430,6 +455,14 @@ impl<'a> Walker<'a> {
             ExprKind::Lambda(def) => self.func_body(def),
             ExprKind::Spread(inner) | ExprKind::Try(inner) | ExprKind::Await(inner) => {
                 self.expr(inner)
+            }
+            ExprKind::Match { scrutinee, arms } => {
+                self.expr(scrutinee);
+                for arm in arms {
+                    self.match_arm(&arm.pattern, arm.span, arm.guard.as_ref(), |this| {
+                        this.expr(&arm.body)
+                    });
+                }
             }
             ExprKind::If {
                 cond,
@@ -634,6 +667,31 @@ if @total > 0 (
         assert_eq!(target_span(&a, 9, 15), Some(Span { line: 8, col: 5 }));
         // 無名関数は外側の `@total` を捕まえる
         assert_eq!(target_span(&a, 11, 22), Some(Span { line: 6, col: 1 }));
+    }
+
+    #[test]
+    fn match_bindings_are_definitions() {
+        let a = analyze(
+            "@v := {1, 2}
+@r := match @v (
+    {@a, @b} if @a > 0 => @a + @b
+    _ => 0
+)
+match @v (
+    {@c, ...@d} => log[@c, @d]
+)
+",
+        )
+        .unwrap();
+        // ガードと式の本体の `@a` は、パターンの `@a`（3 行目の 6 列）を指す
+        assert_eq!(target_span(&a, 3, 17), Some(Span { line: 3, col: 6 }));
+        assert_eq!(target_span(&a, 3, 27), Some(Span { line: 3, col: 6 }));
+        assert_eq!(target_span(&a, 3, 32), Some(Span { line: 3, col: 10 }));
+        // 文の match の本体の `@c` `@d`
+        assert_eq!(target_span(&a, 7, 24), Some(Span { line: 7, col: 6 }));
+        assert_eq!(target_span(&a, 7, 28), Some(Span { line: 7, col: 13 }));
+        // 対象の `@v`
+        assert_eq!(target_span(&a, 2, 13), Some(Span { line: 1, col: 1 }));
     }
 
     #[test]

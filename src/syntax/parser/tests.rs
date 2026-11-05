@@ -300,3 +300,112 @@ fn record_definition_errors() {
         assert!(parse_src(src).is_err(), "{src}");
     }
 }
+
+#[test]
+fn match_statement() {
+    assert_eq!(
+        ast(
+            "match @v (\n    0 => log[1]\n    @x if @x > 1 => (\n        log[@x]\n    )\n    _ => log[2]\n)\n"
+        ),
+        "(match @v (0 ((log 1))) (@x (if (> @x 1)) ((log @x))) (_ ((log 2))))\n"
+    );
+}
+
+#[test]
+fn match_expression() {
+    assert_eq!(
+        ast("@k := match @v ( 0 => \"a\", 1 | 2 => \"b\", _ => \"c\" )\n"),
+        "(:= @k (match @v (0 \"a\") ((or 1 2) \"b\") (_ \"c\")))\n"
+    );
+    // 文の先頭以外では式。値を `#` で返す
+    assert_eq!(
+        ast("f[@v] (\n    # match @v (\n        1 => 2\n        _ => 3\n    )\n)\n"),
+        "(def f (@v) ((# (match @v (1 2) (_ 3)))))\n"
+    );
+}
+
+#[test]
+fn match_patterns() {
+    let first = |src: &str| {
+        let text = ast(&format!("@x := match @v (\n    {src} => 1\n)\n"));
+        text.trim_start_matches("(:= @x (match @v (")
+            .split(" 1)")
+            .next()
+            .unwrap()
+            .to_string()
+    };
+    assert_eq!(first("-2"), "-2");
+    assert_eq!(first("-3i"), "-3i");
+    assert_eq!(first("1.5"), "1.5");
+    assert_eq!(first("\"a\""), "\"a\"");
+    assert_eq!(first("true"), "true");
+    assert_eq!(first("nil"), "nil");
+    assert_eq!(first("{}"), "(arr)");
+    assert_eq!(first("{:}"), "(map)");
+    assert_eq!(first("{@a, ...@r}"), "(arr @a (... @r))");
+    assert_eq!(
+        first("{\"k\": {1, @a}, \"j\": _}"),
+        "(map (\"k\" (arr 1 @a)) (\"j\" _))"
+    );
+    assert_eq!(first("Point[@x, 1 | 2]"), "(rec Point @x (or 1 2))");
+    assert_eq!(first("{1 | 2, @x}"), "(arr (or 1 2) @x)");
+}
+
+#[test]
+fn match_arm_separators() {
+    assert!(parse_src("match @v (\n\n    1 => 2,\n\n    3 => 4\n    ,\n)\n").is_ok());
+    assert!(parse_src("match @v ()\n").is_ok());
+    // 腕の間に区切りがない
+    assert!(
+        error("match @v ( 1 => 2 3 => 4 )\n")
+            .message
+            .contains("改行か `,`")
+    );
+}
+
+#[test]
+fn match_syntax_errors() {
+    for src in [
+        "match @v (\n    1\n)\n",
+        "match @v (\n    => 1\n)\n",
+        "match @v\n",
+        "match (\n)\n",
+        "match @v (\n    1 =>\n)\n",
+        // 文字列の展開は書けない
+        "match @v (\n    \"a@x\" => 1\n)\n",
+        // 式の match の本体は式（文は書けない）
+        "@x := match @v (\n    1 => break\n)\n",
+        "@x := match @v (\n    1 => @y = 2\n)\n",
+        // `|` はパターンの外では使えない
+        "@x := 1 | 2\n",
+        "match @v (\n    Point => 1\n)\n",
+        "match @v (\n    {...@r, @a} => 1\n)\n",
+    ] {
+        assert!(parse_src(src).is_err(), "{src}");
+    }
+}
+
+#[test]
+fn refutable_patterns_are_match_only() {
+    for src in [
+        "{1, @a} := @v\n",
+        "{\"k\": nil} := @v\n",
+        "{@a | @b} := @v\n",
+        "for Point[@x] in @v (\n)\n",
+        "for {\"s\"} in @v (\n)\n",
+    ] {
+        assert!(parse_src(src).is_err(), "{src}");
+    }
+    // `_` は分割代入と for でも書ける
+    assert_eq!(
+        ast("{_, @b} := @v\nfor {_, @w} in @m (\n)\n"),
+        "(:= (arr _ @b) @v)\n(for (arr _ @w) @m ())\n"
+    );
+}
+
+#[test]
+fn match_is_a_keyword() {
+    assert!(error("match := 1\n").message.contains("式"));
+    // `@match` は変数
+    assert_eq!(ast("@match = 1\n"), "(= @match 1)\n");
+}

@@ -1,0 +1,85 @@
+// match: 腕ごとの新しいスコープ。クロージャが捕まえた束縛は実行ごとに別
+@fs := {}
+for @i in range[0, 3] (
+    match {@i, @i * 10} (
+        {@a, @b} => (
+            arr_push[@fs, [] ( # @a + @b )]
+        )
+    )
+)
+for @f in @fs (
+    log[@f[]]
+)
+
+// 式の match の本体でもクロージャが束縛を捕まえられる
+makers[] (
+    @out := {}
+    for @n in {1, 2, 3} (
+        arr_push[@out, match @n (
+            1 => [] ( # "one" )
+            @k => [] ( # "n=@k" )
+        )]
+    )
+    # @out
+)
+for @g in makers[] (
+    log[@g[]]
+)
+
+// 束縛した変数への代入は、その腕の中だけ。外側の同名の変数は隠れるだけで変わらない
+@x := "outer"
+match 5 (
+    @x => (
+        @x = @x + 1
+        log["inner @x"]
+    )
+)
+log["outer is @x"]
+
+// 外側の変数への代入は効く
+@total := 0
+for @v in {1, 2, 3} (
+    match @v (
+        2 => @total = @total + 100
+        @n => @total = @total + @n
+    )
+)
+log[@total]
+
+// 対象の式は腕のスコープの外側で、1 回だけ評価される
+@count := 0
+next[] (
+    @count = @count + 1
+    # @count
+)
+match next[] (
+    5 => log["five"]
+    @n => log["n = @n, count = @count"]
+)
+log[@count]
+
+// 関数の中（クロージャも分割代入もなければ、変数はスロットに置かれる）
+slot[@v] (
+    @acc := 0
+    match @v (
+        {@a, @b} => (
+            @acc = @a * @b
+        )
+        @n => (
+            @acc = @n
+        )
+    )
+    # @acc
+)
+log[slot[{6, 7}], slot[8]]
+
+// 関数の中にクロージャがあるとき（Env に置かれる）
+env[@v] (
+    @fs := {}
+    match @v (
+        {@a, @b} => arr_push[@fs, [] ( # @a - @b )]
+        @n => arr_push[@fs, [] ( # @n )]
+    )
+    # @fs{0}[]
+)
+log[env[{10, 3}], env[8]]

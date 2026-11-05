@@ -45,6 +45,9 @@ impl Compiler {
                 let name = self.name(name);
                 self.emit(Op::FuncRef(name), span);
             }
+            ExprKind::Match { scrutinee, arms } => {
+                self.match_common(scrutinee, arms, span, |c, body| c.expr(body), |_| false);
+            }
             ExprKind::If {
                 cond,
                 then_expr,

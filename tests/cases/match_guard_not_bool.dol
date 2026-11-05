@@ -1,0 +1,6 @@
+// ガードは真偽値でなければ実行時エラー（if の条件と同じ）
+match 1 (
+    2 if 1 => log["two"]
+    @x if "yes" => log["x"]
+    _ => log["other"]
+)

@@ -1,0 +1,39 @@
+// match: マップのパターン。キーがすべてあれば合う（余分なキーは許す）
+handle[@msg] (
+    # match @msg (
+        {"type": "ping"} => "pong"
+        {"type": "say", "text": @t} => "say: @t"
+        {"type": "move", "pos": {@x, @y}} => "move to @x,@y"
+        {"type": "tag", "tag": nil} => "no tag"
+        {"type": "tag", "tag": "a" | "b"} => "tag a or b"
+        {"type": @other} => "unknown type @other"
+        {:} => "map without type"
+        _ => "not a map"
+    )
+)
+
+log[handle[{"type": "ping"}]]
+log[handle[{"type": "ping", "extra": 1}]]
+log[handle[{"type": "say", "text": "hello"}]]
+log[handle[{"type": "say"}]]
+log[handle[{"type": "move", "pos": {3, 4}}]]
+log[handle[{"type": "move", "pos": {3}}]]
+log[handle[{"type": "tag", "tag": nil}]]
+log[handle[{"type": "tag", "tag": "b"}]]
+log[handle[{"type": "tag", "tag": "c"}]]
+log[handle[{"x": 1}]]
+log[handle[{:}]]
+log[handle[{}]]
+log[handle["ping"]]
+
+// レコードにもマップのパターンが使える（名前でフィールドを取る）
+record Point[@x, @y]
+match Point[3, 4] (
+    {"y": @y} => log["y = @y"]
+)
+
+// キーがなければ次の腕へ（分割代入と違い、エラーにならない）
+match {"a": 1} (
+    {"b": @b} => log["b"]
+    {"a": @a} => log["a = @a"]
+)

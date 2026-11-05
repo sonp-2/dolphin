@@ -1,0 +1,4 @@
+match_binding_scope.dol:6:5: エラー: 未定義の変数 `@a`
+  |
+6 | log[@a]
+  |     ^

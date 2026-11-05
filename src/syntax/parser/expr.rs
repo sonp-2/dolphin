@@ -227,6 +227,7 @@ impl<'t> Parser<'t> {
                     span: token.span,
                 });
             }
+            TokenKind::Match => return self.match_expr(),
             // lambda = [ "async" ] "[" [ params ] "]" block
             TokenKind::LBracket | TokenKind::Async => {
                 let is_async = self.at(&TokenKind::Async);

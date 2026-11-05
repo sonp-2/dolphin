@@ -148,7 +148,7 @@
       "patterns": [
         {
           "name": "keyword.control.dolphin",
-          "match": "\\b(if|else|while|for|in|break|continue|async|await|record|defer)\\b"
+          "match": "\\b(if|else|while|for|in|break|continue|async|await|record|defer|match)\\b"
         }
       ]
     },
@@ -218,6 +218,10 @@
     "operator": {
       "patterns": [
         {
+          "name": "keyword.operator.arrow.dolphin",
+          "match": "=>"
+        },
+        {
           "name": "keyword.operator.assignment.dolphin",
           "match": ":=|="
         },
@@ -227,7 +231,7 @@
         },
         {
           "name": "keyword.operator.logical.dolphin",
-          "match": "&&|\\|\\||!|\\?"
+          "match": "&&|\\|\\||\\||!|\\?"
         },
         {
           "name": "keyword.operator.arithmetic.dolphin",

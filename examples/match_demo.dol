@@ -1,0 +1,59 @@
+// パターンマッチ match の例（design.md 5.59）
+// 1. 配列で表した式の木を評価する  2. メッセージ（マップ）を振り分ける  3. レコードを分解する
+
+// ---- 1. 式の木の評価。{"add", a, b} のような配列を再帰で解く ----
+eval[@e] (
+    # match @e (
+        @n if type_of[@n] == "number" => @n
+        {"add", @a, @b} => eval[@a] + eval[@b]
+        {"mul", @a, @b} => eval[@a] * eval[@b]
+        {"neg", @a} => -eval[@a]
+        {"sum", ...@terms} => arr_reduce[arr_map[@terms, eval], 0, [@acc, @x] ( # @acc + @x )]
+    )
+)
+
+@tree := {"add", 1, {"mul", 2, {"neg", {"add", 3, 4}}}}
+log["式の値:", eval[@tree]]
+log["sum:", eval[{"sum", 1, 2, {"mul", 3, 4}}]]
+
+// ---- 2. メッセージの振り分け。部分一致なので、余分なキーは無視される ----
+handle[@msg] (
+    match @msg (
+        {"type": "ping"} => log["pong"]
+        {"type": "greet", "name": @name} => log["こんにちは、@name さん"]
+        {"type": "move", "to": {@x, @y}} if @x < 0 || @y < 0 => log["範囲外: @x,@y"]
+        {"type": "move", "to": {@x, @y}} => log["移動: @x,@y"]
+        {"type": "close" | "quit"} => log["終了"]
+        {"type": @other} => log["未対応: @other"]
+        _ => log["メッセージではありません: @msg"]
+    )
+)
+
+handle[{"type": "ping", "id": 1}]
+handle[{"type": "greet", "name": "ドルフィン"}]
+handle[{"type": "move", "to": {3, 4}}]
+handle[{"type": "move", "to": {-1, 4}}]
+handle[{"type": "quit"}]
+handle[{"type": "fly"}]
+handle[42]
+
+// ---- 3. レコードの分解。フィールドは定義順 ----
+record Point[@x, @y]
+record Circle[@center, @radius]
+record Rect[@origin, @width, @height]
+
+describe[@shape] (
+    # match @shape (
+        Point[0, 0] => "原点"
+        Point[@x, @y] => "点 (@x, @y)"
+        Circle[Point[@x, @y], @r] if @r > 10 => "大きな円 (@x, @y)"
+        Circle[_, @r] => "円 半径 @r"
+        Rect[_, @w, @h] if @w == @h => "正方形 @w"
+        Rect[_, @w, @h] => "長方形 @w x @h"
+        _ => "不明"
+    )
+)
+
+for @s in {Point[0, 0], Point[2, 3], Circle[Point[1, 1], 20], Circle[Point[1, 1], 2], Rect[Point[0, 0], 4, 4], Rect[Point[0, 0], 4, 5], "?"} (
+    log[describe[@s]]
+)

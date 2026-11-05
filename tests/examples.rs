@@ -76,6 +76,31 @@ fn shapes_uses_records() {
 }
 
 #[test]
+fn match_demo_dispatches_on_shapes() {
+    let output = dolphin(&["examples/match_demo.dol"]);
+    assert!(output.status.success(), "{}", stderr(&output));
+    let text = stdout(&output);
+    for expected in [
+        "式の値: -13",
+        "sum: 15",
+        "こんにちは、ドルフィン さん",
+        "範囲外: -1,4",
+        "終了",
+        "未対応: fly",
+        "メッセージではありません: 42",
+        "大きな円 (1, 1)",
+        "正方形 4",
+        "長方形 4 x 5",
+    ] {
+        assert!(
+            text.contains(expected),
+            "{expected:?} がない:
+{text}"
+        );
+    }
+}
+
+#[test]
 fn life_runs_a_few_generations() {
     let output = dolphin(&["examples/life.dol", "3"]);
     assert!(output.status.success(), "{}", stderr(&output));

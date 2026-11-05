@@ -132,6 +132,14 @@ pub enum Op {
         pattern: u32,
         declare: bool,
     },
+    /// `match` の腕の検査（design.md 5.59）。スタックの値を取り出してパターンに当て、合えば
+    /// 束縛する値をパターンの変数の順に積む。合わなければ何も積まずに `fail` へ飛ぶ
+    MatchPat {
+        pattern: u32,
+        fail: u32,
+    },
+    /// どの腕にも合わなかった。スタックの値（`match` の対象）を添えて実行時エラーにする
+    MatchFail,
     /// 配列を取り出し、要素の写しと位置 0 を積む（`for` の準備）
     ForPrep,
     /// 次の要素をスコープの変数に入れる。なくなったら `end` へ飛ぶ
@@ -161,7 +169,16 @@ pub struct Chunk {
     /// `MakeClosure` が作る無名関数の定義
     pub defs: Vec<Rc<FuncDef>>,
     pub patterns: Vec<Pattern>,
+    /// `MatchPat` が当てるパターン
+    pub matches: Vec<MatchInfo>,
     /// ローカル変数をスロットに置く関数なら、そのスロットの数（引数を含む）。
     /// `None` なら、従来どおり名前で引く `Env` に置く
     pub locals: Option<u32>,
+}
+
+/// `match` の腕のパターンと、それが束縛する変数（積む値の順）
+#[derive(Debug)]
+pub struct MatchInfo {
+    pub pattern: Pattern,
+    pub vars: Vec<Rc<str>>,
 }

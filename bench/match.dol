@@ -1,0 +1,42 @@
+// match の速さ（design.md 5.59）: 関数の中の match（変数はスロット）で値を振り分ける。
+// 同じ処理を if の連なりで書いた classify_if と並べて測る
+classify[@v] (
+    # match @v (
+        0 => 1
+        1 | 2 => 2
+        {@a, @b} => @a + @b
+        {"k": @k} => @k
+        @n if @n > 100 => 3
+        _ => 4
+    )
+)
+
+classify_if[@v] (
+    if @v == 0 ( # 1 )
+    if @v == 1 || @v == 2 ( # 2 )
+    if type_of[@v] == "array" && arr_len[@v] == 2 ( # @v{0} + @v{1} )
+    if type_of[@v] == "map" && map_has[@v, "k"] ( # @v{"k"} )
+    if type_of[@v] == "number" && @v > 100 ( # 3 )
+    # 4
+)
+
+@inputs := {0, 1, 2, {3, 4}, {"k": 5}, 500, 7}
+@s := 0
+@i := 0
+while @i < 200000 (
+    for @v in @inputs (
+        @s = @s + classify[@v]
+    )
+    @i = @i + 1
+)
+log[@s]
+
+@t := 0
+@j := 0
+while @j < 200000 (
+    for @v in @inputs (
+        @t = @t + classify_if[@v]
+    )
+    @j = @j + 1
+)
+log[@t]

@@ -289,3 +289,118 @@ fn duplicate_param() {
         Err("引数 `@a` が重複しています".into())
     );
 }
+
+#[test]
+fn match_scopes_and_bindings() {
+    // パターンの変数は、ガードと本体で見える。腕の外では見えない
+    assert_eq!(
+        check("match {1} (\n    {@a} if @a > 0 => log[@a]\n    _ => log[1]\n)"),
+        Ok(())
+    );
+    assert_eq!(
+        check("match {1} (\n    {@a} => log[1]\n)\nlog[@a]"),
+        Err("未定義の変数 `@a`".into())
+    );
+    // ほかの腕の変数は見えない
+    assert_eq!(
+        check("match {1} (\n    {@a} => log[1]\n    _ => log[@a]\n)"),
+        Err("未定義の変数 `@a`".into())
+    );
+    // 対象の式は、腕の変数の外側
+    assert_eq!(
+        check("match @a (\n    @a => log[@a]\n)"),
+        Err("未定義の変数 `@a`".into())
+    );
+    // 本体のブロックは、パターンの変数と同じスコープ
+    assert_eq!(
+        check("match 1 (\n    @a => (\n        @a := 2\n    )\n)"),
+        Err("変数 `@a` はすでに宣言されています".into())
+    );
+    assert_eq!(
+        check("match 1 (\n    @a => (\n        @b := @a\n        log[@b]\n    )\n)"),
+        Ok(())
+    );
+    // 外側の同名の変数は隠れるだけ
+    assert_eq!(
+        check("@a := 1\nmatch 2 (\n    @a => log[@a]\n)\nlog[@a]"),
+        Ok(())
+    );
+}
+
+#[test]
+fn match_expression_scopes() {
+    assert_eq!(
+        check("@r := match {1} (\n    {@a} if @a > 0 => @a + 1\n    _ => 0\n)\nlog[@r]"),
+        Ok(())
+    );
+    assert_eq!(
+        check("@r := match 1 (\n    @a => @b\n)"),
+        Err("未定義の変数 `@b`".into())
+    );
+    assert_eq!(
+        check("@r := match 1 (\n    @a => 1\n)\nlog[@a]"),
+        Err("未定義の変数 `@a`".into())
+    );
+}
+
+#[test]
+fn match_pattern_errors() {
+    assert_eq!(
+        check("match 1 (\n    {@a, @a} => 1\n)"),
+        Err("変数 `@a` はすでに宣言されています".into())
+    );
+    assert_eq!(
+        check("match 1 (\n    {@a} | {@b} => 1\n)"),
+        Err("or パターンの選択肢で束縛する変数が違います".into())
+    );
+    assert_eq!(
+        check("match 1 (\n    1 | @a => 1\n)"),
+        Err("or パターンの選択肢で束縛する変数が違います".into())
+    );
+    // 同じ変数を束縛する or は書ける（順序は問わない）
+    assert_eq!(
+        check("match {1, 2} (\n    {@a, @b} | {@b, @a} => log[@a, @b]\n)"),
+        Ok(())
+    );
+    assert_eq!(check("match 1 (\n    1 | 2 | _ => log[1]\n)"), Ok(()));
+}
+
+#[test]
+fn match_record_arity() {
+    let def = "record Point[@x, @y]\n";
+    assert_eq!(
+        check(&format!("{def}match 1 (\n    Point[@a, @b] => log[@a]\n)")),
+        Ok(())
+    );
+    assert_eq!(
+        check(&format!("{def}match 1 (\n    Point[@a] => log[@a]\n)")),
+        Err("レコード `Point` のフィールドは 2 個です（パターンは 1 個）".into())
+    );
+    // 定義がない名前は、実行時に合わないだけ
+    assert_eq!(check("match 1 (\n    Other[@a] => log[@a]\n)"), Ok(()));
+}
+
+#[test]
+fn match_with_break_return_and_guards() {
+    assert_eq!(
+        check("while true (\n    match 1 (\n        1 => break\n        _ => continue\n    )\n)"),
+        Ok(())
+    );
+    assert_eq!(
+        check("match 1 (\n    1 => break\n)"),
+        Err("`break` は while か for の中でのみ使えます".into())
+    );
+    assert_eq!(
+        check("f[@v] (\n    match @v (\n        @x if @x > 1 => # @x\n        _ => # 0\n    )\n)"),
+        Ok(())
+    );
+    assert_eq!(
+        check("match 1 (\n    1 => # 2\n)"),
+        Err("`#` は関数の中でのみ使えます".into())
+    );
+    // ガードの中の未定義の変数
+    assert_eq!(
+        check("match 1 (\n    @a if @z => 1\n)"),
+        Err("未定義の変数 `@z`".into())
+    );
+}

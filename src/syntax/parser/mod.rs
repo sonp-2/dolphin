@@ -6,6 +6,7 @@
 mod expr;
 mod func;
 mod lookahead;
+mod matching;
 mod pattern;
 mod record;
 mod stmt;

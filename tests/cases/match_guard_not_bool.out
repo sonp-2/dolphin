@@ -1,0 +1,4 @@
+match_guard_not_bool.dol:4:11: エラー: 条件は真偽値である必要があります（文字列でした）
+  |
+4 |     @x if "yes" => log["x"]
+  |           ^

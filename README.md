@@ -55,6 +55,7 @@ count: 3
 | `defer 式` | いまの関数を抜けるとき（`#`・エラー・`?` のどれでも）、登録の逆順に評価する後始末（[5.53](docs/design.md)） |
 | `if 条件 ( … )` / `else ( … )` / `else if` | 条件分岐 |
 | `while 条件 ( … )` / `for @x in 配列・マップ・文字列 ( … )`（`for {@k, @v} in @m ( … )` のように分割代入も書ける）/ `break` / `continue` | 繰り返し |
+| `match 式 ( パターン [if 条件] => 本体 … )` | パターンマッチ。文でも式でも書ける（`@k := match @v ( 0 => "零", _ => "他" )`）。リテラル・`_`・`@x`・配列 `{@h, ...@t}`・マップ `{"k": @v}`・レコード `Point[@x, @y]`・`1 | 2` を書け、合う腕がなければ実行時エラー（[5.59](docs/design.md)）。`match` は予約語 |
 | `nil` | 値なし |
 | `{1, 2, 3}` / `@a{0}` | 配列。添字は `{ }` |
 | `{"key": value}` / `@m{"key"}` / `{:}` | マップ（`{:}` は空のマップ） |
@@ -134,6 +135,7 @@ count: 3
 | [json.dol](examples/json.dol) / [http.dol](examples/http.dol) | JSON の読み書き / HTTP で JSON を取ってくる（ネットワークが必要） |
 | [closure.dol](examples/closure.dol) | クロージャと `arr_map` |
 | [shapes.dol](examples/shapes.dol) | レコード（`record Point[@x, @y]`）で図形を表し、面積を求める |
+| [match_demo.dol](examples/match_demo.dol) | パターンマッチ（`match`）: 式の木の評価、メッセージの振り分け、レコードの分解 |
 | [hello.dol](examples/hello.dol) / [count.dol](examples/count.dol) | 最小の例。変数・関数・`while`・配列の合計 |
 | [todo_api.dol](examples/todo_api.dol) | メモを JSON で出し入れする小さな API サーバー（`http.serve` と `std:router`。`curl` で試せる） |
 | [counter_ui.dol](examples/counter_ui.dol) | ウィンドウを開く小さなアプリ（`std:ui`。`cargo run --features ui -- examples/counter_ui.dol`） |
@@ -285,7 +287,7 @@ dolphin lsp
 
 ### ベンチマーク
 
-`bench/` に、実行の速さを測る小さなスクリプトがあります（`fib.dol`: 再帰、`loop.dol`: `while` のループ、`array.dol`: 配列への追加と `for`、`forx.dol`: 分割代入・マップ・文字列の `for`）。速さを調べるときは、リリースビルドで測ります。
+`bench/` に、実行の速さを測る小さなスクリプトがあります（`fib.dol`: 再帰、`loop.dol`: `while` のループ、`array.dol`: 配列への追加と `for`、`forx.dol`: 分割代入・マップ・文字列の `for`、`match.dol`: `match` と `if` の連なりの比較）。速さを調べるときは、リリースビルドで測ります。
 
 ```sh
 cargo build --release

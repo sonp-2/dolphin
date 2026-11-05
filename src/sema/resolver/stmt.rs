@@ -141,6 +141,12 @@ impl<'a> Resolver<'a> {
                 }
                 Ok(())
             }
+            StmtKind::Match { scrutinee, arms } => {
+                self.expr(scrutinee, ctx)?;
+                arms.iter().try_for_each(|arm| {
+                    self.match_arm(arm, ctx, |ctx| self.stmts(&arm.body, ctx, in_loop))
+                })
+            }
             StmtKind::Expr(expr) => self.expr(expr, ctx),
             StmtKind::Defer(expr) => {
                 // 抜けるときに呼ばれる無名関数の中と同じ規則で調べる（`await` は書けない）
