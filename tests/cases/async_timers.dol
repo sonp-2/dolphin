@@ -2,7 +2,7 @@
 @async := import["std:async"]
 log["start"]
 
-@async.after[0.80, [] ( log["third (0.80)"] )]
+@async.after[1.60, [] ( log["third (1.60)"] )]
 @async.after[0.10, [] ( log["first (0.10)"] )]
 @never := @async.after[0.20, [] ( log["キャンセルしたので出ない"] )]
 @async.cancel[@never]
@@ -27,7 +27,7 @@ log["start"]
 )]
 
 // エラーになったコールバックは、報告されるだけで、ほかは続く
-@async.after[0.55, [] ( log[1 / 0] )]
-@async.after[0.65, [] ( log["errors don't stop the loop"] )]
+@async.after[1.10, [] ( log[1 / 0] )]
+@async.after[1.20, [] ( log["errors don't stop the loop"] )]
 
 log["end of script, ticker id", @ticker > 0]

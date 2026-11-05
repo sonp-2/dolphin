@@ -4,13 +4,13 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use super::super::{error_value, num_arg};
 use super::args::check_count;
-use super::calendar::{civil_from_ts, days_from_civil};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
 
 /// OS のタイムゾーンの、UTC からの分。`ts` の時点の値（夏時間を反映）
 #[cfg(windows)]
 fn os_offset_minutes(ts: f64) -> Result<i64, String> {
+    use super::calendar::{civil_from_ts, days_from_civil};
     #[repr(C)]
     #[derive(Default, Clone, Copy)]
     struct WinTime {
