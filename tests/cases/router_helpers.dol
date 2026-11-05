@@ -1,0 +1,44 @@
+// std:router の応答の補助・CORS・クッキー（design.md 5.52）
+@router := import["std:router"]
+
+log[@router.json[201, {"a": 1}]]
+log[@router.text[404, "no"]]
+log[@router.redirect["/login"]]
+log[@router.redirect["/new", 301]]
+
+// クッキー
+log[@router.set_cookie["sid", "abc"]]
+log[@router.set_cookie["name", "a b;c", {"max_age": 3600, "path": "/app", "domain": "example.com", "secure": true, "http_only": false, "same_site": "Strict"}]]
+log[@router.set_cookie["x", "y", {"same_site": "None", "secure": true}]]
+log[@router.cookies[{"headers": {"cookie": "a=1; b=%E3%81%82; a=2; c=\"q\"; bad; =x"}}]]
+log[@router.cookies[{"headers": {:}}]]
+log[@router.cookies[{:}]]
+
+// CORS
+call[@h, @method, @path, @headers] (
+    # @h[{"method": @method, "path": @path, "headers": @headers, "query": {:}}]
+)
+
+@r := @router.new[]
+@router.use[@r, @router.cors[{"origin": {"https://a.example", "https://b.example"}, "credentials": true, "expose": "X-Total", "max_age": 60}]]
+@router.get[@r, "/data", [@req] ( # {"json": {"ok": true}, "headers": {"Vary": "Accept"}} )]
+@router.post[@r, "/data", [@req] ( # "posted" )]
+@h := @router.handler[@r]
+
+// Origin なし: 何も足さない
+log[call[@h, "GET", "/data", {:}]]
+// 許さない Origin: 何も足さない
+log[call[@h, "GET", "/data", {"origin": "https://evil.example"}]]
+// 許す Origin
+log[call[@h, "GET", "/data", {"origin": "https://a.example"}]]
+// プリフライト
+log[call[@h, "OPTIONS", "/data", {"origin": "https://b.example", "access-control-request-method": "POST", "access-control-request-headers": "x-a, content-type"}]]
+// Origin つきでも、プリフライトでない OPTIONS は通常どおり
+log[call[@h, "OPTIONS", "/data", {"origin": "https://b.example"}]]
+
+@open := @router.new[]
+@router.use[@open, @router.cors[]]
+@router.get[@open, "/", [@req] ( # "hello" )]
+@ho := @router.handler[@open]
+log[call[@ho, "GET", "/", {"origin": "https://any.example"}]]
+log[call[@ho, "OPTIONS", "/nowhere", {"origin": "https://any.example", "access-control-request-method": "PUT"}]]

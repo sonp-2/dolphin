@@ -90,10 +90,36 @@ count: 3
   - [x] 組み込みモジュール（`import["std:..."]`）と JSON（`std:json`）
   - [x] HTTP クライアント（`std:http`）
   - [x] HTTP サーバー（`http.serve`。WebSocket も）
+  - [x] ルーターとミドルウェア（`std:router`。[design.md 5.52](docs/design.md)）
 - [x] **段階 5**: ウィンドウ・描画・入力 → デスクトップアプリ
   - [x] `std:ui`（宣言的 UI）と `std:canvas`（ゲーム・描画）。`--features ui` で有効になる（eframe / egui）
   - [x] 音 `std:audio`（`--features audio`）
 - [x] **そのほか**: 標準ライブラリ（`std:json` `std:regex` `std:sqlite` `std:worker` など）、`async` / `await`、バイトコード VM、`dolphin check` / `test` / `fmt` / `lsp`、FFI（`--features ffi`）
+
+### ルーター（`std:router`）の例
+
+`http.serve` に渡すハンドラを、経路ごとに分けて書けます（ミドルウェア・グループ・静的ファイル・CORS・クッキーつき）。
+
+```
+@http := import["std:http"]
+@router := import["std:router"]
+
+@r := @router.new[]
+@router.use[@r, [@req, @next] (                 // 全リクエストを包むミドルウェア
+    log[@req{"method"}, @req{"path"}]
+    # @next[@req]
+)]
+@router.get[@r, "/users/:id", [@req] (
+    # @router.json[200, {"id": @req{"params"}{"id"}}]
+)]
+@router.get[@r, "/static/*", @router.static["public"]]
+
+@api := @router.new[]
+@router.post[@api, "/echo", [@req] ( # @router.text[200, @req{"body"}] )]
+@router.group[@r, "/api", @api]                 // POST /api/echo
+
+@http.serve[8080, @router.handler[@r]]?
+```
 
 ## 作ってみたもの
 
@@ -109,7 +135,7 @@ count: 3
 | [closure.dol](examples/closure.dol) | クロージャと `arr_map` |
 | [shapes.dol](examples/shapes.dol) | レコード（`record Point[@x, @y]`）で図形を表し、面積を求める |
 | [hello.dol](examples/hello.dol) / [count.dol](examples/count.dol) | 最小の例。変数・関数・`while`・配列の合計 |
-| [todo_api.dol](examples/todo_api.dol) | メモを JSON で出し入れする小さな API サーバー（`http.serve`。`curl` で試せる） |
+| [todo_api.dol](examples/todo_api.dol) | メモを JSON で出し入れする小さな API サーバー（`http.serve` と `std:router`。`curl` で試せる） |
 | [counter_ui.dol](examples/counter_ui.dol) | ウィンドウを開く小さなアプリ（`std:ui`。`cargo run --features ui -- examples/counter_ui.dol`） |
 | [breakout.dol](examples/breakout.dol) | ブロック崩し（`std:canvas`。`cargo run --features ui -- examples/breakout.dol`） |
 

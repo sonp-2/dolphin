@@ -1,0 +1,9 @@
+// group を通して重複するときは、handler を作るところで見つかる
+@router := import["std:router"]
+@r := @router.new[]
+@router.get[@r, "/api/ping", [@req] ( # "a" )]
+@sub := @router.new[]
+@router.get[@sub, "/ping", [@req] ( # "b" )]
+@router.group[@r, "/api", @sub]
+log["group までは通る"]
+@router.handler[@r]

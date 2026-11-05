@@ -1,0 +1,7 @@
+ここまでは通る
+std:router:222:9: エラー: router.route: 経路が重複しています（GET /u/:name）
+    |
+222 |         assert[@old{"key"} != @key, "router.route: 経路が重複しています（@{@method} @{@pattern}）"]
+    |         ^
+  = route の中（std:router:228:33 から呼び出し）
+  = get の中（8:1 から呼び出し）

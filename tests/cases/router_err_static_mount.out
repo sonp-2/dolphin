@@ -1,0 +1,9 @@
+std:router:377:5: エラー: router.static: ワイルドカードの経路（"/static/*" など）にマウントしてください
+    |
+377 |     assert[map_has[@params, "*"], "router.static: ワイルドカードの経路（\"/static/*\" など）にマウントしてください"]
+    |     ^
+  = _serve_static の中（std:router:413:18 から呼び出し）
+  = 無名関数 の中（std:router:190:23 から呼び出し）
+  = 無名関数 の中（std:router:287:11 から呼び出し）
+  = _dispatch の中（std:router:320:18 から呼び出し）
+  = 無名関数 の中（6:5 から呼び出し）

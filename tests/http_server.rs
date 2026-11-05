@@ -52,11 +52,16 @@ fn free_port() -> u16 {
 }
 
 fn start(name: &str) -> Server {
+    start_script(name, SCRIPT)
+}
+
+/// `script` の `PORT` を空きポートに置き換えて起動する
+fn start_script(name: &str, script: &str) -> Server {
     let port = free_port();
     let dir = std::env::temp_dir().join("dolphin-serve-tests");
     fs::create_dir_all(&dir).unwrap();
     let path = dir.join(name);
-    fs::write(&path, SCRIPT.replace("PORT", &port.to_string())).unwrap();
+    fs::write(&path, script.replace("PORT", &port.to_string())).unwrap();
     let child = Command::new(env!("CARGO_BIN_EXE_dolphin"))
         .arg(&path)
         .stdout(Stdio::null())
@@ -288,4 +293,82 @@ fn bind_failure_is_an_error_value() {
         .output()
         .unwrap();
     assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "network");
+}
+
+const ROUTER_SCRIPT: &str = r#"@http := import["std:http"]
+@router := import["std:router"]
+@r := @router.new[]
+@router.use[@r, [@req, @next] (
+    @resp := @next[@req]
+    @resp{"headers"} = map_merge[map_get[@resp, "headers", {:}], {"X-Router": "yes"}]
+    # @resp
+)]
+@router.get[@r, "/users/:id", [@req] ( # @router.json[200, {"id": @req{"params"}{"id"}, "q": @req{"query"}}] )]
+@router.post[@r, "/echo", [@req] ( # @router.text[201, @req{"body"}] )]
+@router.get[@r, "/login", [@req] (
+    # {"headers": {"Set-Cookie": @router.set_cookie["sid", "abc", {"max_age": 60}]}, "body": str_join[map_keys[@router.cookies[@req]], ","]}
+)]
+@router.get[@r, "/old", [@req] ( # @router.redirect["/new", 301] )]
+@router.get[@r, "/static/*", @router.static["PUBDIR"]]
+log["serve failed", err_message[@http.serve[PORT, @router.handler[@r]]]]
+"#;
+
+#[test]
+fn router_serves_routes_middleware_and_static_files() {
+    let pubdir = std::env::temp_dir().join("dolphin-serve-tests/router-pub");
+    fs::create_dir_all(&pubdir).unwrap();
+    fs::write(pubdir.join("hello.txt"), "static hello").unwrap();
+    fs::write(pubdir.join(".hidden"), "x").unwrap();
+    let script = ROUTER_SCRIPT.replace("PUBDIR", &pubdir.to_string_lossy().replace('\\', "/"));
+    let server = start_script("router.dol", &script);
+
+    // パラメータ・クエリ・ミドルウェアが足したヘッダー
+    let r = get(&server, "/users/a%20b?x=1");
+    assert_eq!(r.status, 200);
+    assert!(r.headers.contains("x-router: yes"));
+    assert_eq!(r.text(), r#"{"id":"a b","q":{"x":"1"}}"#);
+
+    // 405 に Allow、404、OPTIONS は 204
+    let r = get(&server, "/echo");
+    assert_eq!(r.status, 405);
+    assert!(r.headers.contains("allow: post, options"));
+    assert!(r.headers.contains("x-router: yes"));
+    assert_eq!(get(&server, "/nope").status, 404);
+    let raw = "OPTIONS /echo HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n";
+    let r = send(&server, raw.as_bytes()).unwrap();
+    assert_eq!(r.status, 204);
+    assert!(r.headers.contains("allow: post, options"));
+
+    // POST の本文、リダイレクト、クッキー
+    let raw = "POST /echo HTTP/1.1\r\nHost: x\r\nContent-Length: 3\r\nConnection: close\r\n\r\nabc";
+    let r = send(&server, raw.as_bytes()).unwrap();
+    assert_eq!((r.status, r.text().as_str()), (201, "abc"));
+    let r = get(&server, "/old");
+    assert_eq!(r.status, 301);
+    assert!(r.headers.contains("location: /new"));
+    let raw = "GET /login HTTP/1.1\r\nHost: x\r\nCookie: a=1; b=2\r\nConnection: close\r\n\r\n";
+    let r = send(&server, raw.as_bytes()).unwrap();
+    assert!(
+        r.headers
+            .contains("set-cookie: sid=abc; path=/; max-age=60; httponly; samesite=lax")
+    );
+    assert_eq!(r.text(), "a,b");
+
+    // 静的ファイル。.. とドットファイルは 404（パーセントエンコードでも）
+    let r = get(&server, "/static/hello.txt");
+    assert_eq!(r.status, 200);
+    assert!(
+        r.headers
+            .contains("content-type: text/plain; charset=utf-8")
+    );
+    assert_eq!(r.text(), "static hello");
+    for path in [
+        "/static/.hidden",
+        "/static/%2e%2e/router.dol",
+        "/static/..%2Frouter.dol",
+        "/static/..%5Crouter.dol",
+        "/static/missing.txt",
+    ] {
+        assert_eq!(get(&server, path).status, 404, "{path}");
+    }
 }

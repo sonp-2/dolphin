@@ -1,0 +1,26 @@
+{"body": "root"}
+{"body": "list"}
+{"status": 200, "json": {"id": "42"}}
+{"body": "me"}
+{"status": 200, "json": {"id": "42"}}
+{"status": 201, "body": "created 42"}
+{"body": "{\"id\": \"1\", \"post\": \"9\"}"}
+{"body": "{\"*\": \"a/b/c.txt\", \"path\": \"a/b/c.txt\"}"}
+{"body": "logo"}
+{"body": "{\"*\": \"\", \"path\": \"\"}"}
+{"body": "{\"*\": \"a/b\", \"path\": \"a/b\"}"}
+{"body": "{\"*\": \"x\"}"}
+{"body": "DELETE"}
+{"body": "get-echo"}
+{"body": "list"}
+{"body": "head-route"}
+{"status": 404, "body": "Not Found"}
+{"status": 404, "body": "Not Found"}
+{"status": 405, "headers": {"Allow": "GET, PUT, HEAD, OPTIONS"}, "body": "Method Not Allowed"}
+{"status": 204, "headers": {"Allow": "GET, PUT, HEAD, OPTIONS"}}
+{"status": 204, "headers": {"Allow": "GET, POST, HEAD, OPTIONS"}}
+{"status": 404, "body": "Not Found"}
+{"status": 405, "headers": {"Allow": "GET, HEAD, OPTIONS"}, "body": "Method Not Allowed"}
+{"status": 404, "json": {"error": "no route", "path": "/nope"}}
+404
+{"body": "late"}

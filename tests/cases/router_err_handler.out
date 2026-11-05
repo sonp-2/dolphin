@@ -1,0 +1,7 @@
+std:router:14:5: エラー: router.route: ハンドラは関数です（stringが渡されました）
+   |
+14 |     assert[type_of[@h] == "function", "@{@who}: ハンドラは関数です（@{type_of[@h]}が渡されました）"]
+   |     ^
+  = _check_handler の中（std:router:218:5 から呼び出し）
+  = route の中（std:router:228:33 から呼び出し）
+  = get の中（4:1 から呼び出し）

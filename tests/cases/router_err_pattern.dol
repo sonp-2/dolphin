@@ -1,0 +1,3 @@
+@router := import["std:router"]
+@r := @router.new[]
+@router.get[@r, "users", [@req] ( # "x" )]

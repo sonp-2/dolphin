@@ -1,0 +1,7 @@
+std:router:41:9: エラー: router.route: * は最後の区間にだけ書けます（"/a/*/b"）
+   |
+41 |         assert[arr_len[@segs] == 0 || @segs{arr_len[@segs] - 1}{"t"} != "wild", "@{@who}: * は最後の区間にだけ書けます（\"@{@pattern}\"）"]
+   |         ^
+  = _parse_pattern の中（std:router:219:14 から呼び出し）
+  = route の中（std:router:228:33 から呼び出し）
+  = get の中（4:1 から呼び出し）
