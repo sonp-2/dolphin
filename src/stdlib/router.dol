@@ -466,7 +466,9 @@ _cors[@cfg, @req, @next] (
     if @cfg{"expose"} != nil ( @h{"Access-Control-Expose-Headers"} = @cfg{"expose"} )
     @resp := @next[@req]
     if is_error[@resp] ( # @resp )
-    if !map_has[@resp, "headers"] ( @resp{"headers"} = {:} )
+    // ハンドラが使い回している応答のマップを書き換えないよう、写しに足す
+    @resp = map_copy[@resp]
+    @resp{"headers"} = map_copy[map_get[@resp, "headers", {:}]]
     @out := @resp{"headers"}
     for @k in map_keys[@h] (
         if @k == "Vary" && map_has[@out, "Vary"] (
