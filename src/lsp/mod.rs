@@ -600,7 +600,9 @@ log[ad";
         // 0: 診断, 1: 診断, 2〜: 応答
         assert!(labels(out[2].path("result").unwrap()).contains(&"total".to_string()));
         assert!(labels(out[3].path("result").unwrap()).contains(&"std:json".to_string()));
-        assert!(!labels(out[4].path("result").unwrap()).is_empty());
+        let names = labels(out[4].path("result").unwrap());
+        assert!(!names.is_empty());
+        assert!(names.contains(&"async".to_string()) && names.contains(&"await".to_string()));
         // 関数の中では、トップレベルの変数と引数が見える
         let inside = labels(out[5].path("result").unwrap());
         assert!(
