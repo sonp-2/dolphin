@@ -1,4 +1,4 @@
-//! `file_walk` と `file_glob`（design.md 5.49）。外部クレートを使わない
+//! `fs.walk` と `fs.glob`（design.md 5.49）。外部クレートを使わない
 //!
 //! パスは `/` 区切りで返す。順序は名前の文字コード順
 
@@ -10,11 +10,6 @@ use crate::runtime::value::Value;
 use crate::stdlib::fs::io_error;
 use crate::stdlib::path::to_slash;
 use crate::stdlib::{new_array, str_arg, type_error};
-
-pub fn register(interp: &mut Interpreter<'_>) {
-    interp.register("file_walk", file_walk);
-    interp.register("file_glob", file_glob);
-}
 
 /// `dir` と名前をつなげる。`dir` が空ならそのまま名前
 fn child(dir: &str, name: &str) -> String {
@@ -31,7 +26,7 @@ fn paths_value(paths: Vec<String>) -> Value {
     new_array(paths.into_iter().map(|p| Value::Str(p.into())).collect())
 }
 
-// ---- file_walk ----
+// ---- fs.walk ----
 
 struct WalkOptions {
     files: bool,
@@ -42,14 +37,14 @@ struct WalkOptions {
 
 fn walk_options(value: &Value) -> Result<WalkOptions, String> {
     let Value::Map(options) = value else {
-        return Err(type_error("file_walk", 1, "マップ", value));
+        return Err(type_error("fs.walk", 1, "マップ", value));
     };
     let options = options.borrow();
     const KNOWN: [&str; 4] = ["files", "dirs", "follow_links", "max_depth"];
     for (key, _) in options.iter() {
         if !KNOWN.contains(&&**key) {
             return Err(format!(
-                "file_walk に知らないオプション `{key}` があります（使えるのは {}）",
+                "fs.walk に知らないオプション `{key}` があります（使えるのは {}）",
                 KNOWN.join("、")
             ));
         }
@@ -59,7 +54,7 @@ fn walk_options(value: &Value) -> Result<WalkOptions, String> {
             None => Ok(default),
             Some(Value::Bool(b)) => Ok(*b),
             Some(other) => Err(format!(
-                "file_walk の `{key}` は真偽値です（{}が渡されました）",
+                "fs.walk の `{key}` は真偽値です（{}が渡されました）",
                 other.type_name()
             )),
         }
@@ -68,13 +63,11 @@ fn walk_options(value: &Value) -> Result<WalkOptions, String> {
         None | Some(Value::Nil) => None,
         Some(Value::Num(n)) if n.fract() == 0.0 && *n >= 0.0 && *n < 1e9 => Some(*n as usize),
         Some(Value::Num(n)) => {
-            return Err(format!(
-                "file_walk の `max_depth` は 0 以上の整数です（{n}）"
-            ));
+            return Err(format!("fs.walk の `max_depth` は 0 以上の整数です（{n}）"));
         }
         Some(other) => {
             return Err(format!(
-                "file_walk の `max_depth` は数値か nil です（{}が渡されました）",
+                "fs.walk の `max_depth` は数値か nil です（{}が渡されました）",
                 other.type_name()
             ));
         }
@@ -88,14 +81,14 @@ fn walk_options(value: &Value) -> Result<WalkOptions, String> {
 }
 
 /// `dir` の下を再帰的にたどって、パスの配列を返す
-fn file_walk(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+pub(super) fn file_walk(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     if !(1..=2).contains(&args.len()) {
         return Err(format!(
-            "file_walk の引数は 1 個か 2 個です（{} 個渡されました）",
+            "fs.walk の引数は 1 個か 2 個です（{} 個渡されました）",
             args.len()
         ));
     }
-    let dir = str_arg("file_walk", args, 0)?;
+    let dir = str_arg("fs.walk", args, 0)?;
     let options = match args.get(1) {
         Some(value) => walk_options(value)?,
         None => WalkOptions {
@@ -187,7 +180,7 @@ fn walk(
     Ok(())
 }
 
-// ---- file_glob ----
+// ---- fs.glob ----
 
 enum Seg {
     /// ワイルドカードのない名前
@@ -393,20 +386,20 @@ fn glob_walk(base: &str, cur: &str, segs: &[Seg], dir_only: bool, out: &mut Vec<
 }
 
 /// パターンに合うパスの配列
-fn file_glob(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+pub(super) fn file_glob(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     if !(1..=2).contains(&args.len()) {
         return Err(format!(
-            "file_glob の引数は 1 個か 2 個です（{} 個渡されました）",
+            "fs.glob の引数は 1 個か 2 個です（{} 個渡されました）",
             args.len()
         ));
     }
     let (base, pattern) = if args.len() == 2 {
         (
-            to_slash(Path::new(str_arg("file_glob", args, 0)?)),
-            str_arg("file_glob", args, 1)?,
+            to_slash(Path::new(str_arg("fs.glob", args, 0)?)),
+            str_arg("fs.glob", args, 1)?,
         )
     } else {
-        (String::new(), str_arg("file_glob", args, 0)?)
+        (String::new(), str_arg("fs.glob", args, 0)?)
     };
     let compiled = compile(pattern);
     let mut out = Vec::new();

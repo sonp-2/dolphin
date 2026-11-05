@@ -1,4 +1,4 @@
-sysx_walk_option_error.dol:1:7: エラー: file_walk に知らないオプション `depth` があります（使えるのは files、dirs、follow_links、max_depth）
+sysx_walk_option_error.dol:1:7: エラー: fs.walk に知らないオプション `depth` があります（使えるのは files、dirs、follow_links、max_depth）
   |
 1 | @x := file_walk[".", {"depth": 1}]
   |       ^

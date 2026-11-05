@@ -1,4 +1,4 @@
-//! `file_temp`、`file_temp_dir`、`file_chmod`（design.md 5.49）
+//! `fs.temp`、`fs.temp_dir`、`fs.chmod`（design.md 5.49）
 
 use std::fs::{self, OpenOptions};
 use std::io;
@@ -10,13 +10,7 @@ use crate::stdlib::fs::io_error;
 use crate::stdlib::path::to_slash;
 use crate::stdlib::{error_value, expect_args, num_arg, str_arg, type_error};
 
-pub fn register(interp: &mut Interpreter<'_>) {
-    interp.register("file_temp", file_temp);
-    interp.register("file_temp_dir", file_temp_dir);
-    interp.register("file_chmod", file_chmod);
-}
-
-/// `file_temp` `file_temp_dir` の `options`
+/// `fs.temp` `fs.temp_dir` の `options`
 struct TempOptions {
     prefix: String,
     suffix: String,
@@ -157,23 +151,23 @@ fn create_private_dir(path: &Path) -> io::Result<()> {
 }
 
 /// 一意な名前の空のファイルを作って、パスを返す
-fn file_temp(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    make_temp("file_temp", args, false)
+pub(super) fn file_temp(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    make_temp("fs.temp", args, false)
 }
 
 /// 一意な名前の空のディレクトリを作って、パスを返す
-fn file_temp_dir(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    make_temp("file_temp_dir", args, true)
+pub(super) fn file_temp_dir(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    make_temp("fs.temp_dir", args, true)
 }
 
 /// 権限（モード）を変える。Unix だけ。Windows は `unsupported` のエラー値
-fn file_chmod(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
-    expect_args("file_chmod", args, 2)?;
-    let path = str_arg("file_chmod", args, 0)?;
-    let mode = num_arg("file_chmod", args, 1)?;
+pub(super) fn file_chmod(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("fs.chmod", args, 2)?;
+    let path = str_arg("fs.chmod", args, 0)?;
+    let mode = num_arg("fs.chmod", args, 1)?;
     if mode.fract() != 0.0 || !(0.0..=4095.0).contains(&mode) {
         return Err(format!(
-            "file_chmod のモードは 0〜0o7777 の整数です（{mode}）"
+            "fs.chmod のモードは 0〜0o7777 の整数です（{mode}）"
         ));
     }
     chmod(path, mode as u32)
@@ -198,7 +192,7 @@ fn chmod(path: &str, mode: u32) -> Result<Value, String> {
 fn chmod(path: &str, _mode: u32) -> Result<Value, String> {
     Ok(error_value(
         "unsupported",
-        format!("`{path}` の権限を変えられません: この OS では file_chmod を使えません"),
+        format!("`{path}` の権限を変えられません: この OS では fs.chmod を使えません"),
     ))
 }
 
