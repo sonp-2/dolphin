@@ -1,0 +1,39 @@
+// std:toml（design.md 5.51）
+@toml := import["std:toml"]
+
+@src := "title = \"TOML example\"
+count = 3
+ratio = 0.25
+on = true
+tags = [\"a\", \"b\"]
+when = 1979-05-27T07:32:00Z
+day = 1979-05-27
+clock = 07:32:00
+
+[owner]
+name = \"Tom\"
+born = 1979-05-27T07:32:00-08:00
+
+[database]
+ports = [8000, 8001]
+inline = { x = 1, y = 2 }
+
+[[servers]]
+name = \"alpha\"
+
+[[servers]]
+name = \"beta\"
+"
+@v := @toml.parse[@src]?
+log[@v]
+log[@v.title, @v.count, @v.ratio, @v.on, @v.tags{1}, @v.database.ports{0}, @v.servers{1}.name]
+// 日時は、書かれたとおりの文字列
+log[@v.when, @v.day, @v.clock, @v.owner.born, type_of[@v.when]]
+
+// 空の文書は空のマップ
+log[@toml.parse[""]?, type_of[@toml.parse[""]?]]
+
+// 書く
+log[@toml.stringify[{"title": "x", "n": 3, "f": 0.5, "list": {1, 2}, "sub": {"k": "v", "deep": {"z": true}}, "rows": {{"id": 1}, {"id": 2}}}]]
+log[@toml.stringify[{"a b": 1, "ja": "日本語", "q": "say \"hi\"\nnext"}]]
+log[@toml.stringify[{:}]]

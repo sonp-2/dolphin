@@ -1,0 +1,69 @@
+// ループごとの新しいスコープ
+@i := 0
+while @i < 3 (
+    @x := @i
+    @x = @x + 10
+    log[@x]
+    @i = @i + 1
+)
+
+// for の変数は繰り返しごとに別。本体で書き換えても次には影響しない
+for @e in {1, 2, 3} (
+    @e = @e * 100
+    log[@e]
+)
+
+// ループの外の変数に積み上げる
+@sum := 0
+for @e in range[0, 5] (
+    @sum = @sum + @e
+)
+log[@sum]
+
+// 回し始めた時点の配列を使う
+@arr := {1, 2, 3}
+for @e in @arr (
+    arr_push[@arr, @e * 10]
+)
+log[@arr]
+
+// continue / break でも毎回新しいスコープ
+@r := {}
+for @e in range[0, 8] (
+    @t := @e * 2
+    if @e % 2 == 1 (
+        continue
+    )
+    if @e > 5 (
+        break
+    )
+    arr_push[@r, @t]
+)
+log[@r]
+
+// ループの変数と同名の外の変数は変わらない
+@e := "outer"
+for @e in {1, 2} (
+    log[@e]
+)
+log[@e]
+
+// 入れ子のループ
+for @a in {1, 2} (
+    for @b in {10, 20} (
+        log[@a * @b]
+    )
+)
+
+// 入れ子の while が外の変数を書き換える
+@outer := 0
+@cnt := 0
+while @outer < 2 (
+    @inner := 0
+    while @inner < 3 (
+        @cnt = @cnt + 1
+        @inner = @inner + 1
+    )
+    @outer = @outer + 1
+)
+log[@cnt]

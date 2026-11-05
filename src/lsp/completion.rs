@@ -8,7 +8,8 @@ use super::json::Json;
 use crate::Catalog;
 
 const KEYWORDS: &[&str] = &[
-    "if", "else", "while", "for", "in", "break", "continue", "true", "false", "nil",
+    "if", "else", "while", "for", "in", "break", "continue", "true", "false", "nil", "async",
+    "await",
 ];
 
 // CompletionItemKind

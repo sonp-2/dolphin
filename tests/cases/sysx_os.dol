@@ -1,0 +1,42 @@
+// os.setenv / shell / hostname / getpid / cpu_count（design.md 5.49）。環境に依存する値は型や有無だけ
+@os := import["std:os"]
+
+// setenv
+log[@os.env["DOLPHIN_SYSX_VAR"]]
+log[@os.setenv["DOLPHIN_SYSX_VAR", "値 1"]]
+log[@os.env["DOLPHIN_SYSX_VAR"], @os.env_all[]{"DOLPHIN_SYSX_VAR"}]
+@os.setenv["DOLPHIN_SYSX_VAR", "2"]
+log[@os.env["DOLPHIN_SYSX_VAR"]]
+@os.setenv["DOLPHIN_SYSX_VAR", nil]
+log[@os.env["DOLPHIN_SYSX_VAR"]]
+
+// 子プロセス（shell）にも渡る
+@os.setenv["DOLPHIN_SYSX_CHILD", "hello"]
+@show := "echo $DOLPHIN_SYSX_CHILD"
+if @os.platform[] == "windows" (
+    @show = "echo %DOLPHIN_SYSX_CHILD%"
+)
+@r := @os.shell[@show]
+log[@r{"status"}, @r{"ok"}, str_trim[@r{"stdout"}], @r{"stderr"}]
+@os.setenv["DOLPHIN_SYSX_CHILD", nil]
+
+// shell: 終了コード、標準エラー出力、options
+@r = @os.shell["exit 3"]
+log[@r{"status"}, @r{"ok"}, @r{"stdout"}]
+@r = @os.shell["echo err 1>&2"]
+log[@r{"ok"}, str_trim[@r{"stderr"}], @r{"stdout"}]
+@r = @os.shell["echo %DOLPHIN_SYSX_X%$DOLPHIN_SYSX_X", {"env": {"DOLPHIN_SYSX_X": "v"}}]
+log[str_contains[@r{"stdout"}, "v"]]
+file_mkdir["target/golden_sysx_os"]
+@r = @os.shell["echo ok", {"cwd": "target/golden_sysx_os"}]
+log[@r{"ok"}]
+@cleared := file_remove_all["target/golden_sysx_os"]
+@r = @os.shell["echo in", {"as": "bytes"}]
+log[type_of[@r{"stdout"}]]
+log[err_kind[@os.shell["exit 0", {"cwd": "target/no/such/dir"}]]]
+
+// hostname / getpid / cpu_count
+@host := @os.hostname[]
+log[type_of[@host], str_len[@host] > 0]
+log[type_of[@os.getpid[]], @os.getpid[] > 0, @os.getpid[] == @os.getpid[]]
+log[type_of[@os.cpu_count[]], @os.cpu_count[] >= 1, floor[@os.cpu_count[]] == @os.cpu_count[]]

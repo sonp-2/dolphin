@@ -1,0 +1,8 @@
+core_err_nested_stack.dol:2:19: エラー: キー "missing" がありません
+  |
+2 | level3[@m] ( # @m{"missing"} )
+  |                   ^
+  = level3 の中（3:16 から呼び出し）
+  = level2 の中（5:18 から呼び出し）
+  = 無名関数 の中（6:7 から呼び出し）
+  = level1 の中（8:5 から呼び出し）

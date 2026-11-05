@@ -2,6 +2,14 @@
 name = "dolphin"
 version = "0.54.0"
 edition = "2024"
+# let chains（`if let ... && ...`）を使っているので 1.88 以上。既定の feature の依存も 1.88 で足りる
+rust-version = "1.88"
+description = "Dolphin: Rust 製のインタプリタ言語（VM・async/await・標準ライブラリ・LSP・フォーマッタ付き）"
+license = "MIT"
+repository = "https://github.com/sonp-2/dolphin"
+readme = "README.md"
+keywords = ["interpreter", "language", "scripting", "vm", "lsp"]
+categories = ["compilers", "command-line-utilities", "development-tools"]
 
 # コア言語（lib）は外部クレートに依存しない。CLI の便利機能だけ feature で足す
 [dependencies]
@@ -26,6 +34,20 @@ ureq = { version = "3.4", optional = true }
 # WebSocket の TLS（`wss://`）。ルート証明書は std:http と同じ webpki-roots
 rustls = { version = "0.23", optional = true, default-features = false, features = ["ring", "std", "tls12"] }
 webpki-roots = { version = "1", optional = true }
+# PostgreSQL（`import["std:postgres"]`）。純 Rust の同期クライアント。TLS は rustls（`tls` feature と同じ webpki-roots）
+postgres = { version = "0.19", optional = true, default-features = false }
+postgres-protocol = { version = "0.6", optional = true }
+tokio-postgres-rustls = { version = "0.14", optional = true, default-features = false, features = ["ring"] }
+bytes = { version = "1", optional = true }
+fallible-iterator = { version = "0.2", optional = true }
+# YAML（`import["std:yaml"]`）。パーサーのイベントを読み、値は自前で組み立てる
+yaml-rust2 = { version = "0.13", optional = true }
+# TOML（`import["std:toml"]`）。キーの順を保つ
+toml = { version = "1", optional = true, default-features = false, features = ["parse", "display", "serde", "preserve_order"] }
+# 圧縮とアーカイブ（`import["std:zip"]`）。どれも純 Rust
+flate2 = { version = "1", optional = true }
+zip = { version = "9", optional = true, default-features = false, features = ["deflate-flate2"] }
+tar = { version = "0.4", optional = true, default-features = false }
 
 [features]
 default = ["repl", "http", "crypto", "regex", "tls", "image"]
@@ -49,3 +71,11 @@ audio = ["dep:rodio"]
 ffi = ["dep:libloading", "dep:libffi"]
 # SQLite（`import["std:sqlite"]`）。ソースを同梱するのでビルドが長くなる。既定では無効（`--features sqlite`）
 sqlite = ["dep:rusqlite"]
+# PostgreSQL（`import["std:postgres"]`）。`tls` を含む。既定では無効（`--features postgres`）
+postgres = ["dep:postgres", "dep:postgres-protocol", "dep:tokio-postgres-rustls", "dep:bytes", "dep:fallible-iterator", "tls"]
+# YAML（`import["std:yaml"]`）。純 Rust。既定では無効（`--features yaml`）
+yaml = ["dep:yaml-rust2"]
+# TOML（`import["std:toml"]`）。純 Rust。既定では無効（`--features toml`）
+toml = ["dep:toml"]
+# gzip・zlib・zip・tar（`import["std:zip"]`）。純 Rust。既定では無効（`--features zip`）
+zip = ["dep:flate2", "dep:zip", "dep:tar"]

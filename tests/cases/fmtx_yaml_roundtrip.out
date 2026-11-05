@@ -1,0 +1,21 @@
+map true
+seq of maps true
+tricky strings true
+tricky keys true
+nested empty true
+number true
+nil true
+string true
+true
+name: x
+items:
+- id: 1
+  tags:
+  - a
+  - b
+- id: 2
+  tags: []
+meta:
+  k: v
+
+true

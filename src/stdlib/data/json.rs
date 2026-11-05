@@ -77,10 +77,10 @@ fn pretty(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 // ---- 読み込み ----
 
 /// 失敗したときの (バイト位置, メッセージ)
-type PErr = (usize, String);
+pub(crate) type PErr = (usize, String);
 
 /// `ints` が true なら、小数点も指数もない整数を `int` にする（design.md 5.40）
-fn parse_str(src: &str, ints: bool) -> Result<Value, PErr> {
+pub(crate) fn parse_str(src: &str, ints: bool) -> Result<Value, PErr> {
     let mut p = Parser {
         ints,
         src,

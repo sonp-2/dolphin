@@ -1,0 +1,4 @@
+sysx_args_spec_error.dol:3:5: エラー: os.parse_args の spec が正しくありません: 省略できる位置引数の後ろに、必須のものは置けません
+  |
+3 | log[@os.parse_args[{"positional": {{"name": "a", "required": false}, "b"}}, {}]]
+  |     ^

@@ -1,0 +1,4 @@
+utilx_time_diff_unit_error.dol:2:5: エラー: time.diff の単位は "milliseconds" "seconds" "minutes" "hours" "days" "weeks" のどれかです（"years"）
+  |
+2 | log[@t.diff[1, 0, "years"]]
+  |     ^

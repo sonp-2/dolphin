@@ -1,0 +1,4 @@
+limit_workers.dol:6:21: エラー: 同時に動かせるワーカーは 64 個までです
+  |
+6 |     arr_push[@keep, @w.spawn["limit_worker_child.dol"]]
+  |                     ^

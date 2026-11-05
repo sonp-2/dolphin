@@ -80,15 +80,18 @@ count: 3
   - [x] 関数値とクロージャ（`[@n] ( # @n + 1 )`、`arr_map` など）
   - [x] `nil`、`for`、`range`
   - [x] エラー処理（エラー値と `?`）
-  - [ ] 実行モデル（イベントループ）
-- [ ] **段階 3**: 複数ファイル、ファイル入出力
+  - [x] 実行モデル（イベントループ。タイマー・非同期の結果・`http.serve` のメッセージを 1 スレッドで順に処理する）
+- [x] **段階 3**: 複数ファイル、ファイル入出力
   - [x] `import`（名前空間つき。`@u := import["util.dol"]`、`@u.add[1, 2]`）
   - [x] ファイル入出力（`file_read` `file_write` `file_append` `file_exists`）
-- [ ] **段階 4**: HTTP、JSON → バックエンド API
+- [x] **段階 4**: HTTP、JSON → バックエンド API
   - [x] 組み込みモジュール（`import["std:..."]`）と JSON（`std:json`）
   - [x] HTTP クライアント（`std:http`）
-  - [ ] HTTP サーバー
-- [ ] **段階 5**: ウィンドウ・描画・入力 → デスクトップアプリ（旧 C++ 実装では SFML で対応済み）
+  - [x] HTTP サーバー（`http.serve`。WebSocket も）
+- [x] **段階 5**: ウィンドウ・描画・入力 → デスクトップアプリ
+  - [x] `std:ui`（宣言的 UI）と `std:canvas`（ゲーム・描画）。`--features ui` で有効になる（eframe / egui）
+  - [x] 音 `std:audio`（`--features audio`）
+- [x] **そのほか**: 標準ライブラリ（`std:json` `std:regex` `std:sqlite` `std:worker` など）、`async` / `await`、バイトコード VM、`dolphin check` / `test` / `fmt` / `lsp`、FFI（`--features ffi`）
 
 ## 作ってみたもの
 
@@ -102,6 +105,10 @@ count: 3
 | [mandelbrot.dol](examples/mandelbrot.dol) | マンデルブロ集合を文字で描く |
 | [json.dol](examples/json.dol) / [http.dol](examples/http.dol) | JSON の読み書き / HTTP で JSON を取ってくる（ネットワークが必要） |
 | [closure.dol](examples/closure.dol) | クロージャと `arr_map` |
+| [hello.dol](examples/hello.dol) / [count.dol](examples/count.dol) | 最小の例。変数・関数・`while`・配列の合計 |
+| [todo_api.dol](examples/todo_api.dol) | メモを JSON で出し入れする小さな API サーバー（`http.serve`。`curl` で試せる） |
+| [counter_ui.dol](examples/counter_ui.dol) | ウィンドウを開く小さなアプリ（`std:ui`。`cargo run --features ui -- examples/counter_ui.dol`） |
+| [breakout.dol](examples/breakout.dol) | ブロック崩し（`std:canvas`。`cargo run --features ui -- examples/breakout.dol`） |
 
 ## コードを段階ごとに読む
 
@@ -190,7 +197,17 @@ runtime_error.dol:5:12: エラー: 添字 5 は範囲外です（要素は 2 個
 | Resolver | 実行前に、未定義の関数・引数の数・宣言されていない変数などを検査する |
 | Compiler / VM | AST を命令の列（バイトコード）にコンパイルして、VM で実行する |
 
+周辺のツールも、同じ Lexer / Parser / Resolver を土台にしています。
+
+| 部分 | 役割 |
+|---|---|
+| `fmt.rs` | `dolphin fmt`。字句単位で空白と字下げだけを整える |
+| `lsp/` | `dolphin lsp`。言語サーバー（定義へ移動・エラー表示・ホバー・補完・リネームなど）。`editors/vscode` に VS Code 拡張がある |
+| `testrun.rs` | `dolphin test`。`*_test.dol` を集めて `test_` で始まる関数を実行する |
+
 全体像は [docs/architecture.md](docs/architecture.md) にまとめています。コア言語は外部クレートに依存しません（HTTP の TLS は、既定で有効な `http` feature の `ureq` を、ハッシュ・HMAC・乱数は `crypto` feature の `ring` と `md-5` を、正規表現は `regex` feature の `regex` を使います）。GUI（`std:ui`）は依存が多いので、`ui` feature（`cargo build --features ui`）を付けたときだけ含まれます。音（`std:audio`）も `audio` feature（`rodio` を使う。Linux では `libasound2-dev` が要ります）です。SQLite（`std:sqlite`）は `sqlite` feature（`rusqlite` で SQLite のソースを同梱する。C コンパイラが要ります）です。FFI（`std:ffi`）は `ffi` feature（`libloading` と `libffi` を使う。C コンパイラが要ります）です。
+
+PostgreSQL（`std:postgres`）は `postgres` feature（純 Rust の `postgres` クレートを使う。TLS は `tls` feature の rustls）です。`cargo build --features postgres` で入り、例は [examples/pg_demo.dol](examples/pg_demo.dol)、仕様は [docs/design.md](docs/design.md) の 5.47 にあります。サーバーを使うテストは、環境変数 `DOLPHIN_TEST_PG_URL` があるときだけ動きます。
 
 ## ビルド・実行方法
 
@@ -212,6 +229,36 @@ cargo run -- --ast examples/hello.dol      # 構文木（S 式）
 
 # テスト
 cargo test
+```
+
+### 検査・整形・テスト・言語サーバー
+
+```sh
+# 実行せずに、構文と実行前の検査（Resolver）だけをする。問題があれば終了コード 1
+dolphin check a.dol b.dol
+
+# *_test.dol の test_ で始まる関数を実行する。パスは省略すると、いまのフォルダ以下を探す
+dolphin test
+dolphin test tests/
+
+# 整形して書き戻す。--check は書き換えずに、整形が必要なファイルを表示する（必要なら終了コード 1）。--stdout は結果を標準出力に出す（1 ファイルだけ）
+dolphin fmt a.dol
+dolphin fmt --check a.dol b.dol
+dolphin fmt --stdout a.dol
+
+# 言語サーバー（標準入出力で LSP を話す。ふつうはエディタが起動する）
+dolphin lsp
+```
+
+`cargo run -- check a.dol` のように、`cargo run --` のあとに同じ引数を渡しても使えます。VS Code では [editors/vscode](editors/vscode) の拡張を入れると、`dolphin lsp` につながります。
+
+### ベンチマーク
+
+`bench/` に、実行の速さを測る小さなスクリプトがあります（`fib.dol`: 再帰、`loop.dol`: `while` のループ、`array.dol`: 配列への追加と `for`）。速さを調べるときは、リリースビルドで測ります。
+
+```sh
+cargo build --release
+time target/release/dolphin bench/fib.dol
 ```
 
 `cargo build --release` でビルドすると、実行ファイルは `target/release/dolphin`（Windows は `dolphin.exe`）にできます。

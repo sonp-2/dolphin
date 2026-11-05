@@ -1,0 +1,4 @@
+stdx_format_type_error.dol:1:5: エラー: str_format の型 d には整数が必要です（数値が渡されました）
+  |
+1 | log[str_format["{:d}", 1.5]]
+  |     ^

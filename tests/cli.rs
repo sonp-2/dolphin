@@ -381,3 +381,35 @@ fn packages_are_found_through_dolphin_path() {
         .unwrap();
     assert!(stderr(&output).contains("パッケージ `greet` が見つかりません"));
 }
+
+#[test]
+fn help_and_version() {
+    for flag in ["--help", "-h"] {
+        let output = dolphin().arg(flag).output().unwrap();
+        assert_eq!(output.status.code(), Some(0));
+        assert!(stdout(&output).starts_with("使い方: dolphin"));
+    }
+    let output = dolphin().arg("--version").output().unwrap();
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(
+        stdout(&output),
+        format!("dolphin {}\n", env!("CARGO_PKG_VERSION"))
+    );
+}
+
+#[test]
+fn unknown_subcommand_or_missing_file_shows_usage() {
+    let output = dolphin().arg("no_such_subcommand").output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let err = stderr(&output);
+    assert!(err.contains("no_such_subcommand"), "{err}");
+    assert!(err.contains("使い方: dolphin"), "{err}");
+    assert!(stdout(&output).is_empty());
+}
+
+#[test]
+fn unknown_option_exits_with_2() {
+    let output = dolphin().arg("--no-such-option").output().unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stderr(&output).contains("使い方: dolphin"));
+}

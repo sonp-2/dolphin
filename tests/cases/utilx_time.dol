@@ -1,0 +1,35 @@
+// std:time の local_offset・diff・add（design.md 5.50）。タイムゾーンは環境で変わるので、形だけ確かめる
+@t := import["std:time"]
+
+// local_offset: 数値で、時差として使える範囲
+@o := @t.local_offset[]
+log[type_of[@o], @o > -1440, @o < 1440, @o == floor[@o]]
+@o2 := @t.local_offset[1700000000]
+log[type_of[@o2], @o2 > -1440, @o2 < 1440]
+// そのまま offset に渡せる
+log[type_of[@t.iso[1700000000, @o2]]]
+
+// diff: 小数のまま、単数形も可
+log[@t.diff[100, 40, "seconds"], @t.diff[100, 40, "second"], @t.diff[100, 40, "minutes"], @t.diff[40, 100, "milliseconds"]]
+log[@t.diff[864000, 0, "days"], @t.diff[864000, 0, "weeks"], @t.diff[7200, 0, "hours"], @t.diff[5400, 0, "hour"]]
+
+// add
+@base := @t.timestamp[{"year": 2026, "month": 1, "day": 31, "hour": 10}]?
+log[@t.iso[@t.add[@base, {"days": 1}]]]
+log[@t.iso[@t.add[@base, {"days": 1, "hours": 2}]]]
+log[@t.iso[@t.add[@base, {"weeks": 1, "minutes": 30, "seconds": 15, "milliseconds": 500}]]]
+log[@t.iso[@t.add[@base, {"days": -31}]]]
+log[@t.iso[@t.add[@base, {:}]]]
+// 月と年は暦で（月末に丸める）。先に足してから、残りを足す
+log[@t.iso[@t.add[@base, {"months": 1}]]]
+log[@t.iso[@t.add[@base, {"years": 1, "months": 1, "days": 1}]]]
+log[@t.iso[@t.add[@base, {"months": -2}]]]
+// 時差の暦で数える（日本時間の 1/31 00:30 の 1 か月後）
+@jst := @t.timestamp[{"year": 2026, "month": 1, "day": 31, "hour": 0, "minute": 30}, 540]?
+log[@t.iso[@t.add[@jst, {"months": 1}, 540], 540]]
+// diff と add は逆の関係
+log[@t.diff[@t.add[@base, {"days": 3, "hours": 6}], @base, "hours"]]
+// 範囲外はエラー値
+log[err_kind[@t.add[@base, {"years": 100000}]]]
+log[err_kind[@t.add[@base, {"days": 99999999}]]]
+log[err_kind[@t.add[@base, {"years": -3000}]]]

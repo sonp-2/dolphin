@@ -1,0 +1,4 @@
+stdx_format_missing_error.dol:1:5: エラー: str_format の引数が足りません（1 番目が必要で、1 個渡されました）
+  |
+1 | log[str_format["{} と {}", 1]]
+  |     ^

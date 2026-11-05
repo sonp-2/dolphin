@@ -99,3 +99,45 @@ fn dolvc_usage() {
     assert_eq!(output.status.code(), Some(2));
     assert!(stdout(&output).contains("使い方"));
 }
+
+/// 例を `dolphin check`（構文と Resolver）に通す
+#[test]
+fn every_example_passes_check() {
+    for entry in fs::read_dir(root().join("examples")).unwrap() {
+        let path = entry.unwrap().path();
+        if path.extension().is_none_or(|e| e != "dol") {
+            continue;
+        }
+        let name = format!("examples/{}", path.file_name().unwrap().to_string_lossy());
+        let output = dolphin(&["check", &name]);
+        assert!(output.status.success(), "{name}: {}", stderr(&output));
+    }
+}
+
+/// 例を実行して、出力を `expected` と比べる（ネットワークと GUI を使わない例だけ）
+fn assert_example_output(name: &str, expected: &str) {
+    let output = dolphin(&[name]);
+    assert!(output.status.success(), "{name}: {}", stderr(&output));
+    assert_eq!(stdout(&output), expected, "{name}");
+}
+
+#[test]
+fn hello_output() {
+    assert_example_output(
+        "examples/hello.dol",
+        "Hello, Dolphin!\ncount: 1\ncount: 2\ncount: 3\n{\"name\": \"Dolphin\", \"langs\": {\"Rust\", \"C++\"}}\n",
+    );
+}
+
+#[test]
+fn closure_output() {
+    assert_example_output("examples/closure.dol", "1 2 1\n{1, 4, 9, 16}\n{9, 16}\n");
+}
+
+#[test]
+fn count_output() {
+    assert_example_output(
+        "examples/count.dol",
+        "1 番目は 15 より大きい\n2 番目は 15 より大きい\n{110, 20, 30}\n",
+    );
+}

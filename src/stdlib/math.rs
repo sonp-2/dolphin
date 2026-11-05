@@ -4,7 +4,7 @@
 use std::cell::Cell;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use super::{expect_args, int_arg, num_arg};
+use super::{array_arg, expect_args, int_arg, num_arg, str_arg, type_error};
 use crate::runtime::interp::{Const, Interpreter};
 use crate::runtime::value::Value;
 
@@ -24,6 +24,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("sign", sign_value);
     interp.register("clamp", clamp);
     interp.register("num_fixed", num_fixed);
+    interp.register("num_group", num_group);
     register_std_math(interp);
 }
 
@@ -60,6 +61,9 @@ fn register_std_math(interp: &mut Interpreter<'_>) {
             ("math.hypot", |_, args| {
                 binary("math.hypot", args, f64::hypot)
             }),
+            ("math.mean", mean),
+            ("math.median", median),
+            ("math.stdev", stdev),
             ("math.is_nan", |_, args| {
                 expect_args("math.is_nan", args, 1)?;
                 Ok(Value::Bool(num_arg("math.is_nan", args, 0)?.is_nan()))
@@ -136,7 +140,124 @@ fn num_fixed(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     Ok(Value::Str(out.into()))
 }
 
-/// 整数（design.md 5.40）は整数のまま、数値は数値で返す
+// ---- 統計（design.md 5.50） ----
+
+/// 数値の配列を読む。数値以外の要素は実行時エラー
+fn numbers_arg(name: &str, args: &[Value]) -> Result<Vec<f64>, String> {
+    expect_args(name, args, 1)?;
+    let items = array_arg(name, args, 0)?.borrow();
+    items
+        .iter()
+        .enumerate()
+        .map(|(i, item)| match item {
+            Value::Num(n) => Ok(*n),
+            other => Err(format!(
+                "{name} の {} 番目の要素は数値です（{}が渡されました）",
+                i + 1,
+                other.type_name()
+            )),
+        })
+        .collect()
+}
+
+fn mean_of(values: &[f64]) -> f64 {
+    values.iter().sum::<f64>() / values.len() as f64
+}
+
+fn median_of(values: &[f64]) -> f64 {
+    let mut sorted = values.to_vec();
+    sorted.sort_by(f64::total_cmp);
+    let mid = sorted.len() / 2;
+    if sorted.len() % 2 == 1 {
+        sorted[mid]
+    } else {
+        (sorted[mid - 1] + sorted[mid]) / 2.0
+    }
+}
+
+/// 標本標準偏差（n - 1 で割る）。2 個以上
+fn stdev_of(values: &[f64]) -> f64 {
+    let mean = mean_of(values);
+    let sum: f64 = values.iter().map(|v| (v - mean) * (v - mean)).sum();
+    (sum / (values.len() - 1) as f64).sqrt()
+}
+
+fn mean(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    let values = numbers_arg("math.mean", args)?;
+    if values.is_empty() {
+        return Ok(Value::error(
+            "range",
+            "math.mean: 空の配列の平均は決まりません",
+        ));
+    }
+    Ok(Value::Num(mean_of(&values)))
+}
+
+fn median(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    let values = numbers_arg("math.median", args)?;
+    if values.is_empty() {
+        return Ok(Value::error(
+            "range",
+            "math.median: 空の配列の中央値は決まりません",
+        ));
+    }
+    Ok(Value::Num(median_of(&values)))
+}
+
+fn stdev(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    let values = numbers_arg("math.stdev", args)?;
+    if values.len() < 2 {
+        return Ok(Value::error(
+            "range",
+            "math.stdev: 標準偏差には要素が 2 個以上要ります",
+        ));
+    }
+    Ok(Value::Num(stdev_of(&values)))
+}
+
+/// 整数部を 3 桁ごとに `sep` で区切る
+fn group_digits(text: &str, sep: &str) -> String {
+    // 指数表記（`1e21` など）はそのまま
+    if text.contains(['e', 'E']) {
+        return text.to_string();
+    }
+    let (sign, rest) = match text.strip_prefix('-') {
+        Some(rest) => ("-", rest),
+        None => ("", text),
+    };
+    let (int_part, frac) = match rest.split_once('.') {
+        Some((i, f)) => (i, Some(f)),
+        None => (rest, None),
+    };
+    let mut out = String::from(sign);
+    let len = int_part.len();
+    for (i, ch) in int_part.chars().enumerate() {
+        if i > 0 && (len - i) % 3 == 0 {
+            out.push_str(sep);
+        }
+        out.push(ch);
+    }
+    if let Some(frac) = frac {
+        out.push('.');
+        out.push_str(frac);
+    }
+    out
+}
+
+/// 数値か整数を、3 桁区切りの文字列にする
+fn num_group(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("num_group", args, 2)?;
+    let text = match &args[0] {
+        Value::Num(n) if n.is_finite() => n.to_string(),
+        Value::Num(n) => return Err(format!("num_group の 1 番目の引数は有限の数値です（{n}）")),
+        Value::Int(n) => n.to_string(),
+        other => return Err(type_error("num_group", 0, "数値か整数", other)),
+    };
+    let sep = str_arg("num_group", args, 1)?;
+    Ok(Value::Str(group_digits(&text, sep).into()))
+}
+
+// 整数（design.md 5.40）は整数のまま、数値は数値で返す
 fn abs(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     expect_args("abs", args, 1)?;
     match &args[0] {
@@ -284,4 +405,33 @@ fn random_int(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
     // 範囲が u64 に収まらない（i64 の全体）ときは、64 ビットをそのまま使う
     let offset = u64::try_from(span).map_or_else(|_| next_u64(), below);
     Ok(Value::Num((i128::from(min) + i128::from(offset)) as f64))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn statistics() {
+        assert_eq!(mean_of(&[1.0, 2.0, 3.0, 4.0]), 2.5);
+        assert_eq!(median_of(&[3.0, 1.0, 2.0]), 2.0);
+        assert_eq!(median_of(&[4.0, 1.0, 3.0, 2.0]), 2.5);
+        assert_eq!(median_of(&[7.0]), 7.0);
+        // 標本標準偏差（n - 1）
+        let sample = [2.0, 4.0, 4.0, 4.0, 5.0, 5.0, 7.0, 9.0];
+        assert!((stdev_of(&sample) - 2.138_089_935_299_395).abs() < 1e-12);
+        assert_eq!(stdev_of(&[1.0, 1.0, 1.0]), 0.0);
+    }
+
+    #[test]
+    fn digit_grouping() {
+        assert_eq!(group_digits("1234567", ","), "1,234,567");
+        assert_eq!(group_digits("999", ","), "999");
+        assert_eq!(group_digits("1000", ","), "1,000");
+        assert_eq!(group_digits("-1234567.891", " "), "-1 234 567.891");
+        assert_eq!(group_digits("-123", ","), "-123");
+        assert_eq!(group_digits("0.5", ","), "0.5");
+        assert_eq!(group_digits("1234", ""), "1234");
+        assert_eq!(group_digits("1e21", ","), "1e21");
+    }
 }

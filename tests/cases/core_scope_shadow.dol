@@ -1,0 +1,66 @@
+// ブロックごとのスコープ: 影・入れ子・二重の影
+@a := "top"
+if true (
+    @a := "b1"
+    if true (
+        @a := "b2"
+        log[@a]
+        @a = "b2'"
+        log[@a]
+    )
+    log[@a]
+    @a = "b1'"
+)
+log[@a]
+
+// 内側で書き換えるのは宣言済みの最も内側
+@v := 1
+if true (
+    @w := 10
+    @v = @v + @w
+    if true (
+        @v = @v * 2
+        @w = @w + 1
+    )
+    log[@v, @w]
+)
+log[@v]
+
+// else の側も別のスコープ
+@k := 0
+if false (
+    @k := 1
+) else (
+    @k := 2
+    log[@k]
+)
+log[@k]
+
+// 条件式
+@n := 5
+@s := if @n > 3 ( "big" ) else ( "small" )
+log[@s]
+
+// 引数がトップレベルの変数を隠す
+@p := "global"
+show[@p] (
+    @p = @p + "!"
+    # @p
+)
+log[show["arg"], @p]
+
+// 関数内の宣言がトップレベルを隠しても、外は変わらない
+@q := 1
+local[] (
+    @q := 2
+    @q = @q + 1
+    # @q
+)
+log[local[], @q]
+
+// 隠さなければトップレベルを書き換える
+glob[] (
+    @q = @q + 100
+)
+glob[]
+log[@q]

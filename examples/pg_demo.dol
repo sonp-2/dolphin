@@ -1,0 +1,43 @@
+// PostgreSQL（std:postgres）の使用例
+//   cargo run --features postgres -- examples/pg_demo.dol
+// 接続先は環境変数 DATABASE_URL（例: postgres://postgres:secret@localhost:5432/postgres）。
+// 一時テーブルしか使わないので、データは残らない。
+// ローカルの開発用サーバーが自己署名の証明書のときは、{"tls": "disable"} を渡す。
+@pg := import["std:postgres"]
+@os := import["std:os"]
+
+@url := @os.env["DATABASE_URL"]
+if @url == nil (
+    log["環境変数 DATABASE_URL に接続先を入れてください"]
+    @os.exit[1]
+)
+
+@c := @pg.connect[@url, {"timeout": 5}]
+if is_error[@c] (
+    log["つながりません:", err_kind[@c], err_message[@c]]
+    @os.exit[1]
+)
+
+@pg.exec[@c, "CREATE TEMP TABLE memo (id serial PRIMARY KEY, title text NOT NULL, tags text[], done bool DEFAULT false, created timestamptz DEFAULT now())"]?
+
+// パラメータは $1 $2 … に配列で渡す（SQL の文字列には埋め込まれない）
+@r := @pg.query[@c, "INSERT INTO memo (title, tags) VALUES ($1, $2) RETURNING id", {"牛乳を買う", {"買い物", "急ぎ"}}]?
+log["id =", @r{0}.id]
+@pg.exec[@c, "INSERT INTO memo (title) VALUES ($1), ($2)", {"本を返す", "メールを書く"}]?
+
+// トランザクションは SQL で書く
+@pg.exec[@c, "BEGIN"]?
+@u := @pg.exec[@c, "UPDATE memo SET done = true WHERE title LIKE $1", {"%を%"}]?
+log["更新した行数:", @u.changes]
+@pg.exec[@c, "COMMIT"]?
+
+// 結果は、列名をキーにしたマップの配列
+for @row in @pg.query[@c, "SELECT id, title, tags, done, created FROM memo ORDER BY id"]? (
+    log[@row.id, @row.title, @row.tags, @row.done]
+)
+
+// 失敗はエラー値。種類で分けられる
+@e := @pg.exec[@c, "INSERT INTO memo (title) VALUES ($1)", {nil}]
+log[err_kind[@e]]
+
+@pg.close[@c]

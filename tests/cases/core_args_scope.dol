@@ -1,0 +1,45 @@
+// 既定値はその関数のスコープで、前の引数を使って評価される
+@g := 10
+dflt[@a, @b = @a * 2, @c = @g + @b] ( # {@a, @b, @c} )
+log[dflt[1], dflt[1, 5], dflt[1, 5, 7]]
+@g = 100
+log[dflt[1]]
+
+// 既定値は呼ぶたびに評価される（配列も毎回新しい）
+push_default[@x, @acc = {}] (
+    arr_push[@acc, @x]
+    # @acc
+)
+log[push_default[1], push_default[2], push_default[3, {0}]]
+
+// 可変長引数: rest は呼び出しごとに別の配列
+vsum[...@xs] (
+    @t := 0
+    for @x in @xs ( @t = @t + @x )
+    # @t
+)
+log[vsum[], vsum[1, 2, 3], vsum[...{4, 5}]]
+
+// 無名関数の既定値と、それを捕まえるクロージャ
+@mk := [@base, @step = 1] (
+    # [] (
+        @base = @base + @step
+        # @base
+    )
+)
+@c1 := @mk[0]
+@c2 := @mk[100, 10]
+log[@c1[], @c1[], @c2[], @c1[]]
+
+// 文字列の展開は、その時点のスコープの変数を使う
+@who := "外"
+greet[] (
+    @who := "中"
+    # "こんにちは @who"
+)
+log[greet[], "こんにちは @who"]
+@fmt := [@who] ( # "[@who]" )
+log[@fmt["引数"], @fmt[@who]]
+for @who in {"ループ"} (
+    log["@who"]
+)

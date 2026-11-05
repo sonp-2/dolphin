@@ -1,6 +1,6 @@
 //! 変数の置き場所（design.md 5.1）
 
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
 use std::mem;
@@ -20,54 +20,97 @@ impl Hasher for NameHasher {
         }
     }
 
+    fn write_usize(&mut self, n: usize) {
+        self.0 = (self.0.rotate_left(5) ^ n as u64).wrapping_mul(0x517c_c1b7_2722_0a95);
+    }
+
     fn finish(&self) -> u64 {
         self.0
     }
 }
 
-/// 軽いハッシュを使う表（名前や関数の定義のアドレスで引く表用）
-pub type FastMap<K, V> = HashMap<K, V, BuildHasherDefault<NameHasher>>;
+pub type NameBuild = BuildHasherDefault<NameHasher>;
 
-/// この数までの変数は、ハッシュを使わず順に探す（ブロックのスコープは変数が少ないので、そのほうが速い）
-const LINEAR_MAX: usize = 8;
+type NameMap = HashMap<Rc<str>, Value, NameBuild>;
 
-/// 変数の並び。宣言した順に並べ、消さない（置き換えは同じ位置に上書き）ので、位置は変わらない
-#[derive(Debug, Default)]
-struct Vars {
-    items: Vec<(String, Value)>,
-    /// 変数が多いスコープ（トップレベルなど）のための、名前 → 位置
-    index: Option<FastMap<String, usize>>,
+/// 小さい変数表は線形探索の方がハッシュより速いので、これを超えたらハッシュ表にする
+const SMALL_MAX: usize = 12;
+
+/// 変数表の中身。関数のスコープのように変数が少ないうちは並べた配列で持つ
+#[derive(Debug)]
+enum Vars {
+    Small(Vec<(Rc<str>, Value)>),
+    Large(NameMap),
+}
+
+impl Default for Vars {
+    fn default() -> Self {
+        Vars::Small(Vec::new())
+    }
+}
+
+fn same_name(a: &Rc<str>, b: &str) -> bool {
+    // コンパイラが同じ名前を同じ `Rc<str>` にそろえているので、多くはアドレスの比較で済む
+    std::ptr::eq(&raw const **a, b) || (a.len() == b.len() && **a == *b)
+}
+
+thread_local! {
+    static NAMES: RefCell<HashMap<Rc<str>, (), NameBuild>> = RefCell::default();
+}
+
+/// 変数名を共有する。同じ名前なら同じ `Rc<str>` を返す
+pub fn intern(name: &str) -> Rc<str> {
+    NAMES.with(|names| {
+        let mut names = names.borrow_mut();
+        if let Some((key, ())) = names.get_key_value(name) {
+            return Rc::clone(key);
+        }
+        let key: Rc<str> = name.into();
+        names.insert(Rc::clone(&key), ());
+        key
+    })
 }
 
 impl Vars {
-    fn find(&self, name: &str) -> Option<usize> {
-        match &self.index {
-            Some(index) => index.get(name).copied(),
-            None => self.items.iter().position(|(n, _)| n == name),
+    fn get(&self, name: &str) -> Option<&Value> {
+        match self {
+            Vars::Small(v) => v.iter().find(|(k, _)| same_name(k, name)).map(|(_, v)| v),
+            Vars::Large(m) => m.get(name),
         }
     }
 
-    fn get(&self, name: &str) -> Option<&Value> {
-        self.find(name).map(|i| &self.items[i].1)
+    fn get_mut(&mut self, name: &str) -> Option<&mut Value> {
+        match self {
+            Vars::Small(v) => v
+                .iter_mut()
+                .find(|(k, _)| same_name(k, name))
+                .map(|(_, v)| v),
+            Vars::Large(m) => m.get_mut(name),
+        }
     }
 
-    fn insert(&mut self, name: &str, value: Value) {
-        if let Some(i) = self.find(name) {
-            self.items[i].1 = value;
+    fn insert(&mut self, name: Rc<str>, value: Value) {
+        if let Some(slot) = self.get_mut(&name) {
+            *slot = value;
             return;
         }
-        self.items.push((name.to_string(), value));
-        let len = self.items.len();
-        if let Some(index) = &mut self.index {
-            index.insert(name.to_string(), len - 1);
-        } else if len > LINEAR_MAX {
-            self.index = Some(
-                self.items
-                    .iter()
-                    .enumerate()
-                    .map(|(i, (n, _))| (n.clone(), i))
-                    .collect(),
-            );
+        match self {
+            Vars::Small(v) if v.len() < SMALL_MAX => v.push((name, value)),
+            Vars::Small(v) => {
+                let mut map: NameMap = v.drain(..).collect();
+                map.insert(name, value);
+                *self = Vars::Large(map);
+            }
+            Vars::Large(m) => {
+                m.insert(name, value);
+            }
+        }
+    }
+
+    fn for_each_value(&self, f: &mut dyn FnMut(&Value)) {
+        match self {
+            Vars::Small(v) => v.iter().for_each(|(_, v)| f(v)),
+            Vars::Large(m) => m.values().for_each(f),
         }
     }
 }
@@ -93,7 +136,7 @@ impl Env {
     /// 循環回収器のために、持っている配列・マップ・関数値・外側のスコープのアドレスを順に渡す
     pub fn for_each_child(&self, f: &mut dyn FnMut(usize)) {
         if let Ok(vars) = self.vars.try_borrow() {
-            vars.items.iter().for_each(|(_, v)| gc::value_child(v, f));
+            vars.for_each_value(&mut |v| gc::value_child(v, f));
         }
         if let Some(parent) = &self.parent {
             f(Rc::as_ptr(parent) as usize);
@@ -119,51 +162,22 @@ impl Env {
         self.vars.borrow().get(name).cloned()
     }
 
-    /// トップレベルのスコープの変数を読む。`cache` に前回見つけた位置を覚えておき、
-    /// 同じ名前が同じ位置にあれば、探さずに済ませる（位置は変わらない）
-    pub fn get_cached(&self, name: &str, cache: &Cell<u32>) -> Option<Value> {
-        let vars = self.vars.borrow();
-        if let Some((n, value)) = vars.items.get(cache.get() as usize)
-            && n == name
-        {
-            return Some(value.clone());
-        }
-        let i = vars.find(name)?;
-        cache.set(i as u32);
-        Some(vars.items[i].1.clone())
-    }
-
-    /// `get_cached` の代入版（このスコープだけを探す）。なければ false
-    pub fn assign_cached(&self, name: &str, value: Value, cache: &Cell<u32>) -> bool {
-        let mut vars = self.vars.borrow_mut();
-        let i = match vars.items.get(cache.get() as usize) {
-            Some((n, _)) if n == name => cache.get() as usize,
-            _ => match vars.find(name) {
-                Some(i) => {
-                    cache.set(i as u32);
-                    i
-                }
-                None => return false,
-            },
-        };
-        vars.items[i].1 = value;
-        true
-    }
-
     /// このスコープに新しい変数を作る。同じ名前があれば置き換える
     /// （同じスコープの二重宣言は Resolver が弾く。REPL の再入力は置き換えを許す）
     pub fn declare(&self, name: &str, value: Value) {
-        self.vars.borrow_mut().insert(name, value);
+        self.vars.borrow_mut().insert(name.into(), value);
+    }
+
+    /// `declare` と同じ。名前を `Rc<str>` で持っているときは、文字列の確保を省ける
+    pub fn declare_rc(&self, name: &Rc<str>, value: Value) {
+        self.vars.borrow_mut().insert(Rc::clone(name), value);
     }
 
     /// 宣言済みの最も内側の変数を書き換える。見つからなければ false
     pub fn assign(&self, name: &str, value: Value) -> bool {
-        {
-            let mut vars = self.vars.borrow_mut();
-            if let Some(i) = vars.find(name) {
-                vars.items[i].1 = value;
-                return true;
-            }
+        if let Some(slot) = self.vars.borrow_mut().get_mut(name) {
+            *slot = value;
+            return true;
         }
         match &self.parent {
             Some(parent) => parent.assign(name, value),

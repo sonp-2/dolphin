@@ -1,0 +1,11 @@
+// 深い再帰は限界までなら動き、超えるとエラー（位置と呼び出し履歴つき）
+sum_to[@n] (
+    if @n == 0 ( # 0 )
+    # @n + sum_to[@n - 1]
+)
+log[sum_to[500]]
+
+forever[@n] (
+    # forever[@n + 1]
+)
+forever[0]

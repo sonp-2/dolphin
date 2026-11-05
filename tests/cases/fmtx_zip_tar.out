@@ -1,0 +1,24 @@
+nil
+target/fmtx_tar/src/ 0 true
+target/fmtx_tar/src/a.txt 5 false
+target/fmtx_tar/src/sub/ 0 true
+target/fmtx_tar/src/sub/b.txt 17 false
+target/fmtx_tar/src/sub/c.bin 4 false
+0
+bravo bravo bravo
+not_found io
+{"target/fmtx_tar/src/a.txt", "target/fmtx_tar/src/sub/b.txt", "target/fmtx_tar/src/sub/c.bin"}
+alpha true
+31 139
+true
+4 4 {10, 8, 10, 134}
+true
+4
+hello こんにちは
+long name
+true
+true
+too_large too_large
+not_found not_found
+parse
+not_found not_found

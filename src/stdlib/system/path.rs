@@ -1,5 +1,5 @@
 //! `std:path`: join, dirname, basename, stem, ext, normalize, is_absolute, absolute, sep
-//! （design.md 5.13）
+//! （design.md 5.13）、relative, parts, with_ext（5.49）
 //!
 //! ファイルには触れず、文字列として組み立てる・分解する。入力はそのシステムの区切りを受け付け、
 //! 出力は常に `/` 区切りにする（Windows も `/` を受け付けるので、スクリプトがシステムによらず
@@ -10,7 +10,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::runtime::interp::{Const, Interpreter};
 use crate::runtime::value::Value;
-use crate::stdlib::{error_value, expect_args, str_arg};
+use crate::stdlib::{error_value, expect_args, new_array, str_arg};
 
 pub fn register(interp: &mut Interpreter<'_>) {
     interp.register_module_constants("std:path", &[("sep", Const::Str("/"))]);
@@ -25,6 +25,9 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("path.normalize", normalize),
             ("path.is_absolute", is_absolute),
             ("path.absolute", absolute),
+            ("path.relative", relative),
+            ("path.parts", parts),
+            ("path.with_ext", with_ext),
         ],
     );
 }
@@ -155,6 +158,100 @@ fn absolute(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     }
 }
 
+/// 絶対パスにして、字面だけで整理する
+fn absolutize(path: &str) -> Result<PathBuf, std::io::Error> {
+    std::path::absolute(path).map(|abs| normalize_path(&abs))
+}
+
+/// `from` から `to` への相対パス。ファイルには触れない
+fn relative(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("path.relative", args, 2)?;
+    let from = str_arg("path.relative", args, 0)?;
+    let to = str_arg("path.relative", args, 1)?;
+    let (from_abs, to_abs) = match (absolutize(from), absolutize(to)) {
+        (Ok(f), Ok(t)) => (f, t),
+        (Err(e), _) | (_, Err(e)) => {
+            let (kind, reason) = crate::stdlib::fs::classify(&e);
+            return Ok(error_value(
+                kind,
+                format!("`{from}` と `{to}` を絶対パスにできません: {reason}"),
+            ));
+        }
+    };
+    Ok(relative_between(&from_abs, &to_abs).map_or_else(
+        || {
+            error_value(
+                "invalid",
+                format!("`{from}` から `{to}` への相対パスは作れません（ドライブが違います）"),
+            )
+        },
+        str_value,
+    ))
+}
+
+/// 絶対パスどうしの相対パス。ルート（ドライブ）が違えば `None`
+fn relative_between(from: &Path, to: &Path) -> Option<String> {
+    let a: Vec<Component<'_>> = from.components().collect();
+    let b: Vec<Component<'_>> = to.components().collect();
+    let common = a.iter().zip(&b).take_while(|(x, y)| x == y).count();
+    if common == 0 {
+        return None;
+    }
+    let mut out: Vec<String> = vec!["..".to_string(); a.len() - common];
+    out.extend(
+        b[common..]
+            .iter()
+            .map(|c| c.as_os_str().to_string_lossy().into_owned()),
+    );
+    Some(if out.is_empty() {
+        ".".to_string()
+    } else {
+        out.join("/")
+    })
+}
+
+/// 部分の配列。ルート（ドライブつきも）は 1 つの部分
+fn parts(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("path.parts", args, 1)?;
+    let path = Path::new(str_arg("path.parts", args, 0)?);
+    Ok(new_array(
+        split_parts(path).into_iter().map(str_value).collect(),
+    ))
+}
+
+fn split_parts(path: &Path) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut prefix: Option<String> = None;
+    for component in path.components() {
+        match component {
+            Component::Prefix(p) => prefix = Some(to_slash(Path::new(p.as_os_str()))),
+            Component::RootDir => out.push(format!("{}/", prefix.take().unwrap_or_default())),
+            other => {
+                out.extend(prefix.take());
+                out.push(other.as_os_str().to_string_lossy().into_owned());
+            }
+        }
+    }
+    out.extend(prefix);
+    out
+}
+
+/// 最後の名前の拡張子を置き換える。最後の名前がないパスはそのまま
+fn with_ext(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("path.with_ext", args, 2)?;
+    let p = str_arg("path.with_ext", args, 0)?;
+    let ext = str_arg("path.with_ext", args, 1)?;
+    if ext.contains(['/', '\\', '\0']) {
+        return Err("path.with_ext の拡張子に区切り文字や NUL は使えません".into());
+    }
+    let ext = ext.strip_prefix('.').unwrap_or(ext);
+    let path = Path::new(p);
+    if !matches!(path.components().next_back(), Some(Component::Normal(_))) {
+        return Ok(str_value(p));
+    }
+    Ok(str_value(to_slash(&path.with_extension(ext))))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -187,5 +284,32 @@ mod tests {
         assert_eq!(last_name("a/.."), "..");
         assert_eq!(last_name("/"), "");
         assert_eq!(last_name(""), "");
+    }
+
+    #[test]
+    fn parts_split() {
+        let parts = |s: &str| split_parts(Path::new(s));
+        assert_eq!(parts("/a/b/"), ["/", "a", "b"]);
+        assert_eq!(parts("a/../b"), ["a", "..", "b"]);
+        assert_eq!(parts("./a"), [".", "a"]);
+        assert!(parts("").is_empty());
+        if cfg!(windows) {
+            assert_eq!(parts("C:/a"), ["C:/", "a"]);
+            assert_eq!(parts("C:\\a\\b"), ["C:/", "a", "b"]);
+        }
+    }
+
+    #[test]
+    fn relative_paths() {
+        let rel = |a: &str, b: &str| relative_between(Path::new(a), Path::new(b));
+        let root = if cfg!(windows) { "C:/" } else { "/" };
+        let p = |s: &str| format!("{root}{s}");
+        assert_eq!(rel(&p("a/b"), &p("a/c/d")).unwrap(), "../c/d");
+        assert_eq!(rel(&p("a"), &p("a")).unwrap(), ".");
+        assert_eq!(rel(&p("a/b/c"), &p("a")).unwrap(), "../..");
+        assert_eq!(rel(root, &p("x")).unwrap(), "x");
+        if cfg!(windows) {
+            assert!(rel("C:/a", "D:/a").is_none());
+        }
     }
 }

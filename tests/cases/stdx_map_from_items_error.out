@@ -1,0 +1,4 @@
+stdx_map_from_items_error.dol:1:5: エラー: map_from_items の 2 番目のキーは文字列である必要があります（数値でした）
+  |
+1 | log[map_from_items[{{"a", 1}, {2, 3}}]]
+  |     ^

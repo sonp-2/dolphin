@@ -1,0 +1,17 @@
+nil
+24 - T Z
+INFO 起動 port=8080 name="a b" empty="" ok=true none=nil
+24 - T Z
+WARN 改行\nあり
+24 - T Z
+ERROR 配列とマップ list=[1,2] map="{\"a\":1}"
+24 - T Z
+DEBUG debug が出る
+24 - T Z
+ERROR error は出る
+24 - T Z
+INFO 戻り値は nil
+info json 1 x {1, 2}
+24 true
+<関数>
+io

@@ -1,0 +1,4 @@
+core_err_for_var_scope.dol:5:5: エラー: 未定義の変数 `@e`
+  |
+5 | log[@e]
+  |     ^

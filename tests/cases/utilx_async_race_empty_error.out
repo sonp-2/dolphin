@@ -1,0 +1,4 @@
+utilx_async_race_empty_error.dol:2:5: エラー: async.race の配列が空です（future が 1 つ以上要ります）
+  |
+2 | log[@a.race[{}]]
+  |     ^

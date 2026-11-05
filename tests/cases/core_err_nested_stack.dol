@@ -1,0 +1,8 @@
+// 入れ子の呼び出しの中のエラー: 呼び出し履歴が内側から外側へ並ぶ
+level3[@m] ( # @m{"missing"} )
+level2[@m] ( # level3[@m] + 1 )
+level1[@m] (
+    @f := [] ( # level2[@m] )
+    # @f[]
+)
+log[level1[{"a": 1}]]

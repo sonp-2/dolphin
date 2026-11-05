@@ -1,0 +1,65 @@
+// os.parse_args（design.md 5.49）
+@os := import["std:os"]
+@spec := {
+    "name": "gen",
+    "description": "ファイルを作る",
+    "flags": {
+        "verbose": {"short": "v", "help": "詳しく表示する"},
+        "quiet": {"short": "q"},
+        "dry-run": "実際には書かない"
+    },
+    "options": {
+        "out": {"short": "o", "help": "出力先", "default": "a.out", "metavar": "FILE"},
+        "count": {"help": "個数", "type": "int", "default": 1i},
+        "ratio": {"type": "num"},
+        "tag": {"short": "t", "multiple": true, "help": "タグ"},
+        "mode": {"required": true}
+    },
+    "positional": {
+        {"name": "input", "help": "入力ファイル"},
+        {"name": "extra", "required": false},
+        {"name": "rest", "multiple": true, "required": false}
+    }
+}
+
+// 解析の結果をマップで返す
+@a := @os.parse_args[@spec, {"--mode", "fast", "in.txt"}]
+log[@a]
+@a = @os.parse_args[@spec, {"-vq", "--out=x.bin", "--count", "5", "--ratio", "-1.5", "-t", "a", "-tb", "--tag=c", "--mode", "m", "--dry-run", "in", "e", "r1", "r2"}]
+log[@a]
+log[type_of[@a{"count"}], type_of[@a{"ratio"}]]
+// -- のあとはすべて位置引数。- だけも位置引数
+@a = @os.parse_args[@spec, {"--mode", "m", "--", "-v", "--x"}]
+log[@a{"input"}, @a{"extra"}, @a{"verbose"}]
+@a = @os.parse_args[@spec, {"--mode", "m", "-", "--out", "-"}]
+log[@a{"input"}, @a{"out"}]
+// 同じオプションを 2 度指定したら、あとが勝つ
+@a = @os.parse_args[@spec, {"--mode", "a", "--mode", "b", "in"}]
+log[@a{"mode"}]
+
+// ユーザーの間違いは、種類 usage のエラー値
+@bad := {
+    {"in"},
+    {"--mode", "m"},
+    {"--mode", "m", "in", "--nope"},
+    {"--mode", "m", "in", "-z"},
+    {"--mode"},
+    {"--mode", "m", "--count", "x", "in"},
+    {"--mode", "m", "--count", "1.5", "in"},
+    {"--mode", "m", "--ratio", "abc", "in"},
+    {"--mode", "m", "-v=1", "in"},
+    {"--mode", "m", "--verbose=1", "in"},
+    {"--mode", "m", "--out", "--verbose", "in"}
+}
+for @args in @bad (
+    @e := @os.parse_args[@spec, @args]
+    log[err_kind[@e], str_split[err_message[@e], "\n"]{0}]
+)
+// メッセージには使い方がつく
+log[err_message[@os.parse_args[@spec, {"in"}]]]
+
+// 宣言のない spec でも使える
+log[@os.parse_args[{:}, {}]]
+log[err_kind[@os.parse_args[{:}, {"x"}]]]
+log[@os.parse_args[{"positional": {"a", "b"}}, {"1", "2"}]]
+log[@os.parse_args[{"flags": {"h": {"short": "h"}}}, {"-h"}]]

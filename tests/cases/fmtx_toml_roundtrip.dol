@@ -1,0 +1,33 @@
+// std:toml の往復（parse → stringify → parse）
+@toml := import["std:toml"]
+
+check[@name, @value] (
+    @text := @toml.stringify[@value]
+    @back := @toml.parse[@text]?
+    log[@name, @back == @value]
+)
+
+check["flat", {"a": 1, "b": "two", "c": 3.5, "d": true}]
+check["nested", {"x": {"y": {"z": {1, 2, 3}}}, "w": "v"}]
+check["array of tables", {"items": {{"id": 1, "tags": {"a"}}, {"id": 2, "tags": {}}}}]
+check["mixed array", {"m": {1, "a", true, {"k": "v"}}}]
+check["strings", {"s1": "", "s2": "a\nb\t\"c\"\\", "s3": "日本語", "s4": "[table]", "k e y": "v", "": "empty key"}]
+check["tables after values", {"t": {"a": 1}, "v": 2, "u": {"b": {"c": 3}}, "w": 4}]
+check["empty", {:}]
+
+// 読んだものを書いて、もう一度読んでも同じ
+@src := "name = \"x\"\nn = 7\n\n[a]\nb = [1, 2]\n\n[[a.c]]\nd = 1\n\n[[a.c]]\nd = 2\n"
+@once := @toml.parse[@src]?
+@twice := @toml.parse[@toml.stringify[@once]]?
+log[@once == @twice]
+log[@toml.stringify[@once]]
+
+// 日時は文字列になるので、書くと文字列（引用符つき）で出る。読み直した値は同じ文字列
+@dt := @toml.parse["when = 1979-05-27T07:32:00Z\n"]?
+log[@toml.stringify[@dt]]
+log[@toml.parse[@toml.stringify[@dt]]? == @dt]
+
+// JSON との往復
+@json := import["std:json"]
+@j := @json.parse["{\"a\": [1, 2], \"b\": {\"c\": \"d\"}}"]?
+log[@toml.parse[@toml.stringify[@j]]? == @j]

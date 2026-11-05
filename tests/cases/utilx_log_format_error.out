@@ -1,0 +1,4 @@
+utilx_log_format_error.dol:2:1: エラー: log.set_format の形式は "text" か "json" です（"xml"）
+  |
+2 | @lg.set_format["xml"]
+  | ^

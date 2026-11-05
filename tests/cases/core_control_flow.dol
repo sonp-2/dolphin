@@ -1,0 +1,77 @@
+// # (return) をループの奥から。スコープを抜けても呼び出し元は壊れない
+first_pair[@xs, @target] (
+    for @a in @xs (
+        for @b in @xs (
+            @s := @a + @b
+            if @s == @target (
+                # {@a, @b}
+            )
+        )
+    )
+    # nil
+)
+@found := first_pair[{1, 4, 6, 9}, 10]
+log[@found, first_pair[{1, 2}, 100]]
+
+// 戻り値なしの関数は nil
+nothing[] ( @z := 1 )
+log[nothing[], nothing[] == nil]
+
+// 値なしの # のあとに続く文は実行されない
+early[@n] (
+    if @n < 0 ( # "負" )
+    log["early の続き"]
+    # "非負"
+)
+log[early[-1], early[1]]
+
+// break のあとの変数: 外の変数は更新が残る
+@seen := 0
+for @e in range[0, 100] (
+    @seen = @e
+    if @e == 3 ( break )
+)
+log[@seen]
+
+// continue を使った while（条件の更新を先に行う）
+@i := 0
+@odd := {}
+while @i < 10 (
+    @i = @i + 1
+    if @i % 2 == 0 ( continue )
+    arr_push[@odd, @i]
+)
+log[@odd]
+
+// while の本体で作った変数は、次の繰り返しに持ち越されない
+@tries := 0
+while @tries < 3 (
+    @fresh := nil
+    log[@fresh]
+    @fresh = @tries
+    @tries = @tries + 1
+)
+
+// 条件式の入れ子と短絡評価
+side[@v] (
+    log["side", @v]
+    # @v
+)
+log[side[false] && side[true], side[true] || side[false], side[true] && side[true]]
+
+// 関数呼び出しを跨いだ break: 内側の while だけ
+@rows := {}
+for @r in range[0, 3] (
+    @line := ""
+    for @c in range[0, 5] (
+        if @c > @r ( break )
+        @line = @line + to_str[@c]
+    )
+    arr_push[@rows, @line]
+)
+log[@rows]
+
+// 条件式の分岐でクロージャを選ぶ
+@op := "plus"
+@fn := if @op == "plus" ( [@a, @b] ( # @a + @b ) ) else ( [@a, @b] ( # @a - @b ) )
+log[@fn[5, 3]]

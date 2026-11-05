@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use super::bytecode::Chunk;
 use super::compile::compile_program;
-use super::env::{Env, FastMap};
+use super::env::{Env, NameBuild};
 use super::error::{RuntimeError, TraceEntry};
 use super::events::Events;
 use super::gc;
@@ -74,7 +74,7 @@ pub struct Interpreter<'a> {
     /// 関数の呼び出しの深さ（ファイルの本体は数えない）
     depth: usize,
     /// コンパイル済みの関数（定義のアドレス → 定義と命令列）
-    chunks: FastMap<usize, (Rc<FuncDef>, Rc<Chunk>)>,
+    chunks: HashMap<usize, (Rc<FuncDef>, Rc<Chunk>), NameBuild>,
     /// 止まっている `async` 関数の流れ（番号 → 流れ。design.md 5.46）
     coroutines: HashMap<u64, vm::Coroutine>,
     next_coroutine: u64,
@@ -82,7 +82,7 @@ pub struct Interpreter<'a> {
     ready: std::collections::VecDeque<u64>,
     /// いま動かしている流れ
     current_coroutine: Option<u64>,
-    natives: FastMap<&'static str, NativeFn>,
+    natives: HashMap<&'static str, NativeFn>,
     /// いま実行している組み込み関数の呼び出し位置。組み込み関数が関数値を呼ぶときの位置になる
     native_span: Span,
     /// 組み込み関数が呼んだ関数値の中で起きたエラー。`call_value` が預け、
@@ -115,12 +115,12 @@ impl<'a> Interpreter<'a> {
             vm_frames: Vec::new(),
             stack: Vec::new(),
             depth: 0,
-            chunks: FastMap::default(),
+            chunks: HashMap::default(),
             coroutines: HashMap::new(),
             next_coroutine: 1,
             ready: std::collections::VecDeque::new(),
             current_coroutine: None,
-            natives: FastMap::default(),
+            natives: HashMap::new(),
             native_span: Span { line: 1, col: 1 },
             native_error: None,
             std_registry: HashMap::new(),

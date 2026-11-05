@@ -213,6 +213,10 @@ fn accept(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
         HandleKind::Sqlite(_) | HandleKind::SqliteClosed => {
             Err("net.accept に渡せるのは待ち受けのハンドルです（SQLite でした）".into())
         }
+        #[cfg(feature = "postgres")]
+        HandleKind::Postgres(_) | HandleKind::PostgresClosed => {
+            Err("net.accept に渡せるのは待ち受けのハンドルです（PostgreSQL でした）".into())
+        }
     }
 }
 
@@ -248,6 +252,10 @@ fn with_conn(
         #[cfg(feature = "sqlite")]
         HandleKind::Sqlite(_) | HandleKind::SqliteClosed => Err(format!(
             "{name} に渡せるのは TCP の接続のハンドルです（SQLite でした）"
+        )),
+        #[cfg(feature = "postgres")]
+        HandleKind::Postgres(_) | HandleKind::PostgresClosed => Err(format!(
+            "{name} に渡せるのは TCP の接続のハンドルです（PostgreSQL でした）"
         )),
     }
 }
@@ -395,6 +403,12 @@ fn local_addr(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
         #[cfg(feature = "sqlite")]
         HandleKind::Sqlite(_) | HandleKind::SqliteClosed => {
             return Err("net.local_addr に渡せるのは TCP のハンドルです（SQLite でした）".into());
+        }
+        #[cfg(feature = "postgres")]
+        HandleKind::Postgres(_) | HandleKind::PostgresClosed => {
+            return Err(
+                "net.local_addr に渡せるのは TCP のハンドルです（PostgreSQL でした）".into(),
+            );
         }
         HandleKind::Closed => return Ok(closed()),
     };

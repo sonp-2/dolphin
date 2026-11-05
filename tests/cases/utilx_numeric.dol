@@ -1,0 +1,50 @@
+// 統計・crc32・整数の読み書き・桁区切り（design.md 5.50）
+@m := import["std:math"]
+@e := import["std:encoding"]
+
+// 統計
+log[@m.mean[{1, 2, 3, 4}], @m.mean[{5}], @m.mean[{-1, 1}]]
+log[@m.median[{3, 1, 2}], @m.median[{4, 1, 3, 2}], @m.median[{7}], @m.median[{1, 1, 1, 100}]]
+@sample := {2, 4, 4, 4, 5, 5, 7, 9}
+log[num_fixed[@m.stdev[@sample], 6], @m.stdev[{1, 1, 1}], @m.stdev[{1, 3}]]
+// 引数の配列は変わらない
+@unsorted := {3, 1, 2}
+@m.median[@unsorted]
+log[@unsorted]
+log[err_kind[@m.mean[{}]], err_kind[@m.median[{}]], err_kind[@m.stdev[{}]], err_kind[@m.stdev[{1}]]]
+log[err_message[@m.mean[{}]]]
+
+// crc32
+log[@e.crc32[""], @e.crc32["123456789"], @e.crc32["a"], @e.crc32[str_to_bytes["hello"]]]
+log[@e.crc32["日本語"]]
+
+// 整数の読み書き
+@b := bytes_from_arr[{1, 2, 3, 4, 255, 255, 255, 255}]
+log[bytes_get_int[@b, 0, 1, "be"], bytes_get_int[@b, 0, 2, "be"], bytes_get_int[@b, 0, 2, "le"]]
+log[bytes_get_int[@b, 0, 4, "be"], bytes_get_int[@b, 0, 4, "le"], bytes_get_int[@b, 1, 3, "be"], bytes_get_int[@b, 1, 3, "le"]]
+log[bytes_get_int[@b, 4, 4, "be"], bytes_get_int[@b, 4, 4, "be", true], bytes_get_int[@b, 4, 1, "le", true], bytes_get_int[@b, 4, 2, "le", false]]
+log[bytes_get_int[@b, 0, 6, "be"], type_of[bytes_get_int[@b, 0, 6, "be"]]]
+log[bytes_get_int[@b, 0, 8, "be"], type_of[bytes_get_int[@b, 0, 8, "be"]], bytes_get_int[@b, 0, 7, "be"]]
+log[bytes_get_int[@b, 0, 8, "be", true], bytes_get_int[@b, 0, 8, "le", true]]
+log[err_kind[bytes_get_int[bytes_from_arr[{255, 255, 255, 255, 255, 255, 255, 255}], 0, 8, "be"]]]
+log[bytes_get_int[bytes_from_arr[{255, 255, 255, 255, 255, 255, 255, 255}], 0, 8, "be", true]]
+log[bytes_get_int[bytes_from_arr[{128, 0, 0, 0, 0, 0, 0, 0}], 0, 8, "be", true]]
+
+log[bytes_set_int[bytes_new[4], 0, 4, 258, "be"], bytes_set_int[bytes_new[4], 0, 4, 258, "le"]]
+log[bytes_set_int[bytes_new[4], 1, 2, 65535, "be"], bytes_set_int[bytes_new[4], 2, 2, -2, "le"], bytes_set_int[bytes_new[2], 0, 2, -1, "be"]]
+log[bytes_set_int[bytes_new[8], 0, 8, 1000000000000i, "be"], bytes_set_int[bytes_new[8], 0, 8, -1i, "le"]]
+// 読み戻せる
+@w := bytes_set_int[bytes_new[8], 2, 4, 3000000000, "le"]
+log[bytes_get_int[@w, 2, 4, "le"], bytes_get_int[@w, 0, 8, "le"]]
+@w2 := bytes_set_int[bytes_new[8], 0, 8, 123456789012345678i, "be"]
+log[bytes_get_int[@w2, 0, 8, "be"]]
+// 元のバイト列は変わらない
+@orig := bytes_new[2]
+bytes_set_int[@orig, 0, 2, 1, "be"]
+log[@orig]
+
+// 桁区切り
+log[num_group[1234567, ","], num_group[999, ","], num_group[1000, ","], num_group[0, ","]]
+log[num_group[-1234567.891, " "], num_group[-100, ","], num_group[1234.5, "_"], num_group[123456789012, ","]]
+log[num_group[1234567, ""], num_group[1234567, "'"], num_group[12345678901234567i, ","], num_group[-1000i, "."]]
+log[num_group[1234567, ".."], num_group[0.5, ","], num_group[-0.25, ","]]

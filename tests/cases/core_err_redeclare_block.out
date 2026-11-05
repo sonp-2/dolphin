@@ -1,0 +1,4 @@
+core_err_redeclare_block.dol:6:5: エラー: 変数 `@b` はすでに宣言されています
+  |
+6 |     @b := 4
+  |     ^

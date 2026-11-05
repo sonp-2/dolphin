@@ -7,6 +7,23 @@
 
 ## [Unreleased]
 
+内部の整理が中心で、**言語の仕様と出力は変わらない**。
+
+### 追加
+- `import["std:postgres"]`（`postgres` feature。**既定では無効**で、`cargo build --features postgres`。純 Rust の `postgres` クレート（同期版）を使い、TLS は `tls` feature と同じ rustls。[design.md 5.47](docs/design.md)）: `connect[url_or_map, options]`（`timeout` `tls` `int` `application_name`）`close` `exec[c, sql, params]`（`{"changes"}` を返す）`query[c, sql, params]`（行を、列名をキーにしたマップの配列で返す）`run_script[c, sql]`。API の形・ハンドル・トランザクション（`exec[c, "BEGIN"]` など）は `std:sqlite` に揃えた
+- `params` は配列（`` `$1` `$2` … に順番に）。値はサーバーが決めた型に合わせて変換する: `int2`〜`int8`・`float`・`numeric`（結果は桁を失わない文字列）・`bool`・`text`・`bytea`・`uuid`・`date`/`time`（文字列）・`timestamp`/`timestamptz`（Unix 時刻の数値）・`json`/`jsonb`・配列型（多次元も）。`interval` `inet` などは `::text` で受ける
+- 失敗はエラー値（種類 `sql` `busy` `auth` `network` `parse` `closed`。メッセージに SQLSTATE を含む）。問い合わせはブロッキングで、`LISTEN`/`NOTIFY`・`COPY`・接続のプールは作らない
+- `examples/pg_demo.dol`。テストは、サーバーがなくても通るもの（URL の解析・接続失敗の種類・値の変換の単体テスト）と、環境変数 `DOLPHIN_TEST_PG_URL` があるときだけ動くサーバーを使うもの（`tests/postgres.rs`）
+- CI に `--features postgres` のビルドとテストを足した
+
+### 変更
+- 変数を作らないブロックは、実行時にスコープ（`Env`）を作らないようにし、変数表のハッシュも軽くした。挙動は同じで、速くなる。計測用のスクリプトを `bench/`（`fib.dol` `loop.dol` `array.dol`）に置いた
+- 大きかったファイルを分けた（挙動は同じ）。`stdlib/` を `system`・`network`・`data`・`media` のフォルダに、`interp.rs` から `import` を `interp/import.rs` に、`lsp` を通信（`transport.rs`）と変換（`convert.rs`）に、`ui/mod.rs` から部品の木を作る処理を `ui/tree.rs` に。`os.spawn` と `worker.spawn` の引数の処理も関数に切り出した
+- GitHub のユーザー名の変更（`sonnnnnnp` から `sonp-2`）に合わせて、リンクと著作権者名を直した
+
+### 修正
+- `http` のテストが、閉じたポートを別のテストのサーバーに使われて落ちることがあったのを直した
+
 ## [0.54.0] - 2026-10-20
 
 `async` と `await`（[design.md 5.46](docs/design.md)）。途中で止めて、あとで続きから再開できる関数。コールバックの入れ子なしで、「A の結果で B を呼び、C と D を同時に進めて、そろったら次へ」と書ける。
@@ -180,7 +197,8 @@ CSV（[design.md 5.29](docs/design.md)）。「Python に比べて足りない�
 ### 追加
 - `import["std:csv"]`（標準ライブラリだけ。feature なし）: `parse[text, options]`（文字列の配列の配列。`header: true` で 1 行目を見出しにしたマップの配列）`stringify[rows, options]`（配列かマップの行の配列を文字列に。マップは `columns` で列を選べる）。オプションは `delimiter`（TSV など）`header` `columns` `newline`
 - RFC 4180 に沿う: `"` で囲んだフィールド（中の `""`、区切り・改行）、`
-` と `
+` と `
+
 `、先頭の BOM、空の行の読み飛ばし。失敗はエラー値（`parse`。行番号つき）
 
 ## [0.36.0] - 2026-10-16
@@ -572,7 +590,57 @@ C++ 版から Rust での作り直しを始めた最初のバージョン。
 - 行・列と呼び出し履歴つきのエラー表示。実行前の検査（未定義の関数、引数の数、関数の外での `$x` など）
 - ゴールデンテスト（`tests/cases/*.dol` と期待出力の比較）
 
-[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.54.0...HEAD
+[0.54.0]: https://github.com/sonp-2/dolphin/compare/v0.53.0...v0.54.0
+[0.53.0]: https://github.com/sonp-2/dolphin/compare/v0.52.0...v0.53.0
+[0.52.0]: https://github.com/sonp-2/dolphin/compare/v0.51.0...v0.52.0
+[0.51.0]: https://github.com/sonp-2/dolphin/compare/v0.50.0...v0.51.0
+[0.50.0]: https://github.com/sonp-2/dolphin/compare/v0.49.0...v0.50.0
+[0.49.0]: https://github.com/sonp-2/dolphin/compare/v0.48.0...v0.49.0
+[0.48.0]: https://github.com/sonp-2/dolphin/compare/v0.47.0...v0.48.0
+[0.47.0]: https://github.com/sonp-2/dolphin/compare/v0.46.0...v0.47.0
+[0.46.0]: https://github.com/sonp-2/dolphin/compare/v0.45.0...v0.46.0
+[0.45.0]: https://github.com/sonp-2/dolphin/compare/v0.44.0...v0.45.0
+[0.44.0]: https://github.com/sonp-2/dolphin/compare/v0.43.0...v0.44.0
+[0.43.0]: https://github.com/sonp-2/dolphin/compare/v0.42.0...v0.43.0
+[0.42.0]: https://github.com/sonp-2/dolphin/compare/v0.41.0...v0.42.0
+[0.41.0]: https://github.com/sonp-2/dolphin/compare/v0.40.0...v0.41.0
+[0.40.0]: https://github.com/sonp-2/dolphin/compare/v0.39.0...v0.40.0
+[0.39.0]: https://github.com/sonp-2/dolphin/compare/v0.38.0...v0.39.0
+[0.38.0]: https://github.com/sonp-2/dolphin/compare/v0.37.0...v0.38.0
+[0.37.0]: https://github.com/sonp-2/dolphin/compare/v0.36.0...v0.37.0
+[0.36.0]: https://github.com/sonp-2/dolphin/compare/v0.35.0...v0.36.0
+[0.35.0]: https://github.com/sonp-2/dolphin/compare/v0.34.0...v0.35.0
+[0.34.0]: https://github.com/sonp-2/dolphin/compare/v0.33.0...v0.34.0
+[0.33.0]: https://github.com/sonp-2/dolphin/compare/v0.32.0...v0.33.0
+[0.32.0]: https://github.com/sonp-2/dolphin/compare/v0.31.0...v0.32.0
+[0.31.0]: https://github.com/sonp-2/dolphin/compare/v0.30.0...v0.31.0
+[0.30.0]: https://github.com/sonp-2/dolphin/compare/v0.29.0...v0.30.0
+[0.29.0]: https://github.com/sonp-2/dolphin/compare/v0.28.0...v0.29.0
+[0.28.0]: https://github.com/sonp-2/dolphin/compare/v0.27.0...v0.28.0
+[0.27.0]: https://github.com/sonp-2/dolphin/compare/v0.26.0...v0.27.0
+[0.26.0]: https://github.com/sonp-2/dolphin/compare/v0.25.0...v0.26.0
+[0.25.0]: https://github.com/sonp-2/dolphin/compare/v0.24.0...v0.25.0
+[0.24.0]: https://github.com/sonp-2/dolphin/compare/v0.23.0...v0.24.0
+[0.23.0]: https://github.com/sonp-2/dolphin/compare/v0.22.0...v0.23.0
+[0.22.0]: https://github.com/sonp-2/dolphin/compare/v0.21.0...v0.22.0
+[0.21.0]: https://github.com/sonp-2/dolphin/compare/v0.20.0...v0.21.0
+[0.20.0]: https://github.com/sonp-2/dolphin/compare/v0.19.0...v0.20.0
+[0.19.0]: https://github.com/sonp-2/dolphin/compare/v0.18.0...v0.19.0
+[0.18.0]: https://github.com/sonp-2/dolphin/compare/v0.17.0...v0.18.0
+[0.17.0]: https://github.com/sonp-2/dolphin/compare/v0.16.0...v0.17.0
+[0.16.0]: https://github.com/sonp-2/dolphin/compare/v0.15.0...v0.16.0
+[0.15.0]: https://github.com/sonp-2/dolphin/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/sonp-2/dolphin/compare/v0.13.0...v0.14.0
+[0.13.0]: https://github.com/sonp-2/dolphin/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/sonp-2/dolphin/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/sonp-2/dolphin/compare/v0.10.0...v0.11.0
+[0.10.0]: https://github.com/sonp-2/dolphin/compare/v0.9.0...v0.10.0
+[0.9.0]: https://github.com/sonp-2/dolphin/compare/v0.8.0...v0.9.0
+[0.8.0]: https://github.com/sonp-2/dolphin/compare/v0.7.0...v0.8.0
+[0.7.0]: https://github.com/sonp-2/dolphin/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/sonp-2/dolphin/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/sonp-2/dolphin/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sonp-2/dolphin/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sonp-2/dolphin/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sonp-2/dolphin/compare/v0.1.0...v0.2.0

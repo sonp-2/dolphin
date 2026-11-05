@@ -1,0 +1,53 @@
+// async 関数の変数: 呼び出しごとに別で、クロージャも別々に捕まえる
+@async := import["std:async"]
+async work[@name, @n] (
+    @local := @n * 10
+    await @async.sleep[0.001 * @n]
+    @local = @local + 1
+    # "@name=@local"
+)
+async main[] (
+    @fs := {}
+    for @i in range[1, 4] (
+        @tag := "t@i"
+        arr_push[@fs, work[@tag, @i]]
+    )
+    @all := await @async.all[@fs]
+    log[@all]
+
+    // await をまたいでも、ループごとの変数は保たれる
+    @seen := {}
+    for @j in {3, 1, 2} (
+        @mine := @j
+        @r := await work["w", 1]
+        arr_push[@seen, {@mine, @r}]
+    )
+    log[@seen]
+
+    // トップレベルの変数を async 関数の中から書き換える
+    @counter = @counter + 1
+    # @counter
+)
+@counter := 40
+log[await main[]]
+log[@counter]
+
+// async の無名関数が外の変数を捕まえる
+@base := 100
+@add := async [@x] (
+    await @async.sleep[0.001]
+    @base = @base + @x
+    # @base
+)
+log[await @add[1], await @add[2], @base]
+
+// エラーは await した側で ? によって伝わる
+async fails[@n] (
+    if @n > 1 ( # err_new["too_big", "n=@n"] )
+    # @n
+)
+async chain[@n] (
+    @v := await fails[@n]?
+    # @v * 2
+)
+log[await chain[1], err_message[await chain[5]]]

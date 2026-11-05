@@ -1,0 +1,4 @@
+utilx_bytes_set_range_error.dol:1:5: エラー: bytes_set_int の値 256 は 1 バイトに収まりません（-128〜255）
+  |
+1 | log[bytes_set_int[bytes_new[4], 0, 1, 256, "be"]]
+  |     ^

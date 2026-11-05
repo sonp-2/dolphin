@@ -1,0 +1,40 @@
+// std:zip の gzip / zlib（design.md 5.51）
+@zip := import["std:zip"]
+
+@text := "hello hello hello hello hello hello hello hello hello hello"
+@gz := @zip.gzip[@text]
+log[type_of[@gz], bytes_len[@gz] < bytes_len[str_to_bytes[@text]]]
+// gzip のマジックナンバー
+log[bytes_to_arr[@gz]{0}, bytes_to_arr[@gz]{1}]
+log[bytes_to_str[@zip.gunzip[@gz]?]? == @text]
+
+// 同じ入力からは同じバイト列ができる
+log[@zip.gzip[@text] == @zip.gzip[str_to_bytes[@text]]]
+
+// zlib
+@z := @zip.deflate[@text]
+log[bytes_to_arr[@z]{0}, bytes_len[@z] < bytes_len[str_to_bytes[@text]]]
+log[bytes_to_str[@zip.inflate[@z]?]? == @text]
+
+// 空と、バイナリ
+log[bytes_len[@zip.gunzip[@zip.gzip[""]]?], bytes_len[@zip.inflate[@zip.deflate[""]]?]]
+@bin := bytes_from_arr[{0, 1, 2, 255, 254, 10, 13, 0}]
+log[@zip.gunzip[@zip.gzip[@bin]]? == @bin, @zip.inflate[@zip.deflate[@bin]]? == @bin]
+
+// 強さ
+@big := str_to_bytes[str_repeat["abcdefgh", 500]]
+@fast := @zip.gzip[@big, {"level": 1}]
+@best := @zip.gzip[@big, {"level": 9}]
+@none := @zip.gzip[@big, {"level": 0}]
+log[bytes_len[@best] <= bytes_len[@fast], bytes_len[@none] > bytes_len[@big]]
+log[@zip.gunzip[@none]? == @big, @zip.gunzip[@best]? == @big]
+
+// 連結された gzip は続けて展開する
+log[bytes_to_str[@zip.gunzip[bytes_concat[@zip.gzip["ab"], @zip.gzip["cd"]]]?]?]
+
+// 壊れたデータは parse、上限を超えると too_large
+log[err_kind[@zip.gunzip[str_to_bytes["not gzip"]]], err_kind[@zip.inflate[str_to_bytes["not zlib"]]]]
+log[err_kind[@zip.gunzip[@zip.deflate["x"]]], err_kind[@zip.inflate[@zip.gzip["x"]]]]
+log[err_kind[@zip.gunzip[bytes_slice[@gz, 0, 12]]]]
+log[err_kind[@zip.gunzip[@gz, {"max_size": 10}]], err_message[@zip.inflate[@z, {"max_size": 10}]]]
+log[bytes_len[@zip.gunzip[@gz, {"max_size": 1000}]?]]

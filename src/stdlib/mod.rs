@@ -9,7 +9,9 @@ pub mod collections;
 pub mod data;
 pub mod debug;
 pub mod error;
+pub mod format;
 pub mod gc;
+pub mod log;
 pub mod map;
 pub mod math;
 pub mod media;
@@ -25,10 +27,18 @@ pub mod worker;
 // 階層を分けても、`stdlib::http` のように 1 段で呼べるようにする
 #[cfg(feature = "crypto")]
 pub use data::crypto;
+#[cfg(feature = "postgres")]
+pub use data::postgres;
 #[cfg(feature = "regex")]
 pub use data::regex;
 #[cfg(feature = "sqlite")]
 pub use data::sqlite;
+#[cfg(feature = "toml")]
+pub use data::toml;
+#[cfg(feature = "yaml")]
+pub use data::yaml;
+#[cfg(feature = "zip")]
+pub use data::zip;
 pub use data::{bytes, csv, encoding, json};
 #[cfg(feature = "audio")]
 pub use media::audio;
@@ -58,9 +68,11 @@ pub fn register(interp: &mut Interpreter<'_>) {
     #[cfg(feature = "ffi")]
     ffi::register(interp);
     string::register(interp);
+    format::register(interp);
     stream::register(interp);
     array::register(interp);
     map::register(interp);
+    log::register(interp);
     math::register(interp);
     bits::register(interp);
     net::register(interp);
@@ -88,6 +100,14 @@ pub fn register(interp: &mut Interpreter<'_>) {
     regex::register(interp);
     #[cfg(feature = "sqlite")]
     sqlite::register(interp);
+    #[cfg(feature = "postgres")]
+    postgres::register(interp);
+    #[cfg(feature = "yaml")]
+    yaml::register(interp);
+    #[cfg(feature = "toml")]
+    toml::register(interp);
+    #[cfg(feature = "zip")]
+    zip::register(interp);
     os::register(interp);
     time::register(interp);
 }
@@ -100,6 +120,17 @@ pub(crate) fn expect_args(name: &str, args: &[Value], n: usize) -> Result<(), St
     } else {
         Err(format!(
             "{name} の引数は {n} 個です（{} 個渡されました）",
+            args.len()
+        ))
+    }
+}
+
+pub(crate) fn expect_args_at_least(name: &str, args: &[Value], n: usize) -> Result<(), String> {
+    if args.len() >= n {
+        Ok(())
+    } else {
+        Err(format!(
+            "{name} の引数は {n} 個以上です（{} 個渡されました）",
             args.len()
         ))
     }

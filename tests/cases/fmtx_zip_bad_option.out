@@ -1,0 +1,4 @@
+fmtx_zip_bad_option.dol:2:1: エラー: zip.gzip の `level` は 0〜9 の整数です（10）
+  |
+2 | @zip.gzip["x", {"level": 10}]
+  | ^

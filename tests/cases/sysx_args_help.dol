@@ -1,0 +1,11 @@
+// --help は使い方を出して、終了コード 0 でスクリプトを終わる（design.md 5.49）
+@os := import["std:os"]
+log["前"]
+@a := @os.parse_args[{
+    "name": "tool",
+    "description": "使い方の例",
+    "flags": {"force": {"short": "f", "help": "強制する"}},
+    "options": {"out": {"short": "o", "help": "出力先", "default": "-"}},
+    "positional": {"src"}
+}, {"-f", "--help"}]
+log["後（出ない）"]

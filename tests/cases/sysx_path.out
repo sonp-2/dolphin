@@ -1,0 +1,11 @@
+../c/d . ../..
+x x/y ../..
+../c . ../../..
+a/b
+{"/", "a", "b"} {"a", "b", "c.txt"} {"a", "..", "b"} {".", "a"}
+{} {"/"} {"a"}
+true
+a/b.md a/b.md a/b
+a/b.md a/b.tar.zip b.x.y
+a/.hidden.md a/b.md
+ / a/..

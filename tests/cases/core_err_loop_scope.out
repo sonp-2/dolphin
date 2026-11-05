@@ -1,0 +1,4 @@
+core_err_loop_scope.dol:5:5: エラー: 未定義の変数 `@last`
+  |
+5 | log[@last]
+  |     ^

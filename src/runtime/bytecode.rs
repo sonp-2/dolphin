@@ -1,7 +1,6 @@
 //! バイトコード（design.md 5.45）。関数・ファイルの本体を、命令の列にコンパイルしたもの。
 //! 命令は `compile.rs` が作り、`interp/vm.rs` の VM が実行する
 
-use std::cell::Cell;
 use std::rc::Rc;
 
 use super::value::Value;
@@ -27,17 +26,6 @@ pub enum Op {
     PopScope,
     /// 関数のローカル変数（スロット）を読んで積む。スロットは枠の `base` からの位置
     LoadLocal(u32),
-    /// ファイルの本体で、ブロックの中の変数ではない名前（トップレベルの変数）を読んで積む。
-    /// `cache` は前回見つけた表の位置
-    LoadGlobal {
-        name: u32,
-        cache: Cell<u32>,
-    },
-    /// `LoadGlobal` の代入版。なければ「未定義の変数」
-    AssignGlobal {
-        name: u32,
-        cache: Cell<u32>,
-    },
     /// スタックの値を、ローカル変数（スロット）に入れる（宣言も代入も）
     StoreLocal(u32),
 
@@ -161,7 +149,11 @@ pub struct Chunk {
     /// 命令ごとの位置（エラー表示用）。`code` と同じ長さ
     pub spans: Vec<Span>,
     pub consts: Vec<Value>,
-    pub names: Vec<String>,
+    pub names: Vec<Rc<str>>,
+    /// 関数の引数名（`FuncDef::params` と同じ順）。呼び出しのとき文字列を確保せずに宣言するため
+    pub param_names: Vec<Rc<str>>,
+    /// 残りの引数の名前
+    pub rest_name: Option<Rc<str>>,
     /// `MakeClosure` が作る無名関数の定義
     pub defs: Vec<Rc<FuncDef>>,
     pub patterns: Vec<Pattern>,

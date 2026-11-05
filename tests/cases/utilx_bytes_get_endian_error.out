@@ -1,0 +1,4 @@
+utilx_bytes_get_endian_error.dol:1:5: エラー: bytes_get_int のバイト順は "le" か "be" です（"middle"）
+  |
+1 | log[bytes_get_int[bytes_new[4], 0, 4, "middle"]]
+  |     ^

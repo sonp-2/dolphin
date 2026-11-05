@@ -5,10 +5,10 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use super::{expect_args, int_arg, num_arg, type_error};
+use super::{array_arg, error_value, expect_args, int_arg, num_arg, type_error};
 use crate::runtime::data::Data;
 use crate::runtime::events::Event;
-use crate::runtime::handle::Handle;
+use crate::runtime::handle::{Forward, FutureOutcome, Handle, HandleKind};
 use crate::runtime::interp::Interpreter;
 use crate::runtime::value::Value;
 
@@ -22,6 +22,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("async.run", run),
             ("async.stop", stop),
             ("async.sleep", sleep),
+            ("async.race", race),
+            ("async.timeout", timeout),
         ],
     );
 }
@@ -170,6 +172,115 @@ fn sleep(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
         let _ = tx.send(Event::Tick { id });
     });
     Ok(future)
+}
+
+/// future の今の状態。終わっていれば結果（失敗は受け取ったことにする）、まだなら `Some(None)`。
+/// future でなければ `None`
+fn peek_future(value: &Value) -> Option<Option<FutureOutcome>> {
+    if let Value::Handle(handle) = value
+        && let HandleKind::Future(state) = &mut *handle.inner.borrow_mut()
+    {
+        state.observed = true;
+        return Some(match &state.outcome {
+            FutureOutcome::Pending => None,
+            done => Some(done.clone()),
+        });
+    }
+    None
+}
+
+/// `future` が終わったとき、`forward` に従って転送先を終わらせるようにする
+fn add_forward(future: &Value, forward: Forward) {
+    if let Value::Handle(handle) = future
+        && let HandleKind::Future(state) = &mut *handle.inner.borrow_mut()
+    {
+        state.forwards.push(forward);
+    }
+}
+
+/// 最初に終わった future の結果で終わる future（design.md 5.50）
+fn race(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("async.race", args, 1)?;
+    let futures: Vec<Value> = array_arg("async.race", args, 0)?.borrow().clone();
+    if futures.is_empty() {
+        return Err("async.race の配列が空です（future が 1 つ以上要ります）".into());
+    }
+    // 先に全部を検査する（途中で転送だけが残らないように）
+    for (i, future) in futures.iter().enumerate() {
+        if peek_future(future).is_none() {
+            return Err(format!(
+                "async.race の {} 番目の要素は future です（{}が渡されました）",
+                i + 1,
+                future.type_name()
+            ));
+        }
+    }
+    let result = Handle::new_future();
+    for future in &futures {
+        if let Some(Some(outcome)) = peek_future(future) {
+            interp.settle_future(&result, outcome);
+            break;
+        }
+        add_forward(
+            future,
+            Forward {
+                target: result.clone(),
+                replace: None,
+                cancel_timer: None,
+            },
+        );
+    }
+    Ok(result)
+}
+
+/// 時間内に終わらなければ、`timeout` のエラー値で終わる future（design.md 5.50）
+fn timeout(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("async.timeout", args, 2)?;
+    let limit = {
+        let n = num_arg("async.timeout", args, 1)?;
+        if !(n.is_finite() && n > 0.0) {
+            return Err(format!("async.timeout の秒数は 0 より大きい数です（{n}）"));
+        }
+        Duration::try_from_secs_f64(n)
+            .map_err(|_| format!("async.timeout の秒数が大きすぎます（{n}）"))?
+    };
+    let future = &args[0];
+    match peek_future(future) {
+        None => return Err(type_error("async.timeout", 0, "future", future)),
+        Some(Some(_)) => return Ok(future.clone()),
+        Some(None) => {}
+    }
+    let result = Handle::new_future();
+    let timer = Handle::new_future();
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let id = interp
+        .events
+        .register(timer.clone(), Some((Arc::clone(&cancelled), false)))?;
+    let tx = interp.events.sender();
+    thread::spawn(move || {
+        thread::sleep(limit);
+        let _ = tx.send(Event::Tick { id });
+    });
+    add_forward(
+        future,
+        Forward {
+            target: result.clone(),
+            replace: None,
+            cancel_timer: Some(id),
+        },
+    );
+    add_forward(
+        &timer,
+        Forward {
+            target: result.clone(),
+            replace: Some(error_value(
+                "timeout",
+                format!("{} 秒以内に終わりませんでした", args[1]),
+            )),
+            cancel_timer: None,
+        },
+    );
+    Ok(result)
 }
 
 fn cancel(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {

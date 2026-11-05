@@ -1,0 +1,4 @@
+core_err_continue_in_closure.dol:3:16: エラー: `continue` は while か for の中でのみ使えます
+  |
+3 |     @f := [] ( continue )
+  |                ^

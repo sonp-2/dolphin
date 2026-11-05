@@ -1,0 +1,4 @@
+utilx_math_mean_type_error.dol:2:5: エラー: math.mean の 2 番目の要素は数値です（文字列が渡されました）
+  |
+2 | log[@m.mean[{1, "a"}]]
+  |     ^

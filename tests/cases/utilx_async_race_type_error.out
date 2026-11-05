@@ -1,0 +1,4 @@
+utilx_async_race_type_error.dol:2:5: エラー: async.race の 1 番目の要素は future です（数値が渡されました）
+  |
+2 | log[@a.race[{1}]]
+  |     ^

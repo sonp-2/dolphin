@@ -1,0 +1,4 @@
+core_err_closure_scope.dol:7:5: エラー: 未定義の変数 `@inner`
+  |
+7 | log[@inner]
+  |     ^
