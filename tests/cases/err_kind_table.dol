@@ -1,0 +1,20 @@
+// design.md 5.57 の kind の表: 実際に返る場面のうち、環境に頼らないもの
+@math := import["std:math"]
+@json := import["std:json"]
+
+// not_found: ないファイル
+log[err_kind[file_read["target/no_such_file_kind.txt"]]]
+// parse: 数に読めない文字列、壊れた JSON
+log[err_kind[to_num["abc"]], err_kind[to_int["x"]], err_kind[@json.parse["{"]]]
+// range: 空の配列の平均
+log[err_kind[@math.mean[{}]]]
+// invalid: record に足りないフィールドを当てはめる
+record Pt[@x, @y]
+log[err_kind[record_from[Pt, {"x": 1}]]]
+// 自分で作った kind はそのまま
+log[err_kind[err_new["custom", "m"]]]
+// runtime: 実行時エラーは catch で捕まえたときだけエラー値になる
+@r := catch[[] ( # 1 / 0 )]
+log[is_error[@r], err_kind[@r]]
+// 実行時エラーでない失敗は catch なしでエラー値
+log[is_error[to_num["abc"]]]
