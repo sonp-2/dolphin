@@ -3,6 +3,7 @@
 //! `http` feature を外したときだけ出力が変わるケースは、`名前.nohttp.out` に書く。
 //! 名前が `crypto` で始まるケースは、`crypto` feature を外した版では動かさない（`regex` も同じ）。
 //! 名前が `sqlite` で始まるケースは、`sqlite` feature を付けた版でだけ動かす
+//! 名前が `fmtx_yaml` `fmtx_toml` `fmtx_zip` で始まるケースも同じ（それぞれの feature を付けた版でだけ）
 
 use std::fs;
 use std::path::Path;
@@ -27,6 +28,9 @@ fn golden() {
             && (cfg!(feature = "ui")
                 || cfg!(feature = "audio")
                 || cfg!(feature = "sqlite")
+                || cfg!(feature = "yaml")
+                || cfg!(feature = "toml")
+                || cfg!(feature = "zip")
                 || cfg!(feature = "ffi")
                 || !cfg!(feature = "image"))
         {
@@ -42,6 +46,13 @@ fn golden() {
         }
         // `sqlite` feature は既定では無効
         if name.starts_with("sqlite") && !cfg!(feature = "sqlite") {
+            continue;
+        }
+        // `yaml` `toml` `zip` feature は既定では無効。名前が `fmtx_yaml` `fmtx_toml` `fmtx_zip` で始まるケースは、付けた版でだけ動かす
+        if (name.starts_with("fmtx_yaml") && !cfg!(feature = "yaml"))
+            || (name.starts_with("fmtx_toml") && !cfg!(feature = "toml"))
+            || (name.starts_with("fmtx_zip") && !cfg!(feature = "zip"))
+        {
             continue;
         }
         let src = fs::read_to_string(&path).unwrap();

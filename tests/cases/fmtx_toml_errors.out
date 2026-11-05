@@ -1,0 +1,6 @@
+parse parse parse
+TOML が正しくありません（2 行 10 列）: unclosed array, expected `]`
+parse parse
+unsupported unsupported unsupported
+unsupported unsupported
+nil は TOML にできません（TOML に null はありません）

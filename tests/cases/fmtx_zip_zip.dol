@@ -1,0 +1,68 @@
+// std:zip の zip ファイル（design.md 5.51）。target/fmtx_zip の下だけを使う
+@zip := import["std:zip"]
+@dir := "target/fmtx_zip"
+@gone := file_remove_all[@dir]
+file_mkdir[@dir + "/src/sub"]
+file_write[@dir + "/src/a.txt", "alpha"]
+file_write[@dir + "/src/sub/b.txt", "bravo bravo bravo"]
+file_write_bytes[@dir + "/src/sub/c.bin", bytes_from_arr[{0, 255, 1, 254}]]
+file_mkdir[@dir + "/src/empty"]
+
+// ファイルとディレクトリのパスの配列から作る（ディレクトリは中身ごと）
+@z1 := @dir + "/one.zip"
+log[@zip.zip_create[@z1, {@dir + "/src"}]]
+@entries := @zip.zip_read[@z1]?
+for @e in @entries (
+    log[@e.name, @e.size, @e.is_dir]
+)
+log[@entries{1}.compressed_size > 0]
+
+// 1 つだけ取り出す
+log[@zip.zip_get[@z1, @dir + "/src/a.txt"]?]
+log[bytes_to_str[@zip.zip_get[@z1, @dir + "/src/sub/b.txt"]?]?]
+log[err_kind[@zip.zip_get[@z1, "nothing"]], err_kind[@zip.zip_get[@z1, @dir + "/src/sub/"]]]
+
+// 展開して、中身が同じ
+@out := @dir + "/out"
+@written := @zip.zip_extract[@z1, @out]?
+log[@written]
+log[file_read[@out + "/" + @dir + "/src/a.txt"]?, file_read[@out + "/" + @dir + "/src/sub/b.txt"]?]
+log[file_read_bytes[@out + "/" + @dir + "/src/sub/c.bin"]? == bytes_from_arr[{0, 255, 1, 254}]]
+log[file_info[@out + "/" + @dir + "/src/empty"]{"is_dir"}]
+
+// マップ（エントリ名 → 中身）から作る。ディスクは読まない
+@z2 := @dir + "/two.zip"
+@zip.zip_create[@z2, {"readme.txt": "hello", "data/bin": bytes_from_arr[{1, 2, 3}], "日本語/名前.txt": "こんにちは"}]?
+log[arr_map[@zip.zip_read[@z2]?, [@e] ( # @e.name )]]
+@out2 := @dir + "/out2"
+log[@zip.zip_extract[@z2, @out2]?]
+log[file_read[@out2 + "/readme.txt"]?, file_read[@out2 + "/日本語/名前.txt"]?]
+
+// 往復: 作る → 展開 → 作り直す → 同じ内容
+@z3 := @dir + "/three.zip"
+@zip.zip_create[@z3, {"readme.txt": file_read[@out2 + "/readme.txt"]?, "data/bin": file_read_bytes[@out2 + "/data/bin"]?}]?
+log[@zip.zip_get[@z3, "readme.txt"]? == @zip.zip_get[@z2, "readme.txt"]?, @zip.zip_get[@z3, "data/bin"]? == @zip.zip_get[@z2, "data/bin"]?]
+
+// 同じ入力からは同じバイト列
+@z4 := @dir + "/four.zip"
+@zip.zip_create[@z4, {"readme.txt": "hello", "data/bin": bytes_from_arr[{1, 2, 3}], "日本語/名前.txt": "こんにちは"}]?
+log[file_read_bytes[@z2]? == file_read_bytes[@z4]?]
+
+// 圧縮しない（level 0）
+@z5 := @dir + "/five.zip"
+@zip.zip_create[@z5, {"x": str_repeat["a", 1000]}, {"level": 0}]?
+log[@zip.zip_read[@z5]?{0}.compressed_size == @zip.zip_read[@z5]?{0}.size]
+@zip.zip_create[@z5, {"x": str_repeat["a", 1000]}]?
+log[@zip.zip_read[@z5]?{0}.compressed_size < @zip.zip_read[@z5]?{0}.size]
+
+// 上限
+log[err_kind[@zip.zip_extract[@z2, @dir + "/limit", {"max_size": 3}]], is_error[file_list[@dir + "/limit"]]]
+log[err_kind[@zip.zip_get[@z2, "readme.txt", {"max_size": 2}]]]
+
+// 失敗
+log[err_kind[@zip.zip_read[@dir + "/none.zip"]], err_kind[@zip.zip_extract[@dir + "/none.zip", @dir + "/x"]]]
+file_write[@dir + "/broken.zip", "this is not a zip"]
+log[err_kind[@zip.zip_read[@dir + "/broken.zip"]], err_kind[@zip.zip_extract[@dir + "/broken.zip", @dir + "/y"]]]
+log[err_kind[@zip.zip_create[@dir + "/no_such_dir/a.zip", {"x": "y"}]]]
+log[err_kind[@zip.zip_create[@dir + "/z.zip", {@dir + "/missing.txt"}]]]
+log[file_exists[@dir + "/z.zip"]]

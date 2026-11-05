@@ -1,0 +1,10 @@
+parse parse parse
+YAML が正しくありません（3 行 1 列）: while parsing a flow sequence, expected ',' or ']'
+unsupported 1 行 7 列: アンカー（`&名前`）は Dolphin の値にできません
+unsupported
+unsupported
+unsupported 1 行 10 列: タグ（`!` `!!`）は Dolphin の値にできません
+unsupported
+unsupported unsupported
+unsupported unsupported unsupported
+true

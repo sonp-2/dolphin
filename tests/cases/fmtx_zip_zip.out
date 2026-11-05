@@ -1,0 +1,29 @@
+nil
+target/fmtx_zip/src/ 0 true
+target/fmtx_zip/src/a.txt 5 false
+target/fmtx_zip/src/empty/ 0 true
+target/fmtx_zip/src/sub/ 0 true
+target/fmtx_zip/src/sub/b.txt 17 false
+target/fmtx_zip/src/sub/c.bin 4 false
+true
+<bytes 616c706861>
+bravo bravo bravo
+not_found io
+{"target/fmtx_zip/src/a.txt", "target/fmtx_zip/src/sub/b.txt", "target/fmtx_zip/src/sub/c.bin"}
+alpha bravo bravo bravo
+true
+true
+{"readme.txt", "data/bin", "日本語/名前.txt"}
+{"readme.txt", "data/bin", "日本語/名前.txt"}
+hello こんにちは
+true true
+true
+true
+true
+too_large true
+too_large
+not_found not_found
+parse parse
+not_found
+not_found
+false

@@ -1,0 +1,28 @@
+{"title": "TOML example", "count": 3, "ratio": 0.25, "on": true, "tags": {"a", "b"}, "when": "1979-05-27T07:32:00Z", "day": "1979-05-27", "clock": "07:32:00", "owner": {"name": "Tom", "born": "1979-05-27T07:32:00-08:00"}, "database": {"ports": {8000, 8001}, "inline": {"x": 1, "y": 2}}, "servers": {{"name": "alpha"}, {"name": "beta"}}}
+TOML example 3 0.25 true b 8000 beta
+1979-05-27T07:32:00Z 1979-05-27 07:32:00 1979-05-27T07:32:00-08:00 string
+{:} map
+title = "x"
+n = 3
+f = 0.5
+list = [1, 2]
+
+[sub]
+k = "v"
+
+[sub.deep]
+z = true
+
+[[rows]]
+id = 1
+
+[[rows]]
+id = 2
+
+"a b" = 1
+ja = "日本語"
+q = """
+say "hi"
+next"""
+
+

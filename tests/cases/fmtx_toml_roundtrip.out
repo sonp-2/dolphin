@@ -1,0 +1,24 @@
+flat true
+nested true
+array of tables true
+mixed array true
+strings true
+tables after values true
+empty true
+true
+name = "x"
+n = 7
+
+[a]
+b = [1, 2]
+
+[[a.c]]
+d = 1
+
+[[a.c]]
+d = 2
+
+when = "1979-05-27T07:32:00Z"
+
+true
+true

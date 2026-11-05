@@ -1,0 +1,42 @@
+{"name": "dolphin", "ports": {80, 443}, "debug": false, "ratio": 0.5, "none": nil, "empty": nil, "nested": {"list": {"a", {"b": 1, "c": {"x"}}}}}
+dolphin 443 false 0.5 nil nil
+1 number
+{"a": 1, "b": 150, "c": 31, "d": 15, "e": -3, "f": true, "g": true, "h": false, "i": "yes", "j": "1_000", "k": "12", "l": "true", "m": nil, "n": nil}
+{"a": "line1\nline2\n", "b": "folded text\n"}
+{"1": "one", "true": "t", "~": "n"}
+nil nil 42 hello
+{{"a": 1}, {"x", "y"}, "z"}
+{}
+parse
+name: dolphin
+ports:
+- 80
+- 443
+debug: false
+none: null
+
+- a: 1
+  b:
+  - 2
+  - 3
+- []
+- {}
+- - []
+- - - x
+- e: {}
+  f: []
+
+plain
+ 12
+ null
+ []
+ - []
+
+"12": "12"
+"true": "true"
+"": ""
+"a: b": "- x"
+line: "a\nb"
+ja: 日本語
+pad: " x "
+

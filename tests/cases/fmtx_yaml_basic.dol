@@ -1,0 +1,25 @@
+// std:yaml（design.md 5.51）
+@yaml := import["std:yaml"]
+
+// 基本。マップ・配列・文字列・数値・真偽値・nil
+@v := @yaml.parse["name: dolphin\nports: [80, 443]\ndebug: false\nratio: 0.5\nnone: ~\nempty:\nnested:\n  list:\n    - a\n    - b: 1\n      c: [x]\n"]?
+log[@v]
+log[@v.name, @v.ports{1}, @v.debug, @v.ratio, @v.none, @v.empty]
+log[@v.nested.list{1}.b, type_of[@v.ports{0}]]
+
+// 型の決まり方（YAML 1.2 のコアスキーマ）
+log[@yaml.parse["{a: 1, b: 1.5e2, c: 0x1F, d: 0o17, e: -3, f: true, g: True, h: FALSE, i: yes, j: 1_000, k: '12', l: \"true\", m: null, n: Null}"]?]
+log[@yaml.parse["a: |\n  line1\n  line2\nb: >\n  folded\n  text\n"]?]
+log[@yaml.parse["1: one\ntrue: t\n~: n\n"]?]
+
+// 空のドキュメント、スカラー、複数のドキュメント
+log[@yaml.parse[""]?, @yaml.parse["# comment only\n"]?, @yaml.parse["42"]?, @yaml.parse["hello"]?]
+log[@yaml.parse_all["---\na: 1\n---\n- x\n- y\n---\nz\n"]?]
+log[@yaml.parse_all[""]?]
+log[err_kind[@yaml.parse["---\na\n---\nb\n"]]]
+
+// 書く
+log[@yaml.stringify[{"name": "dolphin", "ports": {80, 443}, "debug": false, "none": nil}]]
+log[@yaml.stringify[{{"a": 1, "b": {2, 3}}, {}, {:}, {{}}, {{"x"}}, {"e": {:}, "f": {}}}]]
+log[@yaml.stringify["plain"], @yaml.stringify[12], @yaml.stringify[nil], @yaml.stringify[{}], @yaml.stringify[{{}}]]
+log[@yaml.stringify[{"12": "12", "true": "true", "": "", "a: b": "- x", "line": "a\nb", "ja": "日本語", "pad": " x "}]]

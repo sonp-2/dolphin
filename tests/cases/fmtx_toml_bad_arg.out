@@ -1,0 +1,4 @@
+fmtx_toml_bad_arg.dol:2:1: エラー: toml.stringify の 1 番目の引数はマップです（配列が渡されました）
+  |
+2 | @toml.stringify[{1, 2}]
+  | ^

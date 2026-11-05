@@ -1,0 +1,4 @@
+fmtx_yaml_bad_value.dol:2:1: エラー: yaml.stringify: 関数は YAML にできません
+  |
+2 | @yaml.stringify[{"f": log}]
+  | ^
