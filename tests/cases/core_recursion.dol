@@ -1,0 +1,55 @@
+// 再帰: 呼び出しごとに引数と変数が別
+fib[@n] (
+    if @n < 2 (
+        # @n
+    )
+    # fib[@n - 1] + fib[@n - 2]
+)
+log[arr_map[range[0, 12], fib]]
+
+// 再帰の途中で局所変数が混ざらない
+depth[@n] (
+    @here := @n * 10
+    if @n > 0 (
+        @below := depth[@n - 1]
+        # {@here, @below}
+    )
+    # @here
+)
+log[depth[3]]
+
+// 相互再帰（定義より前の行から呼べる）
+log[is_even[10], is_odd[7], is_even[3]]
+is_even[@n] (
+    if @n == 0 ( # true )
+    # is_odd[@n - 1]
+)
+is_odd[@n] (
+    if @n == 0 ( # false )
+    # is_even[@n - 1]
+)
+
+// 無名関数を変数に入れて再帰する（自分の変数を捕まえる）
+@countdown := nil
+@countdown = [@n] (
+    if @n == 0 ( # "done" )
+    # @countdown[@n - 1]
+)
+log[@countdown[50]]
+
+// 再帰しながら配列を作る（配列は参照渡し）
+collect[@acc, @n] (
+    if @n == 0 ( # @acc )
+    arr_push[@acc, @n]
+    # collect[@acc, @n - 1]
+)
+log[collect[{}, 5]]
+
+// 再帰とクロージャ: 各段のクロージャが各段の引数を持つ
+chain[@n] (
+    if @n == 0 ( # {} )
+    @rest := chain[@n - 1]
+    arr_push[@rest, [] ( # @n )]
+    # @rest
+)
+log[arr_map[chain[4], [@f] ( # @f[] )]]

@@ -1,0 +1,47 @@
+// 同じ名前の関数と変数は別の名前空間（変数は @ 付き）
+value[] ( # "関数 value" )
+@value := "変数 value"
+log[value[], @value]
+
+// 関数名だけを書くと関数値。同名の変数があっても関数値は関数を指す
+@f := value
+@value = "変更後"
+log[@f[], @value]
+
+// 変数に入れた関数で呼ぶ。同名の関数は呼べないまま残る
+@name := [] ( # "無名" )
+name[] ( # "名前つき" )
+log[@name[], name[]]
+
+// 引数名・ローカル名が関数名と同じ
+twice[@twice] ( # @twice * 2 )
+log[twice[4]]
+
+// モジュール変数はファイルごとに別で、関数からも読み書きできる
+@u := import["lib/util.dol"]
+@count := 1000
+log[@u.next[], @u.next[], @count, @u.count]
+log[@u.get_version[], @u.version]
+
+// モジュールの関数値
+@nx := @u.next
+log[@nx[], @u.count]
+@add := @u.add
+log[@add[2, 3]]
+
+// 本体の同名関数はモジュールの関数と別
+next[] ( # "本体の next" )
+log[next[], @u.next[]]
+
+// モジュールの値は変数に入れて持ち回せる
+call_it[@mod] ( # @mod.add[10, 20] )
+log[call_it[@u]]
+
+// クロージャがモジュールの関数を呼ぶ
+@counter := [] ( # @u.next[] )
+log[@counter[], @counter[]]
+
+// 組み込み関数と同じ名前の変数は問題なく作れる
+@len := 3
+@log := "ログ"
+log[@len, @log]
