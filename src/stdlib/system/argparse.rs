@@ -571,6 +571,9 @@ fn parse(spec: &Spec, args: &[String]) -> Outcome {
                     Ok(v) => opt_vals[k].push(v),
                     Err(reason) => return fail(reason),
                 }
+            } else if c == '=' && at >= 2 {
+                // `-v=1`: 直前の短いフラグに値は付けられない
+                return fail(format!("`-{}` は値を取りません", chars[at - 2]));
             } else {
                 return fail(format!("知らないオプション `-{c}` です"));
             }
