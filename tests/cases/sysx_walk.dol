@@ -1,0 +1,45 @@
+// file_walk と file_glob（design.md 5.49）。target/golden_sysx_walk の下だけを使う
+@dir := "target/golden_sysx_walk"
+@cleared := file_remove_all[@dir]
+file_mkdir[@dir + "/src/sub"]
+file_mkdir[@dir + "/.hidden"]
+file_mkdir[@dir + "/empty"]
+file_write[@dir + "/a.txt", "a"]
+file_write[@dir + "/b.md", "b"]
+file_write[@dir + "/src/main.dol", "m"]
+file_write[@dir + "/src/lib.dol", "l"]
+file_write[@dir + "/src/sub/deep.dol", "d"]
+file_write[@dir + "/src/sub/note.txt", "n"]
+file_write[@dir + "/.hidden/secret.txt", "s"]
+file_write[@dir + "/.dot.txt", "x"]
+
+// walk: ディレクトリはその中身より先。名前の文字コード順
+log[file_walk[@dir]]
+log[file_walk[@dir, {"files": false}]]
+log[file_walk[@dir, {"dirs": false}]]
+log[file_walk[@dir, {"max_depth": 1}]]
+log[file_walk[@dir, {"max_depth": 2, "dirs": false}]]
+log[file_walk[@dir, {"max_depth": 0}]]
+log[file_walk[@dir + "/empty"]]
+log[err_kind[file_walk[@dir + "/none"]]]
+log[err_kind[file_walk[@dir + "/a.txt"]]]
+
+// glob: base なしは、パターンの書いたとおりのパス
+log[file_glob[@dir + "/*.txt"]]
+log[file_glob[@dir + "/.*.txt"]]
+log[file_glob[@dir + "/?.md"]]
+log[file_glob[@dir + "/[ab].*"]]
+log[file_glob[@dir + "/[!a].*"]]
+log[file_glob[@dir + "/src/**/*.dol"]]
+log[file_glob[@dir + "/src/*/"]]
+log[file_glob[@dir + "/src/**"]]
+log[file_glob[@dir + "/**/*.txt"]]
+log[file_glob[@dir + "/src/main.dol"]]
+log[file_glob[@dir + "/none/*"]]
+// base あり: base からの相対パス
+log[file_glob[@dir, "*.txt"]]
+log[file_glob[@dir, "**/*.dol"]]
+log[file_glob[@dir, "src/s*"]]
+log[file_glob[@dir, "**/deep.*"]]
+
+file_remove_all[@dir]

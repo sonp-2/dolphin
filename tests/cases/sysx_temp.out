@@ -1,0 +1,12 @@
+string true 0 true
+true
+hello
+false
+true true true
+false
+true true {}
+{"inner.txt"}
+true .log
+not_found
+false
+true

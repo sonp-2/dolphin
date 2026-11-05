@@ -1,0 +1,1 @@
+@x := file_walk[".", {"depth": 1}]

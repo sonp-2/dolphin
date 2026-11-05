@@ -482,4 +482,101 @@ mod tests {
         assert!(compile("a/*/").dir_only);
         assert!(!compile("a/*").dir_only);
     }
+
+    /// 一時ディレクトリに木を作って、終わったら消す
+    struct Tree(PathBuf);
+
+    impl Tree {
+        fn new(tag: &str) -> Tree {
+            let root =
+                std::env::temp_dir().join(format!("dolphin_walk_{tag}_{}", std::process::id()));
+            let _ = fs::remove_dir_all(&root);
+            fs::create_dir_all(root.join("a/b")).unwrap();
+            fs::write(root.join("a/b/f.txt"), "").unwrap();
+            fs::write(root.join("a/g.txt"), "").unwrap();
+            fs::write(root.join("top.txt"), "").unwrap();
+            Tree(root)
+        }
+
+        fn root(&self) -> String {
+            to_slash(&self.0)
+        }
+    }
+
+    impl Drop for Tree {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn opts(max_depth: Option<usize>) -> WalkOptions {
+        WalkOptions {
+            files: true,
+            dirs: true,
+            follow_links: false,
+            max_depth,
+        }
+    }
+
+    fn walked(tree: &Tree, options: &WalkOptions) -> Vec<String> {
+        let root = tree.root();
+        let mut out = Vec::new();
+        walk(&root, &root, 1, options, &mut Vec::new(), &mut out).unwrap();
+        out.iter()
+            .map(|p| p.strip_prefix(&format!("{root}/")).unwrap().to_string())
+            .collect()
+    }
+
+    #[test]
+    fn walk_orders_dirs_before_contents() {
+        let tree = Tree::new("order");
+        assert_eq!(
+            walked(&tree, &opts(None)),
+            ["a", "a/b", "a/b/f.txt", "a/g.txt", "top.txt"]
+        );
+        assert_eq!(walked(&tree, &opts(Some(1))), ["a", "top.txt"]);
+        assert_eq!(
+            walked(&tree, &opts(Some(2))),
+            ["a", "a/b", "a/g.txt", "top.txt"]
+        );
+    }
+
+    #[test]
+    fn glob_finds_paths() {
+        let tree = Tree::new("glob");
+        let root = tree.root();
+        let found = |pattern: &str| {
+            let compiled = compile(pattern);
+            let mut out = Vec::new();
+            glob_walk(&root, "", &compiled.segs, compiled.dir_only, &mut out);
+            out.sort_unstable();
+            out
+        };
+        assert_eq!(found("*.txt"), ["top.txt"]);
+        assert_eq!(found("**/*.txt"), ["a/b/f.txt", "a/g.txt", "top.txt"]);
+        assert_eq!(found("a/**"), ["a/b", "a/b/f.txt", "a/g.txt"]);
+        assert_eq!(found("*/"), ["a"]);
+        assert!(found("none/*").is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn walk_does_not_follow_links_by_default() {
+        let tree = Tree::new("link");
+        std::os::unix::fs::symlink(&tree.0, tree.0.join("a/loop")).unwrap();
+        // 既定ではリンクの中へ入らない
+        assert_eq!(
+            walked(&tree, &opts(None)),
+            ["a", "a/b", "a/b/f.txt", "a/g.txt", "a/loop", "top.txt"]
+        );
+        // たどっても、循環で元のディレクトリに戻らない
+        let follow = WalkOptions {
+            follow_links: true,
+            ..opts(None)
+        };
+        assert_eq!(
+            walked(&tree, &follow),
+            ["a", "a/b", "a/b/f.txt", "a/g.txt", "a/loop", "top.txt"]
+        );
+    }
 }

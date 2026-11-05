@@ -1,0 +1,18 @@
+// path.relative / parts / with_ext（design.md 5.49）
+@path := import["std:path"]
+
+log[@path.relative["/a/b", "/a/c/d"], @path.relative["/a/b", "/a/b"], @path.relative["/a/b/c", "/a"]]
+log[@path.relative["/a/b/../c", "/a/./c/x"], @path.relative["/", "/x/y"], @path.relative["/x/y", "/"]]
+// 相対パスどうしは、カレントディレクトリを基準にする
+log[@path.relative["a/b", "a/c"], @path.relative["a", "a"], @path.relative["x/y/z", "."]]
+log[@path.relative[".", "a/b"]]
+
+log[@path.parts["/a/b/"], @path.parts["a/b/c.txt"], @path.parts["a/../b"], @path.parts["./a"]]
+log[@path.parts[""], @path.parts["/"], @path.parts["a"]]
+log[str_join[@path.parts["a/b/c"], "/"] == "a/b/c"]
+
+log[@path.with_ext["a/b.txt", ".md"], @path.with_ext["a/b.txt", "md"], @path.with_ext["a/b.txt", ""]]
+log[@path.with_ext["a/b", ".md"], @path.with_ext["a/b.tar.gz", ".zip"], @path.with_ext["b.txt", "x.y"]]
+log[@path.with_ext["a/.hidden", "md"], @path.with_ext["a/b.txt/", "md"]]
+// 最後の名前がないパスはそのまま
+log[@path.with_ext["", "md"], @path.with_ext["/", "md"], @path.with_ext["a/..", "md"]]

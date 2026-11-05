@@ -1,0 +1,42 @@
+{"verbose": false, "quiet": false, "dry-run": false, "out": "a.out", "count": 1, "ratio": nil, "tag": {}, "mode": "fast", "input": "in.txt", "extra": nil, "rest": {}}
+{"verbose": true, "quiet": true, "dry-run": true, "out": "x.bin", "count": 5, "ratio": -1.5, "tag": {"a", "b", "c"}, "mode": "m", "input": "in", "extra": "e", "rest": {"r1", "r2"}}
+int number
+-v --x false
+- -
+b
+usage `--mode` が必要です
+usage `input` が足りません
+usage 知らないオプション `--nope` です
+usage 知らないオプション `-z` です
+usage `--mode` に値がありません
+usage `--count` の値 `x` は整数ではありません
+usage `--count` の値 `1.5` は整数ではありません
+usage `--ratio` の値 `abc` は数値ではありません
+usage `-v` は値を取りません
+usage `--verbose` は値を取りません
+usage `--out` に値がありません
+`--mode` が必要です
+
+使い方: gen [オプション] <input> [extra] [rest]...
+
+ファイルを作る
+
+引数:
+  input  入力ファイル
+  extra
+  rest   （複数指定できる）
+
+オプション:
+  -v, --verbose      詳しく表示する
+  -q, --quiet
+      --dry-run      実際には書かない
+  -o, --out FILE     出力先（既定: a.out）
+      --count COUNT  個数（既定: 1）
+      --ratio RATIO
+  -t, --tag TAG      タグ（複数回指定できる）
+      --mode MODE    （必須）
+  -h, --help         この使い方を表示して終わる
+{:}
+usage
+{"a": "1", "b": "2"}
+{"h": true}

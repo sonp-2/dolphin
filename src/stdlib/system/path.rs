@@ -285,4 +285,31 @@ mod tests {
         assert_eq!(last_name("/"), "");
         assert_eq!(last_name(""), "");
     }
+
+    #[test]
+    fn parts_split() {
+        let parts = |s: &str| split_parts(Path::new(s));
+        assert_eq!(parts("/a/b/"), ["/", "a", "b"]);
+        assert_eq!(parts("a/../b"), ["a", "..", "b"]);
+        assert_eq!(parts("./a"), [".", "a"]);
+        assert!(parts("").is_empty());
+        if cfg!(windows) {
+            assert_eq!(parts("C:/a"), ["C:/", "a"]);
+            assert_eq!(parts("C:\\a\\b"), ["C:/", "a", "b"]);
+        }
+    }
+
+    #[test]
+    fn relative_paths() {
+        let rel = |a: &str, b: &str| relative_between(Path::new(a), Path::new(b));
+        let root = if cfg!(windows) { "C:/" } else { "/" };
+        let p = |s: &str| format!("{root}{s}");
+        assert_eq!(rel(&p("a/b"), &p("a/c/d")).unwrap(), "../c/d");
+        assert_eq!(rel(&p("a"), &p("a")).unwrap(), ".");
+        assert_eq!(rel(&p("a/b/c"), &p("a")).unwrap(), "../..");
+        assert_eq!(rel(root, &p("x")).unwrap(), "x");
+        if cfg!(windows) {
+            assert!(rel("C:/a", "D:/a").is_none());
+        }
+    }
 }
