@@ -5,6 +5,7 @@
 
 use std::collections::HashMap;
 
+use super::env::intern;
 use super::bytecode::{Chunk, Op};
 use super::value::Value;
 use crate::syntax::ast::{BinaryOp, Expr, ExprKind, FuncDef, Stmt, StmtKind, StrSegment};
@@ -37,8 +38,8 @@ pub fn compile_program(stmts: &[Stmt], keep_last: bool) -> Chunk {
 /// 関数の本体をコンパイルする。引数の宣言は呼び出し側（VM）が行い、ここは既定値の評価から始まる
 pub fn compile_function(def: &FuncDef) -> Chunk {
     let mut c = Compiler::new();
-    c.chunk.param_names = def.params.iter().map(|p| p.name.as_str().into()).collect();
-    c.chunk.rest_name = def.rest.as_deref().map(Into::into);
+    c.chunk.param_names = def.params.iter().map(|p| intern(&p.name)).collect();
+    c.chunk.rest_name = def.rest.as_deref().map(intern);
     for (i, param) in def.params.iter().enumerate() {
         if let Some(default) = &param.default {
             let skip = c.emit(
@@ -127,7 +128,7 @@ impl Compiler {
             return i;
         }
         let i = self.chunk.names.len() as u32;
-        self.chunk.names.push(name.into());
+        self.chunk.names.push(intern(name));
         self.names.insert(name.to_string(), i);
         i
     }

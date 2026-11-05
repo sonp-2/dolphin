@@ -50,7 +50,25 @@ impl Default for Vars {
 }
 
 fn same_name(a: &Rc<str>, b: &str) -> bool {
-    a.len() == b.len() && **a == *b
+    // コンパイラが同じ名前を同じ `Rc<str>` にそろえているので、多くはアドレスの比較で済む
+    std::ptr::eq(&raw const **a, b) || (a.len() == b.len() && **a == *b)
+}
+
+thread_local! {
+    static NAMES: RefCell<HashMap<Rc<str>, (), NameBuild>> = RefCell::default();
+}
+
+/// 変数名を共有する。同じ名前なら同じ `Rc<str>` を返す
+pub fn intern(name: &str) -> Rc<str> {
+    NAMES.with(|names| {
+        let mut names = names.borrow_mut();
+        if let Some((key, ())) = names.get_key_value(name) {
+            return Rc::clone(key);
+        }
+        let key: Rc<str> = name.into();
+        names.insert(Rc::clone(&key), ());
+        key
+    })
 }
 
 impl Vars {

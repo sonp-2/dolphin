@@ -301,6 +301,79 @@ impl Interpreter<'_> {
             };
             loop {
                 let op = &chunk.code[ip];
+                // よく使う命令は、`step` を通さずここで済ませる（できないときは `step` に任せる）
+                match op {
+                    Op::Const(i) => {
+                        self.stack.push(chunk.consts[*i as usize].clone());
+                        ip += 1;
+                        continue;
+                    }
+                    Op::LoadVar(n) => {
+                        if let Some(value) = self.env.get(&chunk.names[*n as usize]) {
+                            self.stack.push(value);
+                            ip += 1;
+                            continue;
+                        }
+                    }
+                    Op::Declare(n) => {
+                        let value = self.pop();
+                        self.env.declare_rc(&chunk.names[*n as usize], value);
+                        ip += 1;
+                        continue;
+                    }
+                    Op::AssignVar(n) => {
+                        let value = self.pop();
+                        let name = &chunk.names[*n as usize];
+                        if !self.env.assign(name, value) {
+                            return Err(self.unwind(undefined_name(name, chunk.spans[ip]), target));
+                        }
+                        ip += 1;
+                        continue;
+                    }
+                    Op::Pop => {
+                        self.pop();
+                        ip += 1;
+                        continue;
+                    }
+                    Op::PopCheckError => {
+                        if !matches!(self.stack.last(), Some(Value::Error(_))) {
+                            self.stack.pop();
+                            ip += 1;
+                            continue;
+                        }
+                    }
+                    Op::Binary(bop) => {
+                        let len = self.stack.len();
+                        if let Some(value) = fast_binary(*bop, &self.stack[len - 2], &self.stack[len - 1])
+                        {
+                            self.stack.truncate(len - 2);
+                            self.stack.push(value);
+                            ip += 1;
+                            continue;
+                        }
+                    }
+                    Op::JumpIfFalseCond(t) => {
+                        if let Some(Value::Bool(b)) = self.stack.last() {
+                            if !*b {
+                                ip = *t as usize;
+                            } else {
+                                ip += 1;
+                            }
+                            self.stack.pop();
+                            continue;
+                        }
+                    }
+                    Op::Jump(t) => {
+                        ip = *t as usize;
+                        continue;
+                    }
+                    Op::LoopTick => {
+                        gc::maybe_collect();
+                        ip += 1;
+                        continue;
+                    }
+                    _ => {}
+                }
                 let span = chunk.spans[ip];
                 ip += 1;
                 match self.step(op, span, &chunk, &mut ip, target) {
@@ -1013,6 +1086,35 @@ impl Interpreter<'_> {
                 format!("{} に関数 `{name}` がありません", module_label(&module)),
             )),
         }
+    }
+}
+
+/// 整数どうし・数値どうしの、エラーにならない二項演算だけを素早く計算する。
+/// それ以外（エラーになる場合を含む）は `None` を返し、`binary_values` に任せる
+#[inline]
+fn fast_binary(op: BinaryOp, l: &Value, r: &Value) -> Option<Value> {
+    use BinaryOp as B;
+
+    match (l, r) {
+        (Value::Int(a), Value::Int(b)) => Some(match op {
+            B::Add => Value::Int(a.checked_add(*b)?),
+            B::Sub => Value::Int(a.checked_sub(*b)?),
+            B::Mul => Value::Int(a.checked_mul(*b)?),
+            B::Eq => Value::Bool(a == b),
+            B::NotEq => Value::Bool(a != b),
+            B::Lt | B::LtEq | B::Gt | B::GtEq => Value::Bool(super::compare(op, Some(a.cmp(b)))),
+            _ => return None,
+        }),
+        (Value::Num(a), Value::Num(b)) => Some(match op {
+            B::Add => Value::Num(a + b),
+            B::Sub => Value::Num(a - b),
+            B::Mul => Value::Num(a * b),
+            B::Lt | B::LtEq | B::Gt | B::GtEq => {
+                Value::Bool(super::compare(op, a.partial_cmp(b)))
+            }
+            _ => return None,
+        }),
+        _ => None,
     }
 }
 
