@@ -37,3 +37,45 @@ jobs:
       # FFI（ffi feature）も、ビルドとテストが通ること
       - run: cargo clippy --all-targets --features ffi -- -D warnings
       - run: cargo test --features ffi
+      # YAML・TOML・zip（yaml・toml・zip feature）も、ビルドとテストが通ること
+      - run: cargo clippy --all-targets --features yaml,toml,zip -- -D warnings
+      - run: cargo test --features yaml,toml,zip
+
+  # macOS と Windows でも、コア言語と標準ライブラリがビルドできてテストが通ること
+  cross:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test
+      - run: cargo test --features sqlite,yaml,toml,zip
+      - run: cargo test --features ffi
+
+  # 実際の PostgreSQL サーバーでの `std:postgres` のテスト
+  postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dolphin_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DOLPHIN_TEST_PG_URL: postgres://postgres:postgres@localhost:5432/dolphin_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --features postgres --test postgres
