@@ -124,7 +124,7 @@ dolphin/
 │     ├─ network/        通信
 │     │  ├─ net.rs       std:net（TCP。ブロッキング、標準ライブラリだけ）
 │     │  ├─ http.rs      std:http のクライアント（feature = "http"。ureq + rustls）
-│     │  ├─ http_server.rs  std:http の serve（std::net だけ。HTTP の解析は自前）
+│     │  ├─ http_server/  std:http の serve（std::net だけ。HTTP の解析は自前）
 │     │  ├─ ws.rs        std:ws（クライアント。サーバー側の接続の send / close も受ける）
 │     │  └─ ws_proto.rs  WebSocket のフレーム・メッセージ・ハンドシェイク（RFC 6455。SHA-1 も自前）
 │     ├─ data/           データの形式と変換
@@ -144,7 +144,7 @@ dolphin/
 │  ├─ examples.rs        examples/ のスクリプトが動くこと（ネットワークを使うものは構文だけ）
 │  ├─ fmt_files.rs       リポジトリの .dol を整形して、字句が変わらず冪等なこと
 │  ├─ cli.rs             実行ファイルを起動して確かめる（os.args・os.exit・os.run）
-│  ├─ http.rs / http_server.rs / ws.rs   HTTP クライアント・サーバー、WebSocket
+│  ├─ http.rs / http_server/ / ws.rs   HTTP クライアント・サーバー、WebSocket
 │  ├─ async_io.rs / await.rs / stream.rs   非同期の関数、async / await、ストリーム
 │  └─ process.rs / worker.rs / ffi.rs      os.spawn、ワーカー、FFI
 ├─ examples/             サンプルスクリプト（breakout・counter_ui・todo_api・dolvc など）
