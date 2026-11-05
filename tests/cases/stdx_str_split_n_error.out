@@ -1,0 +1,4 @@
+stdx_str_split_n_error.dol:1:5: エラー: str_split_n の回数は 0 以上です（-1）
+  |
+1 | log[str_split_n["a,b", ",", -1]]
+  |     ^

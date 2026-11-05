@@ -1,0 +1,4 @@
+stdx_arr_sort_key_error.dol:1:5: エラー: arr_sort_key の比べる値は、すべて数値かすべて整数かすべて文字列である必要があります（真偽値は比べられません）
+  |
+1 | log[arr_sort_key[{1, 2}, [@x] ( # @x == 1 )]]
+  |     ^

@@ -1,0 +1,4 @@
+stdx_arr_flat_map_error.dol:1:5: エラー: arr_flat_map の関数は配列を返す必要があります（数値でした）
+  |
+1 | log[arr_flat_map[{1, 2}, [@x] ( # @x )]]
+  |     ^

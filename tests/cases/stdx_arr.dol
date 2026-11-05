@@ -1,0 +1,29 @@
+// 配列の関数の追加（design.md 5.48）
+log[arr_sum[{1, 2, 3.5}], arr_sum[{}], arr_sum[{1i, 2i}], type_of[arr_sum[{1i, 2i}]]]
+log[arr_sum[{"a", "bb", "ccc"}, [@s] ( # str_len[@s] )]]
+log[arr_min[{3, 1, 2}], arr_max[{3, 1, 2}], arr_min[{}], arr_max[{}]]
+log[arr_min[{"b", "a"}], arr_max[{"b", "a", "c"}]]
+@words := {"ccc", "a", "bb", "dd"}
+log[arr_min[@words, [@s] ( # str_len[@s] )], arr_max[@words, [@s] ( # str_len[@s] )]]
+log[arr_max[{{"n": "x", "v": 1}, {"n": "y", "v": 5}}, [@m] ( # @m{"v"} )]]
+
+log[arr_enumerate[{"a", "b"}], arr_enumerate[{}]]
+for @p in arr_enumerate[{"x", "y", "z"}] (
+    log[@p{0}, @p{1}]
+)
+
+// 安定ソート（同じ鍵は元の順）
+log[arr_sort_key[@words, [@s] ( # str_len[@s] )]]
+log[arr_sort_key[{3, 1, 2}, [@x] ( # -@x )], arr_sort_key[{}, [@x] ( # @x )]]
+log[arr_sort_key[{"b", "a"}, [@s] ( # @s )]]
+
+// 範囲外でもエラーにしない
+@a := {1, 2, 3, 4}
+log[arr_take[@a, 2], arr_take[@a, 0], arr_take[@a, 10], arr_take[@a, -3]]
+log[arr_drop[@a, 2], arr_drop[@a, 0], arr_drop[@a, 10], arr_drop[@a, -3]]
+log[arr_first[@a, 0], arr_last[@a, 0], arr_first[{}, "なし"], arr_last[{}, nil]]
+
+log[arr_partition[{1, 2, 3, 4, 5}, [@x] ( # @x % 2 == 0 )]]
+log[arr_partition[{}, [@x] ( # true )]]
+log[arr_flat_map[{1, 2, 3}, [@x] ( # {@x, @x * 10} )], arr_flat_map[{1, 2}, [@x] ( # {} )]]
+log[@a]
