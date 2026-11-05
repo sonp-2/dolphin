@@ -1,0 +1,71 @@
+// `?` とエラー値の経路（例外の代わり）
+parse[@s] (
+    @n := to_num[@s]
+    if is_error[@n] ( # err_new["bad_input", "数ではない: @s"] )
+    # @n
+)
+
+// ? は呼び出し元の関数から返る。ほかの局所変数には影響しない
+total[@items] (
+    @sum := 0
+    for @s in @items (
+        @n := parse[@s]?
+        @sum = @sum + @n
+    )
+    # @sum
+)
+log[total[{"1", "2", "3"}]]
+@r := total[{"1", "x", "3"}]
+log[is_error[@r], err_kind[@r], err_message[@r]]
+
+// ? を何段も重ねる: 一番外側で受ける
+l1[@s] ( # parse[@s]? + 1 )
+l2[@s] ( # l1[@s]? * 2 )
+l3[@s] ( # l2[@s]? - 3 )
+log[l3["4"], l3["z"]]
+
+// エラーでなければそのまま値（nil や false も通る）
+pass[@v] (
+    @x := @v?
+    # {"通った", @x}
+)
+log[pass[nil], pass[false], pass[0]]
+
+// ループの中・入れ子のループからの ?
+find_bad[@grid] (
+    for @row in @grid (
+        for @c in @row (
+            @v := parse[@c]?
+            if @v > 100 ( # "big" )
+        )
+    )
+    # "all ok"
+)
+log[find_bad[{{"1", "2"}, {"3", "200"}}], is_error[find_bad[{{"1"}, {"a"}}]]]
+
+// 無名関数の中の ? は、その無名関数から返る
+@try_all := [@xs] (
+    @out := {}
+    for @s in @xs (
+        @n := parse[@s]?
+        arr_push[@out, @n]
+    )
+    # @out
+)
+log[@try_all[{"5", "6"}], err_kind[@try_all[{"5", "q"}]]]
+
+// 引数の途中の ? も、式の途中の ? も関数から返る
+mid[@a, @b] (
+    @r := str_concat["値:", parse[@a]?, "/", parse[@b]?]
+    # @r
+)
+log[mid["1", "2"], err_message[mid["1", "zz"]], err_message[mid["yy", "2"]]]
+
+// エラー値はそのまま持ち回せて、自分で作ったものも等しさで比べられる
+@e1 := err_new["k", "m"]
+@list := {@e1, 1}
+log[@list{0} == @e1, is_error[@list{0}], is_error[@list{1}]]
+
+// 受け取った側が値として扱えば例外のようには伝わらない（一度ログに出して進む）
+@res := parse["oops"]
+log["続行", err_kind[@res]]

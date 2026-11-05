@@ -1,0 +1,9 @@
+6
+true bad_input 数ではない: x
+7 <エラー bad_input: 数ではない: z>
+{"通った", nil} {"通った", false} {"通った", 0}
+big true
+{5, 6} bad_input
+値:1/2 数ではない: zz 数ではない: yy
+true true false
+続行 bad_input
