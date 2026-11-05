@@ -52,9 +52,9 @@ Resolver を独立させる理由:
 | 役割 | CPython | Dolphin |
 |---|---|---|
 | 字句解析 | `Parser/tokenizer.c` | `syntax/lexer.rs` |
-| 構文解析 | PEG パーサ（`Grammar/python.gram`） | `syntax/parser.rs`（再帰下降） |
+| 構文解析 | PEG パーサ（`Grammar/python.gram`） | `syntax/parser/`（再帰下降） |
 | 構文木 | `ast` モジュール | `syntax/ast.rs` |
-| 名前解決 | `Python/symtable.c` | `sema/resolver.rs` |
+| 名前解決 | `Python/symtable.c` | `sema/resolver/` |
 | 実行 | `compile.c` → バイトコード → `ceval.c` | `runtime/compile.rs` → `runtime/interp/vm.rs`（バイトコード VM） |
 | 値 | `PyObject` | `runtime/value.rs` の `Value` |
 | 組み込み関数 | `builtins`、C 拡張 | `stdlib/`（`NativeFn` を登録） |
@@ -79,9 +79,9 @@ dolphin/
 │  │  ├─ span.rs         位置情報（行・列）
 │  │  ├─ lexer.rs        字句解析
 │  │  ├─ ast.rs          Program / Stmt / Expr
-│  │  └─ parser.rs       構文解析
+│  │  └─ parser/         構文解析（stmt・expr・pattern・func・record・lookahead・string）
 │  ├─ sema/
-│  │  └─ resolver.rs     実行前の検査
+│  │  └─ resolver/       実行前の検査（func・stmt・expr・scope）
 │  ├─ runtime/
 │  │  ├─ value.rs        値の型
 │  │  ├─ map.rs          順序つきマップ
