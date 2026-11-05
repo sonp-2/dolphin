@@ -29,6 +29,8 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("file_remove_all", file_remove_all);
     interp.register("file_rename", file_rename);
     interp.register("file_copy", file_copy);
+    super::walk::register(interp);
+    super::temp::register(interp);
 }
 
 /// ファイル全体を文字列で返す
@@ -83,7 +85,7 @@ fn file_exists(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String>
 }
 
 /// OS の言語に左右されないよう、よくある原因は固定の文言にする
-fn io_error(action: &str, path: &str, e: &io::Error) -> Value {
+pub(in crate::stdlib) fn io_error(action: &str, path: &str, e: &io::Error) -> Value {
     let (kind, reason) = classify(e);
     error_value(kind, format!("`{path}` を{action}: {reason}"))
 }

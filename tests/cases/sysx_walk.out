@@ -1,0 +1,24 @@
+{"target/golden_sysx_walk/.dot.txt", "target/golden_sysx_walk/.hidden", "target/golden_sysx_walk/.hidden/secret.txt", "target/golden_sysx_walk/a.txt", "target/golden_sysx_walk/b.md", "target/golden_sysx_walk/empty", "target/golden_sysx_walk/src", "target/golden_sysx_walk/src/lib.dol", "target/golden_sysx_walk/src/main.dol", "target/golden_sysx_walk/src/sub", "target/golden_sysx_walk/src/sub/deep.dol", "target/golden_sysx_walk/src/sub/note.txt"}
+{"target/golden_sysx_walk/.hidden", "target/golden_sysx_walk/empty", "target/golden_sysx_walk/src", "target/golden_sysx_walk/src/sub"}
+{"target/golden_sysx_walk/.dot.txt", "target/golden_sysx_walk/.hidden/secret.txt", "target/golden_sysx_walk/a.txt", "target/golden_sysx_walk/b.md", "target/golden_sysx_walk/src/lib.dol", "target/golden_sysx_walk/src/main.dol", "target/golden_sysx_walk/src/sub/deep.dol", "target/golden_sysx_walk/src/sub/note.txt"}
+{"target/golden_sysx_walk/.dot.txt", "target/golden_sysx_walk/.hidden", "target/golden_sysx_walk/a.txt", "target/golden_sysx_walk/b.md", "target/golden_sysx_walk/empty", "target/golden_sysx_walk/src"}
+{"target/golden_sysx_walk/.dot.txt", "target/golden_sysx_walk/.hidden/secret.txt", "target/golden_sysx_walk/a.txt", "target/golden_sysx_walk/b.md", "target/golden_sysx_walk/src/lib.dol", "target/golden_sysx_walk/src/main.dol"}
+{"target/golden_sysx_walk/.dot.txt", "target/golden_sysx_walk/.hidden", "target/golden_sysx_walk/a.txt", "target/golden_sysx_walk/b.md", "target/golden_sysx_walk/empty", "target/golden_sysx_walk/src"}
+{}
+not_found
+io
+{"target/golden_sysx_walk/a.txt"}
+{"target/golden_sysx_walk/.dot.txt"}
+{"target/golden_sysx_walk/b.md"}
+{"target/golden_sysx_walk/a.txt", "target/golden_sysx_walk/b.md"}
+{"target/golden_sysx_walk/b.md"}
+{"target/golden_sysx_walk/src/lib.dol", "target/golden_sysx_walk/src/main.dol", "target/golden_sysx_walk/src/sub/deep.dol"}
+{"target/golden_sysx_walk/src/sub"}
+{"target/golden_sysx_walk/src/lib.dol", "target/golden_sysx_walk/src/main.dol", "target/golden_sysx_walk/src/sub", "target/golden_sysx_walk/src/sub/deep.dol", "target/golden_sysx_walk/src/sub/note.txt"}
+{"target/golden_sysx_walk/a.txt", "target/golden_sysx_walk/src/sub/note.txt"}
+{"target/golden_sysx_walk/src/main.dol"}
+{}
+{"a.txt"}
+{"src/lib.dol", "src/main.dol", "src/sub/deep.dol"}
+{"src/sub"}
+{"src/sub/deep.dol"}
