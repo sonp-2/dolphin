@@ -1,0 +1,3 @@
+// 書庫に入れる名前に `..` は使えない（プログラムの間違い）
+@zip := import["std:zip"]
+@zip.zip_create["target/fmtx_zip_bad.zip", {"../evil.txt": "x"}]

@@ -40,6 +40,14 @@ postgres-protocol = { version = "0.6", optional = true }
 tokio-postgres-rustls = { version = "0.14", optional = true, default-features = false, features = ["ring"] }
 bytes = { version = "1", optional = true }
 fallible-iterator = { version = "0.2", optional = true }
+# YAML（`import["std:yaml"]`）。パーサーのイベントを読み、値は自前で組み立てる
+yaml-rust2 = { version = "0.13", optional = true }
+# TOML（`import["std:toml"]`）。キーの順を保つ
+toml = { version = "1", optional = true, default-features = false, features = ["parse", "display", "serde", "preserve_order"] }
+# 圧縮とアーカイブ（`import["std:zip"]`）。どれも純 Rust
+flate2 = { version = "1", optional = true }
+zip = { version = "9", optional = true, default-features = false, features = ["deflate-flate2"] }
+tar = { version = "0.4", optional = true, default-features = false }
 
 [features]
 default = ["repl", "http", "crypto", "regex", "tls", "image"]
@@ -65,3 +73,9 @@ ffi = ["dep:libloading", "dep:libffi"]
 sqlite = ["dep:rusqlite"]
 # PostgreSQL（`import["std:postgres"]`）。`tls` を含む。既定では無効（`--features postgres`）
 postgres = ["dep:postgres", "dep:postgres-protocol", "dep:tokio-postgres-rustls", "dep:bytes", "dep:fallible-iterator", "tls"]
+# YAML（`import["std:yaml"]`）。純 Rust。既定では無効（`--features yaml`）
+yaml = ["dep:yaml-rust2"]
+# TOML（`import["std:toml"]`）。純 Rust。既定では無効（`--features toml`）
+toml = ["dep:toml"]
+# gzip・zlib・zip・tar（`import["std:zip"]`）。純 Rust。既定では無効（`--features zip`）
+zip = ["dep:flate2", "dep:zip", "dep:tar"]

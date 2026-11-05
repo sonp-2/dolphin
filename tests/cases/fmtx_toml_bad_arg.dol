@@ -1,0 +1,2 @@
+@toml := import["std:toml"]
+@toml.stringify[{1, 2}]

@@ -33,6 +33,12 @@ pub use data::postgres;
 pub use data::regex;
 #[cfg(feature = "sqlite")]
 pub use data::sqlite;
+#[cfg(feature = "toml")]
+pub use data::toml;
+#[cfg(feature = "yaml")]
+pub use data::yaml;
+#[cfg(feature = "zip")]
+pub use data::zip;
 pub use data::{bytes, csv, encoding, json};
 #[cfg(feature = "audio")]
 pub use media::audio;
@@ -96,6 +102,12 @@ pub fn register(interp: &mut Interpreter<'_>) {
     sqlite::register(interp);
     #[cfg(feature = "postgres")]
     postgres::register(interp);
+    #[cfg(feature = "yaml")]
+    yaml::register(interp);
+    #[cfg(feature = "toml")]
+    toml::register(interp);
+    #[cfg(feature = "zip")]
+    zip::register(interp);
     os::register(interp);
     time::register(interp);
 }

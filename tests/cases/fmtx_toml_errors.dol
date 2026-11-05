@@ -1,0 +1,14 @@
+// std:toml のエラー（design.md 5.51）
+@toml := import["std:toml"]
+
+// 構文の間違い・キーの重複は parse（行と列つき）
+log[err_kind[@toml.parse["a = "]], err_kind[@toml.parse["a = 1\na = 2"]], err_kind[@toml.parse["[t\nx = 1"]]]
+log[err_message[@toml.parse["a = 1\nb = [1, 2\n"]]]
+log[err_kind[@toml.parse["a = 1 b = 2"]], err_kind[@toml.parse["[a]\nb = 1\n[a]\nc = 2"]]]
+
+// inf / nan は Dolphin の数値にできない
+log[err_kind[@toml.parse["a = inf"]], err_kind[@toml.parse["a = -inf"]], err_kind[@toml.parse["a = nan"]]]
+
+// nil は TOML にない
+log[err_kind[@toml.stringify[{"a": nil}]], err_kind[@toml.stringify[{"a": {1, nil}}]]]
+log[err_message[@toml.stringify[{"a": {"b": nil}}]]]

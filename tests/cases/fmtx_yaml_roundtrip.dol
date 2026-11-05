@@ -1,0 +1,29 @@
+// std:yaml の往復（parse → stringify → parse）
+@yaml := import["std:yaml"]
+
+check[@name, @value] (
+    @text := @yaml.stringify[@value]
+    @back := @yaml.parse[@text]?
+    log[@name, @back == @value]
+)
+
+check["map", {"a": 1, "b": {"c": {1, 2.5, "x"}, "d": nil}, "e": true}]
+check["seq of maps", {{"id": 1, "tags": {"a", "b"}}, {"id": 2, "tags": {}}}]
+check["tricky strings", {"12", "true", "null", "", " ", "a: b", "# c", "- d", "x ", "a\nb\t\"q\"\\", "日本語、です", "1e3", "~", "---", "..."}]
+check["tricky keys", {"1": 1, "true": 2, "": 3, "a b": 4, "x: y": 5, "日本": 6}]
+check["nested empty", {"a": {:}, "b": {}, "c": {{:}, {}}}]
+check["number", 3.25]
+check["nil", nil]
+check["string", "multi\nline"]
+
+// 読んだものを書いて、もう一度読んでも同じ
+@src := "name: x\nitems:\n  - id: 1\n    tags: [a, b]\n  - id: 2\n    tags: []\nmeta: {k: v}\n"
+@once := @yaml.parse[@src]?
+@twice := @yaml.parse[@yaml.stringify[@once]]?
+log[@once == @twice]
+log[@yaml.stringify[@once]]
+
+// JSON との往復
+@json := import["std:json"]
+@j := @json.parse["{\"a\": [1, 2, {\"b\": null}], \"c\": \"d\"}"]?
+log[@yaml.parse[@yaml.stringify[@j]]? == @j]

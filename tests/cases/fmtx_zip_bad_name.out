@@ -1,0 +1,4 @@
+fmtx_zip_bad_name.dol:3:1: エラー: zip.zip_create のエントリ名 `../evil.txt` は使えません（`..` を含んでいます。相対パスだけです）
+  |
+3 | @zip.zip_create["target/fmtx_zip_bad.zip", {"../evil.txt": "x"}]
+  | ^

@@ -1,0 +1,2 @@
+@yaml := import["std:yaml"]
+@yaml.stringify[{"f": log}]

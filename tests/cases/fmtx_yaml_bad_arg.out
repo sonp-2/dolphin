@@ -1,0 +1,4 @@
+fmtx_yaml_bad_arg.dol:2:1: エラー: yaml.parse の 1 番目の引数は文字列です（数値が渡されました）
+  |
+2 | @yaml.parse[12]
+  | ^

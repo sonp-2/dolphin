@@ -1,0 +1,2 @@
+@zip := import["std:zip"]
+@zip.gzip["x", {"level": 10}]

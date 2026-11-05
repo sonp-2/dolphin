@@ -1,4 +1,4 @@
-//! データの形式と変換（JSON・CSV・エンコード・バイト列・暗号・正規表現・SQLite）
+//! データの形式と変換（JSON・CSV・エンコード・バイト列・暗号・正規表現・SQLite・YAML・TOML・zip）
 
 pub mod bytes;
 #[cfg(feature = "crypto")]
@@ -12,3 +12,9 @@ pub mod postgres;
 pub mod regex;
 #[cfg(feature = "sqlite")]
 pub mod sqlite;
+#[cfg(feature = "toml")]
+pub mod toml;
+#[cfg(feature = "yaml")]
+pub mod yaml;
+#[cfg(feature = "zip")]
+pub mod zip;

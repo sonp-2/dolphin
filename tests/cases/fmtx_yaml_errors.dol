@@ -1,0 +1,16 @@
+// std:yaml のエラー（design.md 5.51）
+@yaml := import["std:yaml"]
+
+// 構文の間違いは parse（行と列つき）
+log[err_kind[@yaml.parse["a: [1, 2"]], err_kind[@yaml.parse["a: 'unterminated"]], err_kind[@yaml.parse["[a, b}"]]]
+log[err_message[@yaml.parse["a: 1\nb: [1, 2\n"]]]
+
+// アンカー・エイリアス・タグ・複合キー・inf/nan は unsupported
+log[err_kind[@yaml.parse["a: &x 1"]], err_message[@yaml.parse["a: &x 1"]]]
+log[err_kind[@yaml.parse["a: &x 1\nb: *x"]]]
+log[err_kind[@yaml.parse["base: &b {k: 1}\nd:\n  <<: *b\n"]]]
+log[err_kind[@yaml.parse["a: !!str 1"]], err_message[@yaml.parse["a: !!str 1"]]]
+log[err_kind[@yaml.parse["a: !custom x"]]]
+log[err_kind[@yaml.parse["? [1, 2]\n: v\n"]], err_kind[@yaml.parse["? {a: 1}\n: v\n"]]]
+log[err_kind[@yaml.parse["a: .inf"]], err_kind[@yaml.parse["a: .nan"]], err_kind[@yaml.parse["- -.inf"]]]
+log[is_error[@yaml.parse_all["---\na: 1\n---\nb: &x 2\n"]]]
