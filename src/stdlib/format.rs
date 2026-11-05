@@ -171,7 +171,7 @@ fn integer_of(value: &Value) -> Option<(bool, u64)> {
 fn group(digits: &str) -> String {
     let mut out = String::new();
     for (k, c) in digits.chars().enumerate() {
-        if k > 0 && (digits.len() - k) % 3 == 0 {
+        if k > 0 && (digits.len() - k).is_multiple_of(3) {
             out.push(',');
         }
         out.push(c);
@@ -314,8 +314,8 @@ mod tests {
 
     #[test]
     fn numbers() {
-        assert_eq!(f("{:.2f}", vec![n(3.14159)]).unwrap(), "3.14");
-        assert_eq!(f("{:8.2f}", vec![n(-3.14159)]).unwrap(), "   -3.14");
+        assert_eq!(f("{:.2f}", vec![n(1.23456)]).unwrap(), "1.23");
+        assert_eq!(f("{:8.2f}", vec![n(-1.23456)]).unwrap(), "   -1.23");
         assert_eq!(f("{:,}", vec![n(1234567.0)]).unwrap(), "1,234,567");
         assert_eq!(f("{:,.1f}", vec![n(-1234.56)]).unwrap(), "-1,234.6");
         assert_eq!(f("{:05d}", vec![n(42.0)]).unwrap(), "00042");
