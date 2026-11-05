@@ -191,7 +191,7 @@ fn scan(src: &str) -> Vec<Tok> {
                 }
                 let class = match word.as_str() {
                     "if" | "else" | "while" | "for" | "in" | "break" | "continue" | "async"
-                    | "await" => Class::Keyword,
+                    | "await" | "record" => Class::Keyword,
                     _ => Class::Word,
                 };
                 push(&mut toks, class, word);

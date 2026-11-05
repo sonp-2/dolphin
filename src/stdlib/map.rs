@@ -21,6 +21,65 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("map_from_items", map_from_items);
     interp.register("map_map_values", map_map_values);
     interp.register("map_filter", map_filter);
+    interp.register("record_name", record_name);
+    interp.register("record_from", record_from);
+}
+
+/// レコードなら型名、そうでなければ `nil`（design.md 5.55）
+fn record_name(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("record_name", args, 1)?;
+    if let Value::Map(map) = &args[0]
+        && let Some(tag) = &map.borrow().tag
+    {
+        return Ok(Value::Str(Rc::clone(tag)));
+    }
+    Ok(Value::Nil)
+}
+
+/// `record_from[Point, @map]`: マップをレコードにする。足りないフィールドはエラー値、
+/// 余計なキーは無視する
+fn record_from(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("record_from", args, 2)?;
+    let Value::Func(ctor) = &args[0] else {
+        return Err(format!(
+            "record_from の第 1 引数はレコードのコンストラクタ（`Point`）である必要があります（{}でした）",
+            args[0].type_name()
+        ));
+    };
+    if !ctor.def.record {
+        return Err(format!(
+            "record_from の第 1 引数はレコードのコンストラクタである必要があります（関数 {} です）",
+            ctor.def.name
+        ));
+    }
+    let source = map_arg("record_from", args, 1)?.borrow();
+    let mut map = Map::default();
+    for param in &ctor.def.params {
+        match source.get(&param.name) {
+            Some(v) => map.insert(param.name.as_str().into(), v.clone()),
+            None => {
+                return Ok(Value::error(
+                    "invalid",
+                    format!(
+                        "record {} にフィールド {:?} がありません",
+                        ctor.def.name, param.name
+                    ),
+                ));
+            }
+        }
+    }
+    map.tag = Some(ctor.def.name.as_str().into());
+    Ok(new_map(map))
+}
+
+/// レコードは形を変えられない（design.md 5.55）
+fn reject_record(name: &str, map: &Rc<std::cell::RefCell<Map>>) -> Result<(), String> {
+    match &map.borrow().tag {
+        Some(tag) => Err(format!(
+            "{name} はレコードには使えません（record {tag} のフィールドは増減できません）"
+        )),
+        None => Ok(()),
+    }
 }
 
 /// `{キー, 値}` の配列の配列からマップを作る（`map_items` の逆）。同じキーが何度も出たら
@@ -128,6 +187,7 @@ fn map_remove(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> 
     expect_args("map_remove", args, 2)?;
     let map = map_arg("map_remove", args, 0)?;
     let key = str_arg("map_remove", args, 1)?;
+    reject_record("map_remove", map)?;
     map.borrow_mut()
         .remove(key)
         .ok_or_else(|| format!("キー {key:?} がありません"))
@@ -166,6 +226,8 @@ fn map_get(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 fn map_merge(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     expect_args("map_merge", args, 2)?;
     let mut merged = map_arg("map_merge", args, 0)?.borrow().clone();
+    // 結果は普通のマップ（design.md 5.55）
+    merged.tag = None;
     for (k, v) in map_arg("map_merge", args, 1)?.borrow().iter() {
         merged.insert(Rc::clone(k), v.clone());
     }
@@ -174,7 +236,9 @@ fn map_merge(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 
 fn map_clear(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     expect_args("map_clear", args, 1)?;
-    map_arg("map_clear", args, 0)?.borrow_mut().clear();
+    let map = map_arg("map_clear", args, 0)?;
+    reject_record("map_clear", map)?;
+    map.borrow_mut().clear();
     Ok(Value::Nil)
 }
 

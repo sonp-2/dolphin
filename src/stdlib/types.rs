@@ -18,6 +18,7 @@ fn type_of(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
         Value::Int(_) => "int",
         Value::Str(_) => "string",
         Value::Array(_) => "array",
+        Value::Map(m) if m.borrow().tag.is_some() => "record",
         Value::Map(_) => "map",
         Value::Func(_) | Value::Native(_) => "function",
         Value::Module(_) => "module",

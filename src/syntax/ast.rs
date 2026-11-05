@@ -123,6 +123,9 @@ pub struct FuncDef {
     pub name: String,
     /// `async` 関数（design.md 5.46）。呼ぶと future を返し、`await` で止まれる
     pub is_async: bool,
+    /// `record 名前[@a, @b]` が作るコンストラクタ（design.md 5.55）。本体は空で、
+    /// 呼ぶと引数を `params` の名前でまとめた、型名つきのマップを返す
+    pub record: bool,
     pub params: Vec<Param>,
     /// `...@rest`。残りの引数を配列で受け取る（design.md 5.19）
     pub rest: Option<String>,
@@ -278,7 +281,13 @@ impl fmt::Display for Stmt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.kind {
             StmtKind::FuncDef(def) => {
-                let head = if def.is_async { "async-def" } else { "def" };
+                let head = if def.record {
+                    "record"
+                } else if def.is_async {
+                    "async-def"
+                } else {
+                    "def"
+                };
                 write!(f, "({head} {} (", def.name)?;
                 write_seq(
                     f,
