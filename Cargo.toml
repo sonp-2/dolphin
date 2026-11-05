@@ -2,6 +2,14 @@
 name = "dolphin"
 version = "0.54.0"
 edition = "2024"
+# let chains（`if let ... && ...`）を使っているので 1.88 以上。既定の feature の依存も 1.88 で足りる
+rust-version = "1.88"
+description = "Dolphin: Rust 製のインタプリタ言語（VM・async/await・標準ライブラリ・LSP・フォーマッタ付き）"
+license = "MIT"
+repository = "https://github.com/sonp-2/dolphin"
+readme = "README.md"
+keywords = ["interpreter", "language", "scripting", "vm", "lsp"]
+categories = ["compilers", "command-line-utilities", "development-tools"]
 
 # コア言語（lib）は外部クレートに依存しない。CLI の便利機能だけ feature で足す
 [dependencies]

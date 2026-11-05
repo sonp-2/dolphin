@@ -1,0 +1,5 @@
+// arr_map のコールバックの中の再帰も 1000 段まで
+down[@n] (
+    # down[@n + 1]
+)
+log[arr_map[{1}, [@x] ( # down[@x] )]]

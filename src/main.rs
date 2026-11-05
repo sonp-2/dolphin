@@ -29,6 +29,18 @@ fn main() {
     process::exit(dolphin::ui::host::run(host, cli));
 }
 
+/// 使い方の文面
+const USAGE: &str = "使い方: dolphin [--tokens | --ast] <file.dol>
+        dolphin <file.dol> [引数...]
+        dolphin check <file.dol>...  （実行せずに検査）
+        dolphin test [パス...]       （*_test.dol の test_ 関数を実行）
+        dolphin fmt [--check | --stdout] <file.dol>...  （整形）
+        dolphin lsp                  （言語サーバー。エディタが起動する）
+        dolphin              （引数なしで対話モード）
+        dolphin --help | -h  （この使い方を表示）
+        dolphin --version    （バージョンを表示）
+";
+
 /// 終了コードを返す
 fn run_cli() -> i32 {
     let args: Vec<String> = env::args().skip(1).collect();
@@ -36,6 +48,14 @@ fn run_cli() -> i32 {
         return start_repl();
     }
     match args[0].as_str() {
+        "--help" | "-h" => {
+            print!("{USAGE}");
+            return 0;
+        }
+        "--version" => {
+            println!("dolphin {}", env!("CARGO_PKG_VERSION"));
+            return 0;
+        }
         "check" => return check(&args[1..]),
         "fmt" => return fmt(&args[1..]),
         "lsp" if args.len() == 1 => return dolphin::lsp::run_stdio(),
@@ -49,13 +69,7 @@ fn run_cli() -> i32 {
         [flag, path] if flag == "--tokens" => (Mode::Tokens, path, &[][..]),
         [flag, path] if flag == "--ast" => (Mode::Ast, path, &[][..]),
         [flag, ..] if flag.starts_with("--") => {
-            eprintln!("使い方: dolphin [--tokens | --ast] <file.dol>");
-            eprintln!("        dolphin <file.dol> [引数...]");
-            eprintln!("        dolphin check <file.dol>...  （実行せずに検査）");
-            eprintln!("        dolphin test [パス...]       （*_test.dol の test_ 関数を実行）");
-            eprintln!("        dolphin fmt [--check | --stdout] <file.dol>...  （整形）");
-            eprintln!("        dolphin lsp                  （言語サーバー。エディタが起動する）");
-            eprintln!("        dolphin              （引数なしで対話モード）");
+            eprint!("{USAGE}");
             return 2;
         }
         [path, rest @ ..] => (Mode::Run, path, rest),
@@ -65,6 +79,8 @@ fn run_cli() -> i32 {
         Ok(src) => src,
         Err(e) => {
             eprintln!("{path}: {e}");
+            // 知らないサブコマンドを打ち間違えたときも、ここに来る
+            eprint!("{USAGE}");
             return 1;
         }
     };
