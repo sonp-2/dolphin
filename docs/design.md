@@ -217,13 +217,17 @@ while @i < 3 (
 
 | 型 | 例 | 状態 |
 |---|---|---|
-| 数値 | `10`, `1.5`（内部は double） | 案 |
+| 数値 | `10`, `1.5`（内部は 64 ビット浮動小数点数）。`type_of` は `"number"` | 確定 |
+| 整数 | `123i`（64 ビット符号付き整数。数値とは別の型で、混ぜた演算は実行時エラー）。`type_of` は `"int"`。5.40 | 確定（2026-10-20） |
 | 文字列 | `"dolphin"`。`"..."` 内の `@name` は展開される | 確定 |
 | 配列 | `{1, 2, 3}` | 案 |
 | マップ | `{"name": "Dolphin", "age": 3}`。5.4 | 確定（2026-10-06） |
 | モジュール | `import["util.dol"]` の結果。5.7 | 確定（2026-10-11） |
 | バイト列 | `str_to_bytes["hi"]` など。変更できない。5.14 | 確定（2026-10-12） |
 | 関数 | `[@n] ( # @n + 1 )` や、`add` のような関数名。5.8 | 確定（2026-10-11） |
+| ハンドル | TCP の接続・待ち受け（5.21）、WebSocket の接続（5.22）、起動したプロセス（5.42）、ワーカー（5.43）、FFI のライブラリ・関数・バッファ（5.44）など、Rust 側のものを指す値。`type_of` は `"handle"`。JSON にはできない | 確定（2026-10-12） |
+| ストリーム | `std:stream` の `open` `create` `stdin` などの結果（5.41）と、TCP の接続。`handle` の仲間で、`type_of` は `"handle"`。向き（読む・書く）があり、閉じられる | 確定（2026-10-20） |
+| future | `async` 関数の結果（5.46）。`handle` の仲間で、`type_of` は `"future"`。`await` で値にする | 確定（2026-10-20） |
 | 真偽値 | `true` / `false`。比較演算の結果も真偽値 | 確定 |
 | 値なし | 戻り値のない関数の結果。`nil` と書ける（確定 2026-10-11）。JSON の `null` に当たる | 確定 |
 | エラー | 失敗しうる関数が返すエラー値。種類とメッセージを持つ。8.6 | 確定（2026-10-11） |
@@ -279,7 +283,7 @@ while @i < 3 (
 | | `pow[a, b]` / `min[...]` / `max[...]` | べき乗・最小・最大 |
 | | `random[]` / `random_int[min, max]` | 0 以上 1 未満 / `min` 以上 `max` 以下の整数 |
 
-ファイル関数のパスは、実行したときのカレントディレクトリからの相対パス（`import` は呼び出したファイルのあるディレクトリから引くので、基準が違う）。読み書きに失敗したらエラー値（`file_write` `file_append` は、成功なら `nil`）。文字コードは UTF-8 のみ。削除・一覧・ディレクトリ作成は未定（案）。
+ファイル関数のパスは、実行したときのカレントディレクトリからの相対パス（`import` は呼び出したファイルのあるディレクトリから引くので、基準が違う）。読み書きに失敗したらエラー値（`file_write` `file_append` は、成功なら `nil`）。文字コードは UTF-8 のみ。一覧・ディレクトリ作成・削除・名前の変更・コピー・情報（`file_list` `file_mkdir` `file_remove` `file_remove_all` `file_rename` `file_copy` `file_info`）は 5.13 にある。
 
 ### 5.6 制御
 
@@ -296,7 +300,7 @@ while @i < 3 (
 ### 5.7 モジュール（import）
 
 ```
-@u = import["util.dol"]
+@u := import["util.dol"]
 log[@u.add[1, 2]]     // 関数を呼ぶ
 log[@u.version]       // util.dol の @version を読む
 ```
@@ -444,7 +448,7 @@ log[@r{"status"}, @r{"ok"}, @r{"headers"}{"content-type"}]
 
 | 関数 | 内容 |
 |---|---|
-| `type_of[v]` | 型の名前の文字列: `"nil"` `"bool"` `"number"` `"string"` `"array"` `"map"` `"function"` `"module"` `"error"`。判定は `type_of[@x] == "number"` と書く（`is_num` のような関数は作らない。`is_error` は例外として残す） |
+| `type_of[v]` | 型の名前の文字列: `"nil"` `"bool"` `"number"` `"int"` `"string"` `"array"` `"map"` `"function"` `"module"` `"error"` `"bytes"` `"handle"` `"future"`（`int` は 5.40、`bytes` は 5.14、`handle` はストリームなどのハンドル、`future` は 5.46）。判定は `type_of[@x] == "number"` と書く（`is_num` のような関数は作らない。`is_error` は例外として残す） |
 
 #### 配列
 
