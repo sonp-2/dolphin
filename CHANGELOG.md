@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+### 追加
+- `import["std:postgres"]`（`postgres` feature。**既定では無効**で、`cargo build --features postgres`。純 Rust の `postgres` クレート（同期版）を使い、TLS は `tls` feature と同じ rustls。[design.md 5.47](docs/design.md)）: `connect[url_or_map, options]`（`timeout` `tls` `int` `application_name`）`close` `exec[c, sql, params]`（`{"changes"}` を返す）`query[c, sql, params]`（行を、列名をキーにしたマップの配列で返す）`run_script[c, sql]`。API の形・ハンドル・トランザクション（`exec[c, "BEGIN"]` など）は `std:sqlite` に揃えた
+- `params` は配列（`` `` … に順番に）。値はサーバーが決めた型に合わせて変換する: `int2`〜`int8`・`float`・`numeric`（結果は桁を失わない文字列）・`bool`・`text`・`bytea`・`uuid`・`date`/`time`（文字列）・`timestamp`/`timestamptz`（Unix 時刻の数値）・`json`/`jsonb`・配列型（多次元も）。`interval` `inet` などは `::text` で受ける
+- 失敗はエラー値（種類 `sql` `busy` `auth` `network` `parse` `closed`。メッセージに SQLSTATE を含む）。問い合わせはブロッキングで、`LISTEN`/`NOTIFY`・`COPY`・接続のプールは作らない
+- `examples/pg_demo.dol`。テストは、サーバーがなくても通るもの（URL の解析・接続失敗の種類・値の変換の単体テスト）と、環境変数 `DOLPHIN_TEST_PG_URL` があるときだけ動くサーバーを使うもの（`tests/postgres.rs`）
+- CI に `--features postgres` のビルドとテストを足した
+
 ## [0.54.0] - 2026-10-20
 
 `async` と `await`（[design.md 5.46](docs/design.md)）。途中で止めて、あとで続きから再開できる関数。コールバックの入れ子なしで、「A の結果で B を呼び、C と D を同時に進めて、そろったら次へ」と書ける。

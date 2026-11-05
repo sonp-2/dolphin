@@ -1,0 +1,123 @@
+// std:postgres を実際のサーバーで確かめる（tests/postgres.rs が DOLPHIN_TEST_PG_URL があるときだけ動かす）
+// 各確認は `ok 名前` か `FAIL 名前` を出す。最後の行は `done`
+@pg := import["std:postgres"]
+@os := import["std:os"]
+@url := @os.env["DOLPHIN_TEST_PG_URL"]
+
+check[@name, @cond] (
+    if @cond ( log["ok", @name] ) else ( log["FAIL", @name] )
+)
+
+@c := @pg.connect[@url]
+check["connect", !is_error[@c]]
+if is_error[@c] (
+    log["FAIL connect:", err_kind[@c], err_message[@c]]
+    log["done"]
+    @os.exit[0]
+)
+check["handle display", str_starts_with[to_str[@c], "<postgres 接続"]]
+check["handle display has no password", !str_contains[to_str[@c], "@"]]
+
+// 基本
+@r := @pg.query[@c, "SELECT 1 AS a, 'x' AS b, NULL AS c"]
+check["select", !is_error[@r] && arr_len[@r] == 1 && @r{0}.a == 1 && @r{0}.b == "x" && @r{0}.c == nil]
+check["select type", type_of[@r{0}.a] == "number"]
+
+@pg.exec[@c, "CREATE TEMP TABLE t (id serial PRIMARY KEY, name text NOT NULL, n int4, big int8, f float8, num numeric(10, 2), b bool, data bytea, ts timestamptz, d date, tm time, j jsonb, arr int4[], tags text[], u uuid)"]?
+
+// 値の往復
+@ins := "INSERT INTO t (name, n, big, f, num, b, data, ts, d, tm, j, arr, tags, u) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) RETURNING id"
+@r1 := @pg.query[@c, @ins, {"alice", 7, 1234567890123, 1.5, "12.34", true, str_to_bytes["hi"], 946684801.5, "2026-10-20", "10:30:00.5", {"a": {1, 2}}, {1, nil, 3}, {"x", "y"}, "123e4567-e89b-12d3-a456-426614174000"}]
+check["insert returning", !is_error[@r1] && arr_len[@r1] == 1 && @r1{0}.id == 1]
+@rows := @pg.query[@c, "SELECT * FROM t ORDER BY id"]
+@row := @rows{0}
+check["text", @row.name == "alice"]
+check["int4", @row.n == 7]
+check["int8", @row.big == 1234567890123]
+check["float8", @row.f == 1.5]
+check["numeric is string", @row.num == "12.34"]
+check["bool", @row.b == true]
+check["bytea", type_of[@row.data] == "bytes" && bytes_len[@row.data] == 2]
+check["timestamptz", @row.ts == 946684801.5]
+check["date", @row.d == "2026-10-20"]
+check["time", @row.tm == "10:30:00.5"]
+check["jsonb", @row.j.a{1} == 2]
+check["int array", arr_len[@row.arr] == 3 && @row.arr{0} == 1 && @row.arr{1} == nil && @row.arr{2} == 3]
+check["text array", @row.tags{1} == "y"]
+check["uuid", @row.u == "123e4567-e89b-12d3-a456-426614174000"]
+
+// NULL
+@pg.exec[@c, "INSERT INTO t (name) VALUES ($1)", {"bob"}]?
+@n := @pg.query[@c, "SELECT * FROM t WHERE name = $1", {"bob"}]?
+check["nulls", @n{0}.n == nil && @n{0}.j == nil && @n{0}.arr == nil && @n{0}.data == nil]
+@pg.exec[@c, "INSERT INTO t (name, n) VALUES ($1, $2)", {"carol", nil}]?
+
+// changes
+@u := @pg.exec[@c, "UPDATE t SET n = 1 WHERE name <> $1", {"alice"}]
+check["changes", !is_error[@u] && @u.changes == 2]
+check["delete none", @pg.exec[@c, "DELETE FROM t WHERE id < 0"].changes == 0]
+
+// numeric の様々な値
+@m := @pg.query[@c, "SELECT $1::numeric AS a, $2::numeric AS b, 0.5::numeric AS c, 100000::numeric AS d, (-0.0001)::numeric AS e", {"123456789.123456789", 42}]
+check["numeric values", !is_error[@m] && @m{0}.a == "123456789.123456789" && @m{0}.b == "42" && @m{0}.c == "0.5" && @m{0}.d == "100000" && @m{0}.e == "-0.0001"]
+
+// トランザクション
+@pg.exec[@c, "BEGIN"]?
+@pg.exec[@c, "INSERT INTO t (name) VALUES ('tx')"]?
+@pg.exec[@c, "ROLLBACK"]?
+check["rollback", arr_len[@pg.query[@c, "SELECT 1 FROM t WHERE name = 'tx'"]?] == 0]
+@pg.exec[@c, "BEGIN"]?
+@pg.exec[@c, "INSERT INTO t (name) VALUES ('tx')"]?
+@pg.exec[@c, "COMMIT"]?
+check["commit", arr_len[@pg.query[@c, "SELECT 1 FROM t WHERE name = 'tx'"]?] == 1]
+
+// 失敗の種類。トランザクション中の失敗は ROLLBACK までほかの文も失敗する
+check["syntax error is sql", err_kind[@pg.exec[@c, "SELEKT 1"]] == "sql"]
+check["sqlstate in message", str_contains[err_message[@pg.exec[@c, "SELEKT 1"]], "[42601]"]]
+check["not null violation", err_kind[@pg.exec[@c, "INSERT INTO t (name) VALUES ($1)", {nil}]] == "sql"]
+check["missing relation", err_kind[@pg.query[@c, "SELECT * FROM no_such_table_dolphin"]] == "sql"]
+check["too few params", err_kind[@pg.exec[@c, "SELECT $1::int, $2::int", {1}]] == "sql"]
+check["too many params", err_kind[@pg.exec[@c, "SELECT 1", {1}]] == "sql"]
+check["no params", err_kind[@pg.exec[@c, "SELECT $1::int"]] == "sql"]
+check["param type mismatch", err_kind[@pg.exec[@c, "SELECT $1::int", {"abc"}]] == "sql"]
+check["int out of range", err_kind[@pg.exec[@c, "SELECT $1::int2", {70000}]] == "sql"]
+check["two statements", err_kind[@pg.exec[@c, "SELECT 1; SELECT 2"]] == "sql"]
+check["unsupported type", err_kind[@pg.query[@c, "SELECT interval '1 day' AS i"]] == "sql"]
+check["cast to text", @pg.query[@c, "SELECT (interval '1 day')::text AS i"]{0}.i == "1 day"]
+@pg.exec[@c, "BEGIN"]?
+check["fail in tx", err_kind[@pg.exec[@c, "SELEKT 1"]] == "sql"]
+check["aborted tx", err_kind[@pg.query[@c, "SELECT 1"]] == "sql"]
+@pg.exec[@c, "ROLLBACK"]?
+check["after rollback", @pg.query[@c, "SELECT 1 AS a"]{0}.a == 1]
+
+// 同じ SQL の繰り返し（準備済みの文）と、スキーマ変更のあとの再実行
+for @i in range[0, 3] (
+    @x := @pg.query[@c, "SELECT * FROM t WHERE name = $1", {"alice"}]
+    check["repeat", arr_len[@x] == 1]
+)
+@pg.exec[@c, "ALTER TABLE t ADD COLUMN extra int DEFAULT 5"]?
+@y := @pg.query[@c, "SELECT * FROM t WHERE name = $1", {"alice"}]
+check["after alter", !is_error[@y] && @y{0}.extra == 5]
+
+// run_script
+check["run_script", @pg.run_script[@c, "CREATE TEMP TABLE s1 (x int); INSERT INTO s1 VALUES (1), (2); INSERT INTO s1 VALUES (3)"] == nil]
+check["run_script result", @pg.query[@c, "SELECT sum(x)::int AS s FROM s1"]{0}.s == 6]
+check["run_script error", err_kind[@pg.run_script[@c, "SELEKT"]] == "sql"]
+
+// int オプション
+@ci := @pg.connect[@url, {"int": true, "application_name": "dolphin-test", "timeout": 5}]?
+@ri := @pg.query[@ci, "SELECT 1::int2 AS a, 2::int4 AS b, 3::int8 AS c, 4.5::float8 AS d, current_setting('application_name') AS app"]?
+check["int option", type_of[@ri{0}.a] == "int" && type_of[@ri{0}.b] == "int" && type_of[@ri{0}.c] == "int" && type_of[@ri{0}.d] == "number"]
+check["application_name", @ri{0}.app == "dolphin-test"]
+check["int changes", type_of[@pg.exec[@ci, "SELECT 1"].changes] == "int"]
+@pg.close[@ci]
+
+// 閉じる
+@pg.close[@c]
+@pg.close[@c]
+check["closed exec", err_kind[@pg.exec[@c, "SELECT 1"]] == "closed"]
+check["closed query", err_kind[@pg.query[@c, "SELECT 1"]] == "closed"]
+check["closed script", err_kind[@pg.run_script[@c, "SELECT 1"]] == "closed"]
+check["closed display", to_str[@c] == "<postgres 閉じています>"]
+
+log["done"]

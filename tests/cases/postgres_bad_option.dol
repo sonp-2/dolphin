@@ -1,0 +1,3 @@
+// std:postgres: 知らないオプションは実行時エラー
+@pg := import["std:postgres"]
+@pg.connect["postgres://u@127.0.0.1:1/db", {"tls": "verify-full"}]

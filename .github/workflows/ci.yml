@@ -31,6 +31,9 @@ jobs:
       # SQLite（sqlite feature）も、ビルドとテストが通ること
       - run: cargo clippy --all-targets --features sqlite -- -D warnings
       - run: cargo test --features sqlite
+      # PostgreSQL（postgres feature）も、ビルドと、サーバーなしでできるテストが通ること
+      - run: cargo clippy --all-targets --features postgres -- -D warnings
+      - run: cargo test --features postgres
       # FFI（ffi feature）も、ビルドとテストが通ること
       - run: cargo clippy --all-targets --features ffi -- -D warnings
       - run: cargo test --features ffi

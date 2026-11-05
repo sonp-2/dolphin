@@ -192,6 +192,8 @@ runtime_error.dol:5:12: エラー: 添字 5 は範囲外です（要素は 2 個
 
 全体像は [docs/architecture.md](docs/architecture.md) にまとめています。コア言語は外部クレートに依存しません（HTTP の TLS は、既定で有効な `http` feature の `ureq` を、ハッシュ・HMAC・乱数は `crypto` feature の `ring` と `md-5` を、正規表現は `regex` feature の `regex` を使います）。GUI（`std:ui`）は依存が多いので、`ui` feature（`cargo build --features ui`）を付けたときだけ含まれます。音（`std:audio`）も `audio` feature（`rodio` を使う。Linux では `libasound2-dev` が要ります）です。SQLite（`std:sqlite`）は `sqlite` feature（`rusqlite` で SQLite のソースを同梱する。C コンパイラが要ります）です。FFI（`std:ffi`）は `ffi` feature（`libloading` と `libffi` を使う。C コンパイラが要ります）です。
 
+PostgreSQL（`std:postgres`）は `postgres` feature（純 Rust の `postgres` クレートを使う。TLS は `tls` feature の rustls）です。`cargo build --features postgres` で入り、例は [examples/pg_demo.dol](examples/pg_demo.dol)、仕様は [docs/design.md](docs/design.md) の 5.47 にあります。サーバーを使うテストは、環境変数 `DOLPHIN_TEST_PG_URL` があるときだけ動きます。
+
 ## ビルド・実行方法
 
 必要なもの: [Rust](https://rustup.rs)（stable）

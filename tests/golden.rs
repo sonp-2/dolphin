@@ -2,7 +2,7 @@
 //! エラーになるケースは、エラー表示も含めて *.out に書く。
 //! `http` feature を外したときだけ出力が変わるケースは、`名前.nohttp.out` に書く。
 //! 名前が `crypto` で始まるケースは、`crypto` feature を外した版では動かさない（`regex` も同じ）。
-//! 名前が `sqlite` で始まるケースは、`sqlite` feature を付けた版でだけ動かす
+//! 名前が `sqlite` で始まるケースは、`sqlite` feature を付けた版でだけ動かす（`postgres` も同じ）
 
 use std::fs;
 use std::path::Path;
@@ -27,6 +27,7 @@ fn golden() {
             && (cfg!(feature = "ui")
                 || cfg!(feature = "audio")
                 || cfg!(feature = "sqlite")
+                || cfg!(feature = "postgres")
                 || cfg!(feature = "ffi")
                 || !cfg!(feature = "image"))
         {
@@ -42,6 +43,10 @@ fn golden() {
         }
         // `sqlite` feature は既定では無効
         if name.starts_with("sqlite") && !cfg!(feature = "sqlite") {
+            continue;
+        }
+        // `postgres` feature も既定では無効（サーバーがなくても通るケースだけ）
+        if name.starts_with("postgres") && !cfg!(feature = "postgres") {
             continue;
         }
         let src = fs::read_to_string(&path).unwrap();

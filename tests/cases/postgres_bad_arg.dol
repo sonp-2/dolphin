@@ -1,0 +1,3 @@
+// std:postgres: 引数の型の間違いはプログラムの間違い（実行時エラー）
+@pg := import["std:postgres"]
+@pg.connect[{"host": 1}]
