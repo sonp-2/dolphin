@@ -7,6 +7,10 @@
 
 ## [Unreleased]
 
+## [0.56.0] - 2026-11-06
+
+言語の拡張（`catch` / `defer`、`for` のパターンとマップ・文字列、レコード）と、HTTP サーバー用のルーター `std:router`。あわせて、大きかったファイルを分けた（挙動は同じ）。
+
 ### 追加
 - `for` の拡張（[design.md 5.54](docs/design.md)）。ループ変数に分割代入のパターンを書ける（`for {@i, @x} in arr_enumerate[@a]`、`for {"name": @n} in @people`。文法とエラーは 5.19 と同じ）。マップを直接回せる（`for {@k, @v} in @m` は挿入順に `{キー, 値}` を渡す。回し始めた時点の写しを回すので、回しながら書き換えても影響しない）。文字列を 1 文字（コードポイント）ずつ回せる。回せない型のエラーは「for で回せるのは配列・マップ・文字列です」になった。添字つきの `for @i, @x in` は作らない（`arr_enumerate` で足りる）
 - レコード（[design.md 5.55](docs/design.md)）: `record Point[@x, @y]` で、型名のタグを持つ軽いレコードを定義する（トップレベルのみ。既定値・可変長引数・メソッド・継承はない）。`Point[1, 2]` で作り（コンストラクタは関数と同じ扱いなので、`dolphin check` が引数の数の間違いを実行前に検出し、`@u.Point[1, 2]` でモジュールからも使える）、`@p.x` `@p{"x"}` で読み書きする。定義にないフィールドの読み書きと、`map_remove` `map_clear` は実行時エラー
@@ -23,6 +27,7 @@
 
 ### 変更
 - Dolphin で書いた関数を持つ組み込みモジュール（`std:router`、`std:async`）は、`import` したファイルと同じく出どころ（`std:router` など）を持ち、中で起きたエラーはそのソースの行を引用する。エラーの出どころは、いちばん内側の関数のファイルで決める（メインのファイルのハンドラが `std:router` の関数を通り抜けて起こしたエラーは、メインのファイルの行を引用する。`import` したファイルの関数が、メインのファイルのコールバックを呼ぶ場合も同じ）
+- 大きかったファイルをフォルダに分けた（挙動は同じ）。`runtime/interp/vm.rs` を `vm/` に（巨大だった `step` を命令の種類ごとの関数に）、`runtime/compile.rs` を `compile/` に、`syntax/parser.rs` を `parser/` に、`sema/resolver.rs` を `resolver/` に、`stdlib/data/postgres.rs`・`stdlib/network/http_server.rs`・`stdlib/time.rs`・`stdlib/data/zip.rs` をそれぞれフォルダに
 
 ## [0.55.0] - 2026-11-05
 
@@ -614,7 +619,8 @@ C++ 版から Rust での作り直しを始めた最初のバージョン。
 - 行・列と呼び出し履歴つきのエラー表示。実行前の検査（未定義の関数、引数の数、関数の外での `$x` など）
 - ゴールデンテスト（`tests/cases/*.dol` と期待出力の比較）
 
-[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.55.0...HEAD
+[Unreleased]: https://github.com/sonp-2/dolphin/compare/v0.56.0...HEAD
+[0.56.0]: https://github.com/sonp-2/dolphin/compare/v0.55.0...v0.56.0
 [0.55.0]: https://github.com/sonp-2/dolphin/compare/v0.54.0...v0.55.0
 [0.54.0]: https://github.com/sonp-2/dolphin/compare/v0.53.0...v0.54.0
 [0.53.0]: https://github.com/sonp-2/dolphin/compare/v0.52.0...v0.53.0
