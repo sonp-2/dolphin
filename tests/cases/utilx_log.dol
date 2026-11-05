@@ -1,0 +1,54 @@
+// std:log（design.md 5.50）。時刻は毎回変わるので、ファイルに書いて時刻の部分を外して見る
+@lg := import["std:log"]
+@s := import["std:stream"]
+@p := import["std:path"]
+@os := import["std:os"]
+@j := import["std:json"]
+
+@path := @p.join[@os.temp_dir[], "dolphin_utilx_log_test.txt"]
+
+@w := @s.create[@path]?
+@lg.set_output[@w]
+@lg.debug["debug は既定では出ない"]
+@lg.info["起動", {"port": 8080, "name": "a b", "empty": "", "ok": true, "none": nil}]
+@lg.warn["改行\nあり"]
+@lg.error["配列とマップ", {"list": {1, 2}, "map": {"a": 1}}]
+@lg.set_level["debug"]
+@lg.debug["debug が出る"]
+@lg.set_level["error"]
+@lg.warn["warn は出ない"]
+@lg.error["error は出る"]
+@lg.set_level["off"]
+@lg.error["off では何も出ない"]
+@lg.set_level["info"]
+log[@lg.info["戻り値は nil"]]
+@s.close[@w]?
+
+for @line in str_lines[file_read[@path]?] (
+    if str_len[@line] > 0 (
+        // 時刻の形だけ確かめる（2026-11-05T03:04:05.678Z）
+        log[str_len[str_sub[@line, 0, 24]], str_sub[@line, 4, 5], str_sub[@line, 10, 11], str_sub[@line, 23, 24]]
+        log[str_sub[@line, 25, str_len[@line]]]
+    )
+)
+
+// json
+@w2 := @s.create[@path]?
+@lg.set_output[@w2]
+@lg.set_format["json"]
+@lg.info["json", {"n": 1, "time": "x", "list": {1, 2}, "f": [] ( # 1 )}]
+@s.close[@w2]?
+@text := file_read[@path]?
+@rec := @j.parse[str_lines[@text]{0}]?
+log[@rec{"level"}, @rec{"msg"}, @rec{"n"}, @rec{"field_time"}, @rec{"list"}]
+log[str_len[@rec{"time"}], str_starts_with[@text, "{\"time\":\""]]
+log[@rec{"f"}]
+
+// 閉じたストリームに書くと、エラー値
+@w3 := @s.create[@path]?
+@lg.set_output[@w3]
+@s.close[@w3]?
+@e := @lg.info["閉じている"]
+log[err_kind[@e]]
+@lg.set_output[nil]
+file_remove[@path]

@@ -1,0 +1,4 @@
+utilx_bytes_get_offset_error.dol:1:5: エラー: bytes_get_int の位置 2 から 4 バイトは範囲外です（長さ 4）
+  |
+1 | log[bytes_get_int[bytes_new[4], 2, 4, "be"]]
+  |     ^

@@ -1,0 +1,4 @@
+utilx_log_level_error.dol:2:1: エラー: log.set_level のレベルは "debug" "info" "warn" "error" "off" のどれかです（"loud"）
+  |
+2 | @lg.set_level["loud"]
+  | ^

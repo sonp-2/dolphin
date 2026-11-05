@@ -19,7 +19,7 @@ fn golden() {
         }
         let name = path.file_name().unwrap().to_string_lossy().into_owned();
         // `crypto` feature を外した版では、std:crypto を使うケースは動かさない
-        if name.starts_with("crypto") && !cfg!(feature = "crypto") {
+        if (name.starts_with("crypto") || name == "utilx_crypto.dol") && !cfg!(feature = "crypto") {
             continue;
         }
         // `ui` `audio` feature を付けた版では、あるモジュールの一覧が変わる

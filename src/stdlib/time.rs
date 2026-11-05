@@ -1,5 +1,6 @@
 //! `std:time`: now, monotonic, sleep, date, timestamp, format, parse, iso, parse_iso
-//! （design.md 5.13）と、is_leap, days_in_month, add_months, start_of（5.30）
+//! （design.md 5.13）と、is_leap, days_in_month, add_months, start_of（5.30）、
+//! local_offset, diff, add（5.50）
 //!
 //! 時刻は Unix 時刻（秒。小数）。暦はグレゴリオ暦で、年は 1〜9999、うるう秒は扱わない。
 //! 時差は「UTC からの分」で、省略は UTC。外部クレートは使わず、暦の計算は自前
@@ -30,6 +31,9 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("time.days_in_month", days_in_month_fn),
             ("time.add_months", add_months),
             ("time.start_of", start_of),
+            ("time.local_offset", local_offset),
+            ("time.diff", diff),
+            ("time.add", add),
         ],
     );
 }
@@ -770,6 +774,239 @@ fn start_of(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
         .map_err(|e| format!("time.start_of: {e}"))
 }
 
+// ---- 5.50: local_offset, diff, add ----
+
+/// OS のタイムゾーンの、UTC からの分。`ts` の時点の値（夏時間を反映）
+#[cfg(windows)]
+fn os_offset_minutes(ts: f64) -> Result<i64, String> {
+    #[repr(C)]
+    #[derive(Default, Clone, Copy)]
+    struct WinTime {
+        year: u16,
+        month: u16,
+        weekday: u16,
+        day: u16,
+        hour: u16,
+        minute: u16,
+        second: u16,
+        millisecond: u16,
+    }
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn SystemTimeToTzSpecificLocalTime(
+            zone: *const std::ffi::c_void,
+            utc: *const WinTime,
+            local: *mut WinTime,
+        ) -> i32;
+    }
+    // Windows が扱えるのは 1601 年から。範囲外は今の値にする
+    let c = match civil_from_ts(ts, 0) {
+        Ok(c) if c.year >= 1601 => c,
+        _ => civil_from_ts(now_secs(), 0)?,
+    };
+    let utc = WinTime {
+        year: c.year as u16,
+        month: c.month as u16,
+        weekday: c.weekday as u16,
+        day: c.day as u16,
+        hour: c.hour as u16,
+        minute: c.minute as u16,
+        second: c.second as u16,
+        millisecond: 0,
+    };
+    let mut local = WinTime::default();
+    // SAFETY: 渡すのはどちらも、このスタック上の正しく初期化された構造体。null の zone は「今のタイムゾーン」
+    let ok = unsafe { SystemTimeToTzSpecificLocalTime(std::ptr::null(), &utc, &mut local) };
+    if ok == 0 {
+        return Err("OS のタイムゾーンを取得できませんでした".into());
+    }
+    let minutes = |t: &WinTime| {
+        days_from_civil(i64::from(t.year), i64::from(t.month), i64::from(t.day)) * 1440
+            + i64::from(t.hour) * 60
+            + i64::from(t.minute)
+    };
+    Ok(minutes(&local) - minutes(&utc))
+}
+
+#[cfg(all(unix, target_pointer_width = "64"))]
+fn os_offset_minutes(ts: f64) -> Result<i64, String> {
+    use std::ffi::{c_char, c_int, c_long};
+    #[repr(C)]
+    struct Tm {
+        sec: c_int,
+        min: c_int,
+        hour: c_int,
+        mday: c_int,
+        mon: c_int,
+        year: c_int,
+        wday: c_int,
+        yday: c_int,
+        isdst: c_int,
+        gmtoff: c_long,
+        zone: *const c_char,
+    }
+    unsafe extern "C" {
+        fn localtime_r(time: *const i64, out: *mut Tm) -> *mut Tm;
+    }
+    let time = ts.floor() as i64;
+    let mut tm = Tm {
+        sec: 0,
+        min: 0,
+        hour: 0,
+        mday: 0,
+        mon: 0,
+        year: 0,
+        wday: 0,
+        yday: 0,
+        isdst: 0,
+        gmtoff: 0,
+        zone: std::ptr::null(),
+    };
+    // SAFETY: どちらもこのスタック上の正しい構造体。localtime_r はスレッドセーフ
+    let result = unsafe { localtime_r(&time, &mut tm) };
+    if result.is_null() {
+        return Err("OS のタイムゾーンを取得できませんでした".into());
+    }
+    Ok(i64::from(tm.gmtoff) / 60)
+}
+
+#[cfg(not(any(windows, all(unix, target_pointer_width = "64"))))]
+fn os_offset_minutes(_ts: f64) -> Result<i64, String> {
+    Err("この環境ではタイムゾーンを取得できません".into())
+}
+
+/// UTC の `2026-11-05T03:04:05.678Z`（ミリ秒まで常に付ける。`std:log` が使う）。範囲外は 1970 年
+pub(super) fn iso_utc_ms(ts: f64) -> String {
+    let c = civil_from_ts(ts, 0).or_else(|_| civil_from_ts(0.0, 0));
+    match c {
+        Ok(c) => format!(
+            "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}.{:03}Z",
+            c.year, c.month, c.day, c.hour, c.minute, c.second, c.millisecond
+        ),
+        Err(_) => String::new(),
+    }
+}
+
+fn now_secs() -> f64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_or(0.0, |d| d.as_secs_f64())
+}
+
+fn local_offset(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    check_count("time.local_offset", args, 0, 1)?;
+    let ts = if args.is_empty() {
+        now_secs()
+    } else {
+        let ts = num_arg("time.local_offset", args, 0)?;
+        if !ts.is_finite() {
+            return Err(format!("time.local_offset の時刻 {ts} は使えません"));
+        }
+        ts
+    };
+    Ok(match os_offset_minutes(ts) {
+        Ok(minutes) => Value::Num(minutes as f64),
+        Err(message) => error_value("io", message),
+    })
+}
+
+/// 単位の名前を、その秒数にする（単数形も可）
+fn unit_seconds(unit: &str) -> Option<f64> {
+    Some(match unit {
+        "millisecond" | "milliseconds" => 0.001,
+        "second" | "seconds" => 1.0,
+        "minute" | "minutes" => 60.0,
+        "hour" | "hours" => 3600.0,
+        "day" | "days" => 86_400.0,
+        "week" | "weeks" => 604_800.0,
+        _ => return None,
+    })
+}
+
+/// `a - b` を `unit` で数える
+fn diff(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    check_count("time.diff", args, 3, 3)?;
+    let a = num_arg("time.diff", args, 0)?;
+    let b = num_arg("time.diff", args, 1)?;
+    let unit = str_arg("time.diff", args, 2)?;
+    let Some(seconds) = unit_seconds(unit) else {
+        return Err(format!(
+            "time.diff の単位は \"milliseconds\" \"seconds\" \"minutes\" \"hours\" \"days\" \"weeks\" のどれかです（{unit:?}）"
+        ));
+    };
+    Ok(Value::Num((a - b) / seconds))
+}
+
+/// 年・月・週・日・時・分・秒・ミリ秒を足す
+fn add(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    check_count("time.add", args, 2, 3)?;
+    let ts = num_arg("time.add", args, 0)?;
+    let Value::Map(delta) = &args[1] else {
+        return Err(type_error("time.add", 1, "マップ", &args[1]));
+    };
+    let offset = offset_arg("time.add", args, 2)?;
+    let (mut months, mut seconds) = (0i64, 0.0f64);
+    for (key, value) in delta.borrow().iter() {
+        let Value::Num(n) = value else {
+            return Err(format!(
+                "time.add の `{key}` は数値です（{}が渡されました）",
+                value.type_name()
+            ));
+        };
+        if !n.is_finite() {
+            return Err(format!("time.add の `{key}` は有限の数値です（{n}）"));
+        }
+        match &**key {
+            "years" | "months" => {
+                if n.fract() != 0.0 || n.abs() > 1e6 {
+                    return Err(format!(
+                        "time.add の `{key}` は整数です（絶対値 1000000 以下。{n} が渡されました）"
+                    ));
+                }
+                months += *n as i64 * if &**key == "years" { 12 } else { 1 };
+            }
+            other => match unit_seconds(other).filter(|_| other.ends_with('s')) {
+                Some(unit) => seconds += n * unit,
+                None => {
+                    return Err(format!(
+                        "time.add に知らない項目 `{key}` があります（使えるのは years、months、weeks、days、hours、minutes、seconds、milliseconds）"
+                    ));
+                }
+            },
+        }
+    }
+    let mut result = ts;
+    if months != 0 {
+        let c = civil_from_ts(result, offset).map_err(|e| format!("time.add: {e}"))?;
+        let total = c.year * 12 + (c.month - 1) + months;
+        let (year, month) = (total.div_euclid(12), total.rem_euclid(12) + 1);
+        if !(1..=9999).contains(&year) {
+            return Ok(error_value(
+                "parse",
+                "足した結果が扱える範囲（1〜9999 年）を超えます",
+            ));
+        }
+        let day = c.day.min(days_in_month(year, month));
+        match ts_from_fields(
+            (year, month, day),
+            (c.hour, c.minute, c.second, c.millisecond),
+            offset,
+        ) {
+            Ok(t) => result = t,
+            Err(message) => return Ok(error_value("parse", message)),
+        }
+    }
+    result += seconds;
+    // 結果が 1〜9999 年に収まるか（`date` などが受け付ける範囲）
+    if civil_from_ts(result, 0).is_err() {
+        return Ok(error_value(
+            "parse",
+            "足した結果が扱える範囲（1〜9999 年）を超えます",
+        ));
+    }
+    Ok(Value::Num(result))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -972,5 +1209,28 @@ mod tests {
         assert!(parse_iso_str("2023-11-14T22:13:20+9:00").is_err());
         assert!(parse_iso_str("2023-11-14T25:00:00Z").is_err());
         assert!(parse_iso_str("2023-11-14T22:13:20Zx").is_err());
+    }
+
+    #[test]
+    fn units() {
+        assert_eq!(unit_seconds("days"), Some(86_400.0));
+        assert_eq!(unit_seconds("day"), Some(86_400.0));
+        assert_eq!(unit_seconds("milliseconds"), Some(0.001));
+        assert_eq!(unit_seconds("years"), None);
+    }
+
+    #[test]
+    fn iso_utc_ms_is_fixed_width() {
+        assert_eq!(iso_utc_ms(0.0), "1970-01-01T00:00:00.000Z");
+        assert_eq!(iso_utc_ms(1_700_000_000.123), "2023-11-14T22:13:20.123Z");
+    }
+
+    #[test]
+    fn os_offset_is_a_valid_offset() {
+        // 環境で値は変わるが、時差として使える範囲に収まる
+        for ts in [0.0, 1_700_000_000.0, 1_750_000_000.5, -1.0e9, 3.0e11] {
+            let minutes = os_offset_minutes(ts).unwrap();
+            assert!(minutes.abs() < 1440, "{ts}: {minutes}");
+        }
     }
 }

@@ -1,0 +1,4 @@
+utilx_async_timeout_zero_error.dol:2:5: エラー: async.timeout の秒数は 0 より大きい数です（0）
+  |
+2 | log[@a.timeout[@a.sleep[1], 0]]
+  |     ^

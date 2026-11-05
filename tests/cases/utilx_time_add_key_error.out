@@ -1,0 +1,4 @@
+utilx_time_add_key_error.dol:2:5: エラー: time.add に知らない項目 `fortnights` があります（使えるのは years、months、weeks、days、hours、minutes、seconds、milliseconds）
+  |
+2 | log[@t.add[0, {"fortnights": 1}]]
+  |     ^

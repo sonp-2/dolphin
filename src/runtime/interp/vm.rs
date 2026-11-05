@@ -487,8 +487,21 @@ impl Interpreter<'_> {
         if !matches!(state.outcome, FutureOutcome::Pending) {
             return;
         }
-        state.outcome = outcome;
+        state.outcome = outcome.clone();
         self.ready.extend(mem::take(&mut state.waiters));
+        let forwards = mem::take(&mut state.forwards);
+        drop(inner);
+        // 転送先（`async.race` `async.timeout`）にも、同じ結果を渡す
+        for forward in forwards {
+            if let Some(id) = forward.cancel_timer {
+                self.events.cancel(id);
+            }
+            let outcome = match (&outcome, forward.replace) {
+                (FutureOutcome::Resolved(_), Some(value)) => FutureOutcome::Resolved(value),
+                _ => outcome.clone(),
+            };
+            self.settle_future(&forward.target, outcome);
+        }
     }
 
     fn add_waiter(&mut self, future: &Value, id: u64) {

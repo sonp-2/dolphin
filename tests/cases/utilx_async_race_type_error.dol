@@ -1,0 +1,2 @@
+@a := import["std:async"]
+log[@a.race[{1}]]

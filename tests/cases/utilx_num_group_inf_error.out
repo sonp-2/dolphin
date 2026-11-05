@@ -1,0 +1,4 @@
+utilx_num_group_inf_error.dol:2:5: エラー: num_group の 1 番目の引数は有限の数値です（inf）
+  |
+2 | log[num_group[@m.inf, ","]]
+  |     ^

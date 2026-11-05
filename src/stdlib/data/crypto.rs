@@ -1,4 +1,4 @@
-//! `std:crypto`: hash, hmac, random_bytes, uuid, equals（design.md 5.14）
+//! `std:crypto`: hash, hmac, random_bytes, uuid, equals（design.md 5.14）, uuid7（5.50）
 //!
 //! 暗号は自前で書かない。ハッシュ・HMAC・乱数は `ring`、md5 は `md-5` を使う。
 //! `crypto` feature（既定で有効）
@@ -19,6 +19,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("crypto.hmac", hmac_fn),
             ("crypto.random_bytes", random_bytes),
             ("crypto.uuid", uuid),
+            ("crypto.uuid7", uuid7),
             ("crypto.equals", equals),
         ],
     );
@@ -108,18 +109,33 @@ fn uuid(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     // バージョン 4、バリアントは RFC 4122
     bytes[6] = bytes[6] & 0x0f | 0x40;
     bytes[8] = bytes[8] & 0x3f | 0x80;
-    let hex = hex_encode(&bytes);
-    Ok(Value::Str(
-        format!(
-            "{}-{}-{}-{}-{}",
-            &hex[..8],
-            &hex[8..12],
-            &hex[12..16],
-            &hex[16..20],
-            &hex[20..]
-        )
-        .into(),
-    ))
+    Ok(Value::Str(format_uuid(&bytes).into()))
+}
+
+fn format_uuid(bytes: &[u8; 16]) -> String {
+    let hex = hex_encode(bytes);
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..]
+    )
+}
+
+/// UUID v7（RFC 9562）。上位 48 ビットがミリ秒の Unix 時刻、残りは乱数（design.md 5.50）
+fn uuid7(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("crypto.uuid7", args, 0)?;
+    let ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_millis() as u64);
+    let mut bytes = [0u8; 16];
+    fill_random(&mut bytes)?;
+    bytes[..6].copy_from_slice(&ms.to_be_bytes()[2..]);
+    bytes[6] = bytes[6] & 0x0f | 0x70;
+    bytes[8] = bytes[8] & 0x3f | 0x80;
+    Ok(Value::Str(format_uuid(&bytes).into()))
 }
 
 /// 中身によらず同じ時間で比べる（HMAC の検証用）。長さが違えば、すぐ false
@@ -185,5 +201,11 @@ mod tests {
             hex_encode(tag.as_ref()),
             "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
         );
+    }
+
+    #[test]
+    fn uuid_format() {
+        let bytes: [u8; 16] = std::array::from_fn(|i| i as u8);
+        assert_eq!(format_uuid(&bytes), "00010203-0405-0607-0809-0a0b0c0d0e0f");
     }
 }
