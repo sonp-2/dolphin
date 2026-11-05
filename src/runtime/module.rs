@@ -1,12 +1,11 @@
 //! モジュール（design.md 5.7）。import したファイル 1 つ分のトップレベルの変数と関数
 
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
-use super::env::Env;
+use super::env::{Env, FastMap};
 use super::value::NativeRef;
 use crate::diag::Origin;
 use crate::syntax::ast::FuncDef;
@@ -94,9 +93,9 @@ pub struct Module {
     pub origin: Option<Rc<Origin>>,
     /// トップレベルのスコープ。ファイル内の関数はここを外側として実行される
     pub globals: Rc<Env>,
-    pub functions: RefCell<HashMap<String, Rc<FuncDef>>>,
+    pub functions: RefCell<FastMap<String, Rc<FuncDef>>>,
     /// 組み込みモジュール（`import["std:json"]`）の関数。名前は `parse` のような短い名前
-    pub natives: HashMap<&'static str, NativeRef>,
+    pub natives: FastMap<&'static str, NativeRef>,
 }
 
 impl Module {
@@ -107,7 +106,7 @@ impl Module {
             origin,
             globals: Env::new(None),
             functions: RefCell::default(),
-            natives: HashMap::new(),
+            natives: FastMap::default(),
         }
     }
 }

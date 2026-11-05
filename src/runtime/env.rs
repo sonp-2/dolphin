@@ -25,7 +25,10 @@ impl Hasher for NameHasher {
     }
 }
 
-type NameMap = HashMap<String, Value, BuildHasherDefault<NameHasher>>;
+/// 軽いハッシュを使う表（名前や関数の定義のアドレスで引く表用）
+pub type FastMap<K, V> = HashMap<K, V, BuildHasherDefault<NameHasher>>;
+
+type NameMap = FastMap<String, Value>;
 
 /// スコープ 1 つ分の変数表。外側のスコープへの参照を持ち、名前は内側から順に探す。
 /// トップレベルのスコープ（ファイルの変数）は `parent` を持たない
