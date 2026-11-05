@@ -140,7 +140,11 @@ pub struct Chunk {
     /// 命令ごとの位置（エラー表示用）。`code` と同じ長さ
     pub spans: Vec<Span>,
     pub consts: Vec<Value>,
-    pub names: Vec<String>,
+    pub names: Vec<Rc<str>>,
+    /// 関数の引数名（`FuncDef::params` と同じ順）。呼び出しのとき文字列を確保せずに宣言するため
+    pub param_names: Vec<Rc<str>>,
+    /// 残りの引数の名前
+    pub rest_name: Option<Rc<str>>,
     /// `MakeClosure` が作る無名関数の定義
     pub defs: Vec<Rc<FuncDef>>,
     pub patterns: Vec<Pattern>,
