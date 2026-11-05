@@ -1,0 +1,26 @@
+@m := {"b": 1, "a": 2, "c": 3}
+for {@k, @v} in @m (
+    log[@k, @v]
+)
+for @pair in @m (
+    log[@pair]
+)
+for {@k, @v} in map_items[@m] (
+    log[@k, @v]
+)
+// 空のマップは 0 回
+for @x in {} (
+    log["ここには来ない"]
+)
+// 回している最中の書き換えは、回し始めた時点の写しを回す
+@w := {"a": 1, "b": 2}
+@n := 0
+for {@k, @v} in @w (
+    @w{"z@n"} = @v
+    if map_has[@w, "b"] (
+        map_remove[@w, "b"]
+    )
+    @n = @n + 1
+    log[@k, @v]
+)
+log[map_keys[@w]]

@@ -1,0 +1,18 @@
+@async := import["std:async"]
+async work[@pairs] (
+    @out := {}
+    for {@k, @v} in @pairs (
+        await @async.sleep[0.001]
+        arr_push[@out, "@k@v"]
+    )
+    for @c in "xy" (
+        await @async.sleep[0.001]
+        arr_push[@out, @c]
+    )
+    # @out
+)
+async main[] (
+    @r := await @async.all[{work[{"a": 1, "b": 2}], work[{"c": 3}]}]
+    log[@r]
+)
+await main[]

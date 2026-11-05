@@ -1,0 +1,14 @@
+for @c in "abc" (
+    log[@c]
+)
+// コードポイント単位（str_len と同じ）
+@s := "あ😀é"
+@n := 0
+for @c in @s (
+    @n = @n + 1
+    log[@c, str_len[@c]]
+)
+log[@n == str_len[@s]]
+for @c in "" (
+    log["ここには来ない"]
+)

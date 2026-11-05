@@ -1,0 +1,21 @@
+// for の速さ: 単一変数・分割代入・マップ・文字列
+@xs := range[0, 300000]
+@s := 0
+for @x in @xs (
+    @s = @s + @x
+)
+for {@i, @x} in arr_enumerate[@xs] (
+    @s = @s + @i - @x
+)
+@m := {"a": 0}
+for @i in range[0, 20000] (
+    @m{"k@i"} = @i
+)
+for {@k, @v} in @m (
+    @s = @s + @v
+)
+@t := str_repeat["abc", 50000]
+for @c in @t (
+    @s = @s + 1
+)
+log[@s]

@@ -1,0 +1,3 @@
+for {@a} in "xy" (
+    log[@a]
+)

@@ -1,0 +1,14 @@
+// クロージャは繰り返しごとに別の変数を捕まえる（単一変数・パターン・マップ）
+@fs := {}
+for {@i, @x} in arr_enumerate[{"a", "b", "c"}] (
+    arr_push[@fs, [] ( # "@i@x" )]
+)
+for {@k, @v} in {"p": 1, "q": 2} (
+    arr_push[@fs, [] ( # "@k=@v" )]
+)
+for @c in "uv" (
+    arr_push[@fs, [] ( # @c )]
+)
+for @f in @fs (
+    log[@f[]]
+)
