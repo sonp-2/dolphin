@@ -1147,3 +1147,31 @@ log[@f[1], @g[1, 2], make[][3]]"),
         assert!(e.message.starts_with("比較は続けて書けません"));
     }
 }
+
+#[cfg(test)]
+mod record_tests {
+    use super::*;
+    use crate::syntax::lexer::tokenize;
+
+    fn parse_src(src: &str) -> Result<Program, Diagnostic> {
+        parse(&tokenize(src).unwrap())
+    }
+
+    #[test]
+    fn record_definition_is_a_constructor_function() {
+        let program = parse_src("record Point[@x, @y]\n").unwrap();
+        assert_eq!(program.to_string(), "(record Point (@x @y) ())\n");
+    }
+
+    #[test]
+    fn record_definition_errors() {
+        for src in [
+            "record P[]\n",
+            "record P[@x = 1]\n",
+            "record P[...@r]\n",
+            "record [@x]\n",
+        ] {
+            assert!(parse_src(src).is_err(), "{src}");
+        }
+    }
+}

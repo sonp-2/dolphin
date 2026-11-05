@@ -1,0 +1,10 @@
+Point{x: 1, y: 2}
+1 2
+Point{x: 10, y: 20}
+record Point nil nil
+表示: Point{x: 10, y: 20}
+Point{x: 10, y: 20}
+{"x", "y"} {10, 20} 2 true
+{Point{x: 1, y: 2}, Point{x: 3, y: 4}}
+{"a": 2}
+99

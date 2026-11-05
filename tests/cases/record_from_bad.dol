@@ -1,0 +1,2 @@
+add[@a] ( # @a )
+log[record_from[add, {"a": 1}]]

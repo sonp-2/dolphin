@@ -1,0 +1,3 @@
+record Point[@x]
+point[@a] ( # @a )
+Point[@a] ( # @a )

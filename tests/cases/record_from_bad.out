@@ -1,0 +1,4 @@
+record_from_bad.dol:2:5: エラー: record_from の第 1 引数はレコードのコンストラクタである必要があります（関数 add です）
+  |
+2 | log[record_from[add, {"a": 1}]]
+  |     ^

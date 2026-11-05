@@ -7,6 +7,13 @@
 
 ## [Unreleased]
 
+### 追加
+- レコード（[design.md 5.55](docs/design.md)）: `record Point[@x, @y]` で、型名のタグを持つ軽いレコードを定義する（トップレベルのみ。既定値・可変長引数・メソッド・継承はない）。`Point[1, 2]` で作り（コンストラクタは関数と同じ扱いなので、`dolphin check` が引数の数の間違いを実行前に検出し、`@u.Point[1, 2]` でモジュールからも使える）、`@p.x` `@p{"x"}` で読み書きする。定義にないフィールドの読み書きと、`map_remove` `map_clear` は実行時エラー
+- `==` は型名が同じで中身が等しいときだけ true。表示は `Point{x: 1, y: 2}`。`type_of` は `"record"`。`json.stringify` は普通のマップと同じ。分割代入（マップのパターン）がそのまま使える。`map_copy` は型名を保ち、`map_merge` などが新しく作るマップは普通のマップになる
+- 組み込み関数 `record_name[v]`（型名か `nil`）と `record_from[Point, @map]`（`json.parse` の結果を型に当てはめる。足りないフィールドはエラー値 `invalid`）
+- `record` を予約語にした（識別子としての `record` は使えなくなる。`@record` は変数なので影響しない）
+- `examples/shapes.dol`
+
 ## [0.55.0] - 2026-11-05
 
 標準ライブラリの追加（PostgreSQL・YAML・TOML・zip・ログ・ファイル操作など）と、VM の高速化。**言語の構文と既存の出力は変わらない**。

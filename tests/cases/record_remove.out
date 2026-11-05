@@ -1,0 +1,4 @@
+record_remove.dol:3:5: エラー: map_remove はレコードには使えません（record Point のフィールドは増減できません）
+  |
+3 | log[map_remove[@p, "x"]]
+  |     ^

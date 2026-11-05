@@ -72,7 +72,7 @@ count: 3
   - 配列、文字列の中の `@x` の展開、行末コメント
 - [x] **段階 2: 実用化**
   - 行・列と呼び出し履歴つきのエラー表示
-  - マップ（連想配列）
+  - マップ（連想配列）、レコード（`record Point[@x, @y]`。型名つきのマップ。[design.md 5.55](docs/design.md)）
   - 文字列・数値変換・数学の組み込み関数
   - 対話モード（REPL）
 - [x] **段階 3.5**: 言語の土台の見直し（[design.md 8 章](docs/design.md)）
@@ -105,6 +105,7 @@ count: 3
 | [mandelbrot.dol](examples/mandelbrot.dol) | マンデルブロ集合を文字で描く |
 | [json.dol](examples/json.dol) / [http.dol](examples/http.dol) | JSON の読み書き / HTTP で JSON を取ってくる（ネットワークが必要） |
 | [closure.dol](examples/closure.dol) | クロージャと `arr_map` |
+| [shapes.dol](examples/shapes.dol) | レコード（`record Point[@x, @y]`）で図形を表し、面積を求める |
 | [hello.dol](examples/hello.dol) / [count.dol](examples/count.dol) | 最小の例。変数・関数・`while`・配列の合計 |
 | [todo_api.dol](examples/todo_api.dol) | メモを JSON で出し入れする小さな API サーバー（`http.serve`。`curl` で試せる） |
 | [counter_ui.dol](examples/counter_ui.dol) | ウィンドウを開く小さなアプリ（`std:ui`。`cargo run --features ui -- examples/counter_ui.dol`） |

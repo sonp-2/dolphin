@@ -1,0 +1,20 @@
+record Point[@x, @y]
+record Size[@x, @y]
+
+log[Point[1, 2] == Point[1, 2]]
+log[Point[1, 2] == Point[2, 1]]
+// 型名が違えば、中身が同じでも false
+log[Point[1, 2] == Size[1, 2]]
+log[Point[1, 2] != Size[1, 2]]
+// 普通のマップとも false
+log[Point[1, 2] == {"x": 1, "y": 2}]
+log[{"x": 1, "y": 2} == Point[1, 2]]
+// 入れ子
+record Line[@from, @to]
+log[Line[Point[0, 0], Point[1, 1]] == Line[Point[0, 0], Point[1, 1]]]
+log[Line[Point[0, 0], Point[1, 1]]]
+// map_copy は型名を保ち、map_merge は普通のマップになる
+@p := Point[1, 2]
+log[map_copy[@p] == @p, type_of[map_copy[@p]]]
+log[type_of[map_merge[@p, {"z": 3}]], map_merge[@p, {"z": 3}]]
+log[type_of[map_filter[@p, [@k, @v] ( # true )]]]

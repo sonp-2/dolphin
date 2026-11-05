@@ -1,0 +1,4 @@
+record_empty.dol:1:1: エラー: レコードにはフィールドが 1 つ以上必要です
+  |
+1 | record Nothing[]
+  | ^

@@ -1,0 +1,4 @@
+record Point[@x, @y]
+@p := Point[1, 2]
+log[@p]
+@p.z = 3

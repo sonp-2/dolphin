@@ -336,6 +336,26 @@ mod tests {
     }
 
     #[test]
+    fn record_display_equality_and_type() {
+        let make = |tag: Option<&str>, x: f64| {
+            let mut map = Map::default();
+            map.insert("x".into(), Value::Num(x));
+            map.insert("s".into(), Value::Str("a".into()));
+            map.tag = tag.map(Into::into);
+            gc::new_map(map)
+        };
+        let p = make(Some("Point"), 1.0);
+        assert_eq!(p.to_string(), "Point{x: 1, s: \"a\"}");
+        assert_eq!(p.type_name(), "レコード");
+        assert!(p.equals(&make(Some("Point"), 1.0)));
+        assert!(!p.equals(&make(Some("Point"), 2.0)));
+        // 型名が違えば、中身が同じでも等しくない。普通のマップとも等しくない
+        assert!(!p.equals(&make(Some("Size"), 1.0)));
+        assert!(!p.equals(&make(None, 1.0)));
+        assert_eq!(make(None, 1.0).type_name(), "マップ");
+    }
+
+    #[test]
     fn repr_quotes_strings() {
         let s = Value::Str("a\"b".into());
         assert_eq!(s.to_string(), "a\"b");

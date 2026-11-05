@@ -1,0 +1,4 @@
+record_nested.dol:2:5: エラー: 関数はトップレベルでのみ定義できます
+  |
+2 |     record Point[@x]
+  |     ^
