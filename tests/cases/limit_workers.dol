@@ -1,0 +1,8 @@
+// 同時に動かせるワーカーは 64 個まで
+@w := import["std:worker"]
+@i := 0
+@keep := {}
+while @i < 65 (
+    arr_push[@keep, @w.spawn["limit_worker_child.dol"]]
+    @i = @i + 1
+)

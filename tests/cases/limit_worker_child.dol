@@ -1,0 +1,5 @@
+// 親から受け取るまで待つだけのワーカー（単独で動かしたときは何もしない）
+@w := import["std:worker"]
+if @w.is_worker[] (
+    @w.recv[]
+)
