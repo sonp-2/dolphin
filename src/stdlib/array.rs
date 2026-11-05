@@ -33,6 +33,17 @@ pub fn register(interp: &mut Interpreter<'_>) {
     interp.register("arr_remove", arr_remove);
     interp.register("arr_clear", arr_clear);
     interp.register("arr_copy", arr_copy);
+    interp.register("arr_sum", arr_sum);
+    interp.register("arr_min", |i, a| min_max("arr_min", i, a, Ordering::Less));
+    interp.register("arr_max", |i, a| min_max("arr_max", i, a, Ordering::Greater));
+    interp.register("arr_enumerate", arr_enumerate);
+    interp.register("arr_sort_key", arr_sort_key);
+    interp.register("arr_take", |_, a| take_drop("arr_take", a, true));
+    interp.register("arr_drop", |_, a| take_drop("arr_drop", a, false));
+    interp.register("arr_first", |_, a| first_last("arr_first", a, true));
+    interp.register("arr_last", |_, a| first_last("arr_last", a, false));
+    interp.register("arr_partition", arr_partition);
+    interp.register("arr_flat_map", arr_flat_map);
 }
 
 /// `range` が作る配列の要素数の上限
@@ -342,6 +353,205 @@ fn arr_clear(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
 fn arr_copy(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     expect_args("arr_copy", args, 1)?;
     Ok(new_array(array_arg("arr_copy", args, 0)?.borrow().clone()))
+}
+
+/// 引数の個数が `min` 個以上 `max` 個以下か
+fn expect_args_between(name: &str, args: &[Value], min: usize, max: usize) -> Result<(), String> {
+    if (min..=max).contains(&args.len()) {
+        Ok(())
+    } else {
+        Err(format!(
+            "{name} の引数は {min} 個か {max} 個です（{} 個渡されました）",
+            args.len()
+        ))
+    }
+}
+
+/// 要素と、その鍵（`f` があれば `f[x]` の結果、なければ要素そのもの）。
+/// 呼び始めたときの要素を使う
+fn keyed(
+    name: &str,
+    interp: &mut Interpreter<'_>,
+    args: &[Value],
+) -> Result<(Vec<Value>, Vec<Value>), String> {
+    let items = array_arg(name, args, 0)?.borrow().clone();
+    let keys = match args.get(1) {
+        Some(_) => {
+            let f = func_arg(name, args, 1)?;
+            let mut keys = Vec::with_capacity(items.len());
+            for item in &items {
+                keys.push(interp.call_value(f, vec![item.clone()])?);
+            }
+            keys
+        }
+        None => items.clone(),
+    };
+    Ok((items, keys))
+}
+
+/// 数値の合計。要素（`f` があれば `f` の結果）がすべて数値なら数値、すべて整数なら整数。空は 0
+fn arr_sum(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args_between("arr_sum", args, 1, 2)?;
+    let (_, keys) = keyed("arr_sum", interp, args)?;
+    if !keys.is_empty() && keys.iter().all(|k| matches!(k, Value::Int(_))) {
+        let mut total: i64 = 0;
+        for k in &keys {
+            if let Value::Int(n) = k {
+                total = total
+                    .checked_add(*n)
+                    .ok_or_else(|| "arr_sum の合計が整数の範囲を出ました".to_string())?;
+            }
+        }
+        return Ok(Value::Int(total));
+    }
+    let mut total = 0.0;
+    for k in &keys {
+        match k {
+            Value::Num(n) => total += n,
+            other => {
+                let first = keys[0].type_name();
+                let message = if first != other.type_name() {
+                    format!("{first}と{}が混ざっています", other.type_name())
+                } else {
+                    format!("{}は足せません", other.type_name())
+                };
+                return Err(format!(
+                    "arr_sum の要素は、すべて数値かすべて整数である必要があります（{message}）"
+                ));
+            }
+        }
+    }
+    Ok(Value::Num(total))
+}
+
+/// 鍵がすべて数値か、すべて整数か、すべて文字列かを確かめる
+fn check_keys(name: &str, keys: &[Value]) -> Result<(), String> {
+    let Some(first) = keys.first() else {
+        return Ok(());
+    };
+    let ok = match first {
+        Value::Num(_) => keys.iter().all(|k| matches!(k, Value::Num(_))),
+        Value::Int(_) => keys.iter().all(|k| matches!(k, Value::Int(_))),
+        Value::Str(_) => keys.iter().all(|k| matches!(k, Value::Str(_))),
+        _ => false,
+    };
+    if ok {
+        return Ok(());
+    }
+    let first_type = first.type_name();
+    let message = match keys.iter().map(Value::type_name).find(|t| *t != first_type) {
+        Some(other) => format!("{first_type}と{other}が混ざっています"),
+        None => format!("{first_type}は比べられません"),
+    };
+    Err(format!(
+        "{name} の比べる値は、すべて数値かすべて整数かすべて文字列である必要があります（{message}）"
+    ))
+}
+
+/// `check_keys` を通った、同じ型の値の比較
+fn cmp_keys(a: &Value, b: &Value) -> Ordering {
+    match (a, b) {
+        (Value::Num(a), Value::Num(b)) => a.total_cmp(b),
+        (Value::Int(a), Value::Int(b)) => a.cmp(b),
+        (Value::Str(a), Value::Str(b)) => a.cmp(b),
+        _ => Ordering::Equal,
+    }
+}
+
+/// 最小（`want` が `Less`）か最大（`Greater`）の要素。同じ値なら最初のもの。空なら `nil`
+fn min_max(
+    name: &str,
+    interp: &mut Interpreter<'_>,
+    args: &[Value],
+    want: Ordering,
+) -> Result<Value, String> {
+    expect_args_between(name, args, 1, 2)?;
+    let (items, keys) = keyed(name, interp, args)?;
+    check_keys(name, &keys)?;
+    let mut best = 0;
+    for i in 1..keys.len() {
+        if cmp_keys(&keys[i], &keys[best]) == want {
+            best = i;
+        }
+    }
+    Ok(items.into_iter().nth(best).unwrap_or(Value::Nil))
+}
+
+/// `{{0, x0}, {1, x1}, ...}`
+fn arr_enumerate(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("arr_enumerate", args, 1)?;
+    let items = array_arg("arr_enumerate", args, 0)?.borrow().clone();
+    Ok(new_array(
+        items
+            .into_iter()
+            .enumerate()
+            .map(|(i, x)| new_array(vec![Value::Num(i as f64), x]))
+            .collect(),
+    ))
+}
+
+/// `f[x]` を鍵にした昇順の新しい配列。鍵は要素ごとに 1 回だけ求める。安定ソート
+fn arr_sort_key(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("arr_sort_key", args, 2)?;
+    let (items, keys) = keyed("arr_sort_key", interp, args)?;
+    check_keys("arr_sort_key", &keys)?;
+    let mut pairs: Vec<(Value, Value)> = keys.into_iter().zip(items).collect();
+    pairs.sort_by(|a, b| cmp_keys(&a.0, &b.0));
+    Ok(new_array(pairs.into_iter().map(|(_, x)| x).collect()))
+}
+
+/// 先頭から `n` 個（`take`）か、先頭の `n` 個を除いたもの。`n` が範囲外なら、
+/// 0 個か全部に収める（エラーにしない）
+fn take_drop(name: &str, args: &[Value], take: bool) -> Result<Value, String> {
+    expect_args(name, args, 2)?;
+    let items = array_arg(name, args, 0)?.borrow();
+    let n = int_arg(name, args, 1)?.clamp(0, items.len() as i64) as usize;
+    let part = if take { &items[..n] } else { &items[n..] };
+    Ok(new_array(part.to_vec()))
+}
+
+/// 先頭か末尾の要素。空なら `default`
+fn first_last(name: &str, args: &[Value], first: bool) -> Result<Value, String> {
+    expect_args(name, args, 2)?;
+    let items = array_arg(name, args, 0)?.borrow();
+    let found = if first { items.first() } else { items.last() };
+    Ok(found.cloned().unwrap_or_else(|| args[1].clone()))
+}
+
+/// `{f が true の要素, それ以外}`
+fn arr_partition(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("arr_partition", args, 2)?;
+    let items = array_arg("arr_partition", args, 0)?.borrow().clone();
+    let f = func_arg("arr_partition", args, 1)?;
+    let (mut yes, mut no) = (Vec::new(), Vec::new());
+    for item in items {
+        if truth("arr_partition", interp.call_value(f, vec![item.clone()])?)? {
+            yes.push(item);
+        } else {
+            no.push(item);
+        }
+    }
+    Ok(new_array(vec![new_array(yes), new_array(no)]))
+}
+
+/// 各要素に `f`（配列を返す）を適用して、結果を 1 つにつなげた新しい配列
+fn arr_flat_map(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("arr_flat_map", args, 2)?;
+    let items = array_arg("arr_flat_map", args, 0)?.borrow().clone();
+    let f = func_arg("arr_flat_map", args, 1)?;
+    let mut out = Vec::new();
+    for item in items {
+        match interp.call_value(f, vec![item])? {
+            Value::Array(part) => out.extend(part.borrow().iter().cloned()),
+            other => {
+                return Err(format!(
+                    "arr_flat_map の関数は配列を返す必要があります（{}でした）",
+                    other.type_name()
+                ))
+            }
+        }
+    }
+    Ok(new_array(out))
 }
 
 #[cfg(test)]

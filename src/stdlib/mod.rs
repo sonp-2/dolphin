@@ -9,6 +9,7 @@ pub mod collections;
 pub mod data;
 pub mod debug;
 pub mod error;
+pub mod format;
 pub mod gc;
 pub mod map;
 pub mod math;
@@ -58,6 +59,7 @@ pub fn register(interp: &mut Interpreter<'_>) {
     #[cfg(feature = "ffi")]
     ffi::register(interp);
     string::register(interp);
+    format::register(interp);
     stream::register(interp);
     array::register(interp);
     map::register(interp);
@@ -100,6 +102,17 @@ pub(crate) fn expect_args(name: &str, args: &[Value], n: usize) -> Result<(), St
     } else {
         Err(format!(
             "{name} の引数は {n} 個です（{} 個渡されました）",
+            args.len()
+        ))
+    }
+}
+
+pub(crate) fn expect_args_at_least(name: &str, args: &[Value], n: usize) -> Result<(), String> {
+    if args.len() >= n {
+        Ok(())
+    } else {
+        Err(format!(
+            "{name} の引数は {n} 個以上です（{} 個渡されました）",
             args.len()
         ))
     }
