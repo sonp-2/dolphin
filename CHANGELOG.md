@@ -15,6 +15,10 @@
 - 失敗はエラー値（種類 `sql` `busy` `auth` `network` `parse` `closed`。メッセージに SQLSTATE を含む）。問い合わせはブロッキングで、`LISTEN`/`NOTIFY`・`COPY`・接続のプールは作らない
 - `examples/pg_demo.dol`。テストは、サーバーがなくても通るもの（URL の解析・接続失敗の種類・値の変換の単体テスト）と、環境変数 `DOLPHIN_TEST_PG_URL` があるときだけ動くサーバーを使うもの（`tests/postgres.rs`）
 - CI に `--features postgres` のビルドとテストを足した
+- 配列・マップ・文字列の関数（[design.md 5.48](docs/design.md)）: `arr_sum` `arr_min` `arr_max` `arr_enumerate` `arr_sort_key` `arr_take` `arr_drop` `arr_first` `arr_last` `arr_partition` `arr_flat_map`、`map_from_items` `map_map_values` `map_filter`、`str_center` `str_capitalize` `str_title` `str_split_n` `str_is_digit` `str_is_alpha` `str_is_space`、書式つきの `str_format`（`{}` `{0}` `{:>8}` `{:.2f}` `{:,}` `{:05d}` `{:x}`）
+- ファイル・パス・OS（[design.md 5.49](docs/design.md)）: `file_walk`（再帰）`file_glob`（`*` `?` `[]` `**`）`file_temp` `file_temp_dir` `file_chmod`、`os.setenv` `os.shell` `os.hostname` `os.getpid` `os.cpu_count`、引数解析 `os.parse_args`（`--help` つき）、`path.relative` `path.parts` `path.with_ext`
+- ログ・時刻・数値・バイナリ・並行（[design.md 5.50](docs/design.md)）: `std:log`（レベル・text/json・出力先）、`time.local_offset` `time.diff` `time.add`、`math.mean` `math.median` `math.stdev`、`num_group`、`encoding.crc32`、`crypto.uuid7`、`bytes_get_int` `bytes_set_int`、`async.race` `async.timeout`
+- データ形式（[design.md 5.51](docs/design.md)。`yaml` `toml` `zip` feature。**既定では無効**）: `std:yaml`（`parse` `parse_all` `stringify`）、`std:toml`（`parse` `stringify`）、`std:zip`（`gzip` `gunzip` `deflate` `inflate`、zip と tar の読み書き・展開。`..` や絶対パスなどの危険な名前は展開前に断る）
 
 ### 変更
 - 変数を作らないブロックは、実行時にスコープ（`Env`）を作らないようにし、変数表のハッシュも軽くした。挙動は同じで、速くなる。計測用のスクリプトを `bench/`（`fib.dol` `loop.dol` `array.dol`）に置いた
