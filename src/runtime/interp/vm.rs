@@ -141,27 +141,7 @@ impl Interpreter<'_> {
         span: Span,
         depth: usize,
     ) -> RResult<(VmFrame, Rc<Env>, Vec<Value>)> {
-        if args.len() < def.min_args() || def.max_args().is_some_and(|max| args.len() > max) {
-            return Err(RuntimeError::new(
-                span,
-                resolver::arity_message(
-                    &quoted_label(def),
-                    def.min_args(),
-                    def.max_args(),
-                    args.len(),
-                ),
-            ));
-        }
-        if depth >= super::MAX_DEPTH {
-            return Err(RuntimeError::new(
-                span,
-                format!(
-                    "関数の呼び出しが深すぎます（{} 段）。終わらない再帰になっていませんか",
-                    super::MAX_DEPTH
-                ),
-            ));
-        }
-
+        check_call(def, args.len(), span, depth)?;
         gc::maybe_collect();
         let chunk = self.chunk_for(def);
         let given = args.len().min(def.params.len());
@@ -185,10 +165,23 @@ impl Interpreter<'_> {
             }
             (env, Vec::new())
         };
-        let frame = VmFrame {
+        let frame = self.function_frame(chunk, module, def, span, given, self.stack.len());
+        Ok((frame, env, locals))
+    }
+
+    fn function_frame(
+        &self,
+        chunk: Rc<Chunk>,
+        module: &Rc<Module>,
+        def: &Rc<FuncDef>,
+        span: Span,
+        given: usize,
+        base: usize,
+    ) -> VmFrame {
+        VmFrame {
             chunk,
             ip: 0,
-            base: self.stack.len(),
+            base,
             kind: FrameKind::Function {
                 def: Rc::clone(def),
                 call_span: span,
@@ -198,21 +191,41 @@ impl Interpreter<'_> {
             scopes: Vec::new(),
             caller_module: Rc::clone(&self.current),
             caller_env: Rc::clone(&self.env),
-        };
-        Ok((frame, env, locals))
+        }
     }
 
-    /// 関数を呼ぶ命令。`async` 関数なら新しい流れを始めて future を積み、普通の関数なら枠を積むだけ
-    /// （戻りを待たない）
+    /// 関数を呼ぶ命令。引数は値のスタックの上から `argc` 個。`async` 関数なら新しい流れを始めて
+    /// future を積み、普通の関数なら枠を積むだけ（戻りを待たない）。
+    /// スロットの関数は、積まれた引数をそのままスロットにする（引数の配列を作らない）
     fn enter_function(
         &mut self,
         module: &Rc<Module>,
         def: &Rc<FuncDef>,
         parent: &Rc<Env>,
-        args: Vec<Value>,
+        argc: usize,
         span: Span,
         ip: usize,
     ) -> RResult<Step> {
+        if !def.is_async && argc <= def.params.len() {
+            let chunk = self.chunk_for(def);
+            if let Some(count) = chunk.locals {
+                check_call(def, argc, span, self.depth)?;
+                gc::maybe_collect();
+                let base = self.stack.len() - argc;
+                self.stack.resize(base + count as usize, Value::Nil);
+                if def.rest.is_some() {
+                    self.stack[base + def.params.len()] = gc::new_array(Vec::new());
+                }
+                let frame = self.function_frame(chunk, module, def, span, argc, base);
+                self.save_ip(ip);
+                self.current = Rc::clone(module);
+                self.env = Rc::clone(parent);
+                self.depth += 1;
+                self.vm_frames.push(frame);
+                return Ok(Step::Reload);
+            }
+        }
+        let args = self.split_top(argc);
         if def.is_async {
             let future = self.start_coroutine(module, def, parent, args, span)?;
             self.stack.push(future);
@@ -272,8 +285,77 @@ impl Interpreter<'_> {
             };
             loop {
                 let op = &chunk.code[ip];
-                let span = chunk.spans[ip];
                 ip += 1;
+                // よく使う命令は、`step`（大きな関数で、呼ぶだけで重い）を通さずにここで済ませる。
+                // エラーになりうる場合は、ここでは何も変えずに `step` に任せる
+                match op {
+                    Op::Const(i) => {
+                        self.stack.push(chunk.consts[*i as usize].clone());
+                        continue;
+                    }
+                    Op::LoadLocal(slot) => {
+                        let value = self.stack[base + *slot as usize].clone();
+                        self.stack.push(value);
+                        continue;
+                    }
+                    Op::StoreLocal(slot) => {
+                        let value = self.pop();
+                        self.stack[base + *slot as usize] = value;
+                        continue;
+                    }
+                    Op::Pop => {
+                        self.stack.pop();
+                        continue;
+                    }
+                    Op::Jump(t) => {
+                        ip = *t as usize;
+                        continue;
+                    }
+                    Op::JumpIfFalseCond(t) => {
+                        if let Some(Value::Bool(cond)) = self.stack.last() {
+                            let cond = *cond;
+                            self.stack.pop();
+                            if !cond {
+                                ip = *t as usize;
+                            }
+                            continue;
+                        }
+                    }
+                    Op::LoopTick => {
+                        gc::maybe_collect();
+                        continue;
+                    }
+                    Op::LoadVar(n) => {
+                        if let Some(value) = self.env.get(&chunk.names[*n as usize]) {
+                            self.stack.push(value);
+                            continue;
+                        }
+                    }
+                    Op::AssignVar(n) => {
+                        let value = self.pop();
+                        if !self.env.assign(&chunk.names[*n as usize], value) {
+                            let span = chunk.spans[ip - 1];
+                            let e = undefined_name(&chunk.names[*n as usize], span);
+                            return Err(self.unwind(e, target));
+                        }
+                        continue;
+                    }
+                    Op::Binary(op) => {
+                        let n = self.stack.len();
+                        let fast = match (&self.stack[n - 2], &self.stack[n - 1]) {
+                            (Value::Int(a), Value::Int(b)) => fast_int(*op, *a, *b),
+                            (Value::Num(a), Value::Num(b)) => fast_num(*op, *a, *b),
+                            _ => None,
+                        };
+                        if let Some(value) = fast {
+                            self.stack.pop();
+                            self.stack[n - 2] = value;
+                            continue;
+                        }
+                    }
+                    _ => {}
+                }
+                let span = chunk.spans[ip - 1];
                 match self.step(op, span, &chunk, &mut ip, base, target) {
                     Ok(Step::Next) => {}
                     Ok(Step::Reload) => break,
@@ -481,6 +563,7 @@ impl Interpreter<'_> {
     }
 
     #[allow(clippy::too_many_lines)]
+    #[inline(never)]
     fn step(
         &mut self,
         op: &Op,
@@ -592,6 +675,7 @@ impl Interpreter<'_> {
                 }
             }
             Op::Binary(op) => {
+                // 速い経路は `run_vm_exit` にある。ここに来るのは、型が違うかエラーになる場合
                 let r = self.pop();
                 let l = self.pop();
                 self.stack.push(binary_values(*op, &l, &r, span)?);
@@ -753,30 +837,29 @@ impl Interpreter<'_> {
                 return Ok(self.do_return(value, target));
             }
             Op::Call { name, argc } => {
-                let args = self.split_top(*argc as usize);
-                return self.call_named(&chunk.names[*name as usize], args, span, *ip);
+                return self.call_named(&chunk.names[*name as usize], *argc as usize, span, *ip);
             }
             Op::CallSpread { name } => {
-                let args = self.pop_spread_args();
-                return self.call_named(&chunk.names[*name as usize], args, span, *ip);
+                let argc = self.push_spread_args();
+                return self.call_named(&chunk.names[*name as usize], argc, span, *ip);
             }
             Op::CallValue { argc, callee } => {
-                let args = self.split_top(*argc as usize);
-                let f = self.pop();
-                return self.call_function_op(&f, args, span, *callee, *ip);
+                let f = self.take_below(*argc as usize);
+                return self.call_function_op(&f, *argc as usize, span, *callee, *ip);
             }
             Op::CallValueSpread { callee } => {
                 let args = self.pop_spread_args();
                 let f = self.pop();
-                return self.call_function_op(&f, args, span, *callee, *ip);
+                let argc = args.len();
+                self.stack.extend(args);
+                return self.call_function_op(&f, argc, span, *callee, *ip);
             }
             Op::MemberCall { name, argc, target } => {
-                let args = self.split_top(*argc as usize);
-                let base = self.pop();
+                let base = self.take_below(*argc as usize);
                 return self.member_call(
                     base,
                     &chunk.names[*name as usize],
-                    args,
+                    *argc as usize,
                     span,
                     *target,
                     *ip,
@@ -785,10 +868,12 @@ impl Interpreter<'_> {
             Op::MemberCallSpread { name, target } => {
                 let args = self.pop_spread_args();
                 let base = self.pop();
+                let argc = args.len();
+                self.stack.extend(args);
                 return self.member_call(
                     base,
                     &chunk.names[*name as usize],
-                    args,
+                    argc,
                     span,
                     *target,
                     *ip,
@@ -871,6 +956,20 @@ impl Interpreter<'_> {
         Ok(Step::Next)
     }
 
+    /// 引数の下にある値（呼ぶ関数、`@u.name[..]` の `@u`）を取り出す。引数は積んだまま
+    fn take_below(&mut self, argc: usize) -> Value {
+        let at = self.stack.len() - argc - 1;
+        self.stack.remove(at)
+    }
+
+    /// 展開を含む引数の配列を取り出して、その要素を引数として積む。個数を返す
+    fn push_spread_args(&mut self) -> usize {
+        let args = self.pop_spread_args();
+        let argc = args.len();
+        self.stack.extend(args);
+        argc
+    }
+
     /// 展開を含む引数の配列を取り出す
     fn pop_spread_args(&mut self) -> Vec<Value> {
         match self.pop() {
@@ -906,13 +1005,14 @@ impl Interpreter<'_> {
     }
 
     /// `name[args]`: ファイルの関数、`import`、組み込み関数の順に探して呼ぶ
-    fn call_named(&mut self, name: &str, args: Vec<Value>, span: Span, ip: usize) -> RResult<Step> {
+    fn call_named(&mut self, name: &str, argc: usize, span: Span, ip: usize) -> RResult<Step> {
         let def = self.current.functions.borrow().get(name).cloned();
         if let Some(def) = def {
             let module = Rc::clone(&self.current);
             let env = Rc::clone(&module.globals);
-            return self.enter_function(&module, &def, &env, args, span, ip);
+            return self.enter_function(&module, &def, &env, argc, span, ip);
         }
+        let args = self.split_top(argc);
         let value = if name == "import" {
             self.import(&args, span)?
         } else {
@@ -931,16 +1031,17 @@ impl Interpreter<'_> {
     fn call_function_op(
         &mut self,
         f: &Value,
-        args: Vec<Value>,
+        argc: usize,
         span: Span,
         callee_span: Span,
         ip: usize,
     ) -> RResult<Step> {
         match f {
             Value::Func(closure) => {
-                self.enter_function(&closure.module, &closure.def, &closure.env, args, span, ip)
+                self.enter_function(&closure.module, &closure.def, &closure.env, argc, span, ip)
             }
             Value::Native(native) => {
+                let args = self.split_top(argc);
                 let value = self.call_native(native.f, &args, span)?;
                 self.stack.push(value);
                 Ok(Step::Next)
@@ -954,7 +1055,7 @@ impl Interpreter<'_> {
         &mut self,
         base: Value,
         name: &str,
-        args: Vec<Value>,
+        argc: usize,
         span: Span,
         target: Span,
         ip: usize,
@@ -963,7 +1064,7 @@ impl Interpreter<'_> {
             // マップの値の関数を呼ぶ（`@m.handler[1]`）
             Value::Map(_) => {
                 let f = index_get(&base, &Value::Str(name.into()), target, span)?;
-                return self.call_function_op(&f, args, span, span, ip);
+                return self.call_function_op(&f, argc, span, span, ip);
             }
             base => self.as_module(base, target)?,
         };
@@ -971,9 +1072,10 @@ impl Interpreter<'_> {
         match (def, module.natives.get(name)) {
             (Some(def), _) => {
                 let env = Rc::clone(&module.globals);
-                self.enter_function(&module, &def, &env, args, span, ip)
+                self.enter_function(&module, &def, &env, argc, span, ip)
             }
             (None, Some(native)) => {
+                let args = self.split_top(argc);
                 let value = self.call_native(native.f, &args, span)?;
                 self.stack.push(value);
                 Ok(Step::Next)
@@ -984,6 +1086,60 @@ impl Interpreter<'_> {
             )),
         }
     }
+}
+
+/// 呼び出しの前の検査: 引数の数と、呼び出しの深さ
+fn check_call(def: &FuncDef, argc: usize, span: Span, depth: usize) -> RResult<()> {
+    if argc < def.min_args() || def.max_args().is_some_and(|max| argc > max) {
+        return Err(RuntimeError::new(
+            span,
+            resolver::arity_message(&quoted_label(def), def.min_args(), def.max_args(), argc),
+        ));
+    }
+    if depth >= super::MAX_DEPTH {
+        return Err(RuntimeError::new(
+            span,
+            format!(
+                "関数の呼び出しが深すぎます（{} 段）。終わらない再帰になっていませんか",
+                super::MAX_DEPTH
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// 整数どうしの二項演算の速い経路。オーバーフロー・0 で割る・その他は `None`（遅い経路がエラーにする）
+fn fast_int(op: BinaryOp, a: i64, b: i64) -> Option<Value> {
+    use BinaryOp as B;
+    Some(match op {
+        B::Add => Value::Int(a.checked_add(b)?),
+        B::Sub => Value::Int(a.checked_sub(b)?),
+        B::Mul => Value::Int(a.checked_mul(b)?),
+        B::Lt => Value::Bool(a < b),
+        B::LtEq => Value::Bool(a <= b),
+        B::Gt => Value::Bool(a > b),
+        B::GtEq => Value::Bool(a >= b),
+        B::Eq => Value::Bool(a == b),
+        B::NotEq => Value::Bool(a != b),
+        _ => return None,
+    })
+}
+
+/// 数値どうしの二項演算の速い経路（割り算は 0 の検査があるので遅い経路）
+fn fast_num(op: BinaryOp, a: f64, b: f64) -> Option<Value> {
+    use BinaryOp as B;
+    Some(match op {
+        B::Add => Value::Num(a + b),
+        B::Sub => Value::Num(a - b),
+        B::Mul => Value::Num(a * b),
+        B::Lt => Value::Bool(a < b),
+        B::LtEq => Value::Bool(a <= b),
+        B::Gt => Value::Bool(a > b),
+        B::GtEq => Value::Bool(a >= b),
+        B::Eq => Value::Bool(a == b),
+        B::NotEq => Value::Bool(a != b),
+        _ => return None,
+    })
 }
 
 /// 二項演算（`&&` と `||` は短絡するので、ここには来ない）
