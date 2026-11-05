@@ -198,6 +198,31 @@ fn add_forward(future: &Value, forward: Forward) {
     }
 }
 
+/// `catch[async 関数]` の結果（design.md 5.53）。`result` は `catch` が受け取った値で、
+/// future なら、失敗を実行時エラーのエラー値にして成功させる future を返す。future でなければ（始める
+/// ときのエラーのエラー値）、それで成功済みの future にする
+pub fn catching_future(interp: &mut Interpreter<'_>, result: &Value) -> Value {
+    let wrapped = Handle::new_future();
+    match peek_future(result) {
+        None => interp.settle_future(&wrapped, FutureOutcome::Resolved(result.clone())),
+        Some(Some(FutureOutcome::Failed(e))) => interp.settle_future(
+            &wrapped,
+            FutureOutcome::Resolved(super::error::runtime_error_value(&e)),
+        ),
+        Some(Some(done)) => interp.settle_future(&wrapped, done),
+        Some(None) => add_forward(
+            result,
+            Forward {
+                target: wrapped.clone(),
+                replace: None,
+                cancel_timer: None,
+                catch: true,
+            },
+        ),
+    }
+    wrapped
+}
+
 /// 最初に終わった future の結果で終わる future（design.md 5.50）
 fn race(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     expect_args("async.race", args, 1)?;
@@ -227,6 +252,7 @@ fn race(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
                 target: result.clone(),
                 replace: None,
                 cancel_timer: None,
+                catch: false,
             },
         );
     }
@@ -267,6 +293,7 @@ fn timeout(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String
             target: result.clone(),
             replace: None,
             cancel_timer: Some(id),
+            catch: false,
         },
     );
     add_forward(
@@ -278,6 +305,7 @@ fn timeout(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String
                 format!("{} 秒以内に終わりませんでした", args[1]),
             )),
             cancel_timer: None,
+            catch: false,
         },
     );
     Ok(result)

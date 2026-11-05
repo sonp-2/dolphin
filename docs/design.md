@@ -80,6 +80,7 @@ statement   = func_def
             | return_stmt
             | "break"
             | "continue"
+            | defer_stmt
             | destructure
             | assignment
             | expr_stmt ;
@@ -104,6 +105,7 @@ if_stmt     = "if" expression block
 while_stmt  = "while" expression block ;
 for_stmt    = "for" variable "in" expression block ;
 return_stmt = "#" [ expression ] ;
+defer_stmt  = "defer" expression ;                              (* 関数を抜けるとき、登録の逆順に評価する（5.53） *)
 expr_stmt   = expression ;
 
 block       = "(" { NEWLINE } [ statement { NEWLINE { NEWLINE } statement } ] { NEWLINE } ")" ;

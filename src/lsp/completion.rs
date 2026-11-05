@@ -9,7 +9,7 @@ use crate::Catalog;
 
 const KEYWORDS: &[&str] = &[
     "if", "else", "while", "for", "in", "break", "continue", "true", "false", "nil", "async",
-    "await",
+    "await", "defer",
 ];
 
 // CompletionItemKind

@@ -165,6 +165,8 @@ pub struct Forward {
     pub replace: Option<Value>,
     /// 転送したとき止める、イベントループのタイマーの番号
     pub cancel_timer: Option<u64>,
+    /// 失敗を、実行時エラーのエラー値で成功させる（`catch`。design.md 5.53）
+    pub catch: bool,
 }
 
 /// `async` 関数の結果を、あとから受け取るための入れ物（design.md 5.46）

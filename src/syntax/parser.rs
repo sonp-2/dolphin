@@ -148,6 +148,11 @@ impl<'t> Parser<'t> {
                 self.advance();
                 StmtKind::Continue
             }
+            // defer_stmt = "defer" expression
+            TokenKind::Defer => {
+                self.advance();
+                StmtKind::Defer(self.expression()?)
+            }
             TokenKind::LBrace if self.looks_like_destructure() => return self.destructure(),
             // `async 名前[…] ( … )` は async 関数の定義。`async [` は無名関数の式
             TokenKind::Async if matches!(self.tokens[self.pos + 1].kind, TokenKind::Ident(_)) => {
@@ -867,6 +872,25 @@ mod tests {
 
     fn error(src: &str) -> Diagnostic {
         parse(&tokenize(src).unwrap()).unwrap_err()
+    }
+
+    #[test]
+    fn defer_statement() {
+        assert_eq!(
+            ast("f[] (
+    defer log[1]
+)"),
+            "(def f () ((defer (log 1))))
+"
+        );
+        assert!(
+            error(
+                "defer
+"
+            )
+            .message
+            .contains("式")
+        );
     }
 
     #[test]
