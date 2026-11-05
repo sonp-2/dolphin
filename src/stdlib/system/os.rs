@@ -26,6 +26,12 @@ pub fn register(interp: &mut Interpreter<'_>) {
             ("os.platform", platform),
             ("os.temp_dir", temp_dir),
             ("os.exe", exe),
+            ("os.setenv", setenv),
+            ("os.shell", shell),
+            ("os.hostname", hostname),
+            ("os.getpid", getpid),
+            ("os.cpu_count", cpu_count),
+            ("os.parse_args", crate::stdlib::system::argparse::parse_args),
             ("os.run", run),
             ("os.run_async", run_async),
             ("os.spawn", crate::stdlib::process::spawn),
@@ -148,18 +154,21 @@ struct RunOptions {
     /// `stdout` と `stderr` をバイト列で返すか（`"as": "bytes"`）
     as_bytes: bool,
     timeout: Option<Duration>,
+    /// Windows の `cmd /c` に、引用符をそのまま渡すコマンド行（`os.shell`）
+    #[cfg_attr(not(windows), allow(dead_code))]
+    raw_arg: Option<String>,
 }
 
-fn run_options(value: &Value) -> Result<RunOptions, String> {
+fn run_options(name: &str, index: usize, value: &Value) -> Result<RunOptions, String> {
     let Value::Map(options) = value else {
-        return Err(type_error("os.run", 2, "マップ", value));
+        return Err(type_error(name, index, "マップ", value));
     };
     let options = options.borrow();
     const KNOWN: [&str; 5] = ["cwd", "env", "stdin", "timeout", "as"];
     for (key, _) in options.iter() {
         if !KNOWN.contains(&&**key) {
             return Err(format!(
-                "os.run に知らないオプション `{key}` があります（使えるのは {}）",
+                "{name} に知らないオプション `{key}` があります（使えるのは {}）",
                 KNOWN.join("、")
             ));
         }
@@ -169,7 +178,7 @@ fn run_options(value: &Value) -> Result<RunOptions, String> {
             None => Ok(None),
             Some(Value::Str(s)) => Ok(Some(s.to_string())),
             Some(other) => Err(format!(
-                "os.run の `{key}` は文字列です（{}が渡されました）",
+                "{name} の `{key}` は文字列です（{}が渡されました）",
                 other.type_name()
             )),
         }
@@ -181,19 +190,19 @@ fn run_options(value: &Value) -> Result<RunOptions, String> {
             for (key, value) in map.borrow().iter() {
                 let Value::Str(value) = value else {
                     return Err(format!(
-                        "os.run の `env` の `{key}` は文字列です（{}が渡されました）",
+                        "{name} の `env` の `{key}` は文字列です（{}が渡されました）",
                         value.type_name()
                     ));
                 };
                 if key.is_empty() || key.contains(['=', '\0']) || value.contains('\0') {
-                    return Err(format!("os.run の `env` の `{key}` は環境変数にできません"));
+                    return Err(format!("{name} の `env` の `{key}` は環境変数にできません"));
                 }
                 env.push((key.to_string(), value.to_string()));
             }
         }
         Some(other) => {
             return Err(format!(
-                "os.run の `env` はマップです（{}が渡されました）",
+                "{name} の `env` はマップです（{}が渡されました）",
                 other.type_name()
             ));
         }
@@ -204,11 +213,11 @@ fn run_options(value: &Value) -> Result<RunOptions, String> {
             Some(Duration::try_from_secs_f64(*n).unwrap_or(Duration::MAX))
         }
         Some(Value::Num(n)) => {
-            return Err(format!("os.run の `timeout` は 0 より大きい数です（{n}）"));
+            return Err(format!("{name} の `timeout` は 0 より大きい数です（{n}）"));
         }
         Some(other) => {
             return Err(format!(
-                "os.run の `timeout` は数値です（{}が渡されました）",
+                "{name} の `timeout` は数値です（{}が渡されました）",
                 other.type_name()
             ));
         }
@@ -219,7 +228,7 @@ fn run_options(value: &Value) -> Result<RunOptions, String> {
         Some(Value::Bytes(b)) => Some(b.to_vec()),
         Some(other) => {
             return Err(format!(
-                "os.run の `stdin` は文字列かバイト列です（{}が渡されました）",
+                "{name} の `stdin` は文字列かバイト列です（{}が渡されました）",
                 other.type_name()
             ));
         }
@@ -230,7 +239,7 @@ fn run_options(value: &Value) -> Result<RunOptions, String> {
         Some(Value::Str(kind)) if &**kind == "bytes" => true,
         Some(other) => {
             return Err(format!(
-                "os.run の `as` は \"text\" か \"bytes\" です（{other}）"
+                "{name} の `as` は \"text\" か \"bytes\" です（{other}）"
             ));
         }
     };
@@ -240,6 +249,7 @@ fn run_options(value: &Value) -> Result<RunOptions, String> {
         stdin,
         as_bytes,
         timeout,
+        raw_arg: None,
     })
 }
 
@@ -249,6 +259,117 @@ fn run(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
     // 子プロセスの出力が、こちらの出力と前後しないように
     interp.out.flush().map_err(|e| e.to_string())?;
     Ok(spawn_and_wait(&command, &arguments, options))
+}
+
+/// シェルを通して実行する（Unix は `sh -c`、Windows は `cmd /c`）。戻り値は `run` と同じ
+fn shell(interp: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    if !(1..=2).contains(&args.len()) {
+        return Err(format!(
+            "os.shell の引数は 1 個か 2 個です（{} 個渡されました）",
+            args.len()
+        ));
+    }
+    let line = str_arg("os.shell", args, 0)?;
+    if line.contains('\0') {
+        return Err("os.shell のコマンドに NUL は使えません".into());
+    }
+    let mut options = match args.get(1) {
+        Some(value) => run_options("os.shell", 1, value)?,
+        None => run_options("os.shell", 1, &new_map(Map::default()))?,
+    };
+    interp.out.flush().map_err(|e| e.to_string())?;
+    if cfg!(windows) {
+        options.raw_arg = Some(line.to_string());
+        Ok(spawn_and_wait("cmd", &["/c".to_string()], options))
+    } else {
+        Ok(spawn_and_wait(
+            "sh",
+            &["-c".to_string(), line.to_string()],
+            options,
+        ))
+    }
+}
+
+/// 環境変数を設定する。`nil` なら消す
+fn setenv(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("os.setenv", args, 2)?;
+    let name = str_arg("os.setenv", args, 0)?;
+    if name.is_empty() || name.contains(['=', '\0']) {
+        return Err(format!("os.setenv の名前 `{name}` は環境変数にできません"));
+    }
+    match &args[1] {
+        Value::Str(value) if value.contains('\0') => {
+            return Err("os.setenv の値に NUL は使えません".into());
+        }
+        // SAFETY: 環境変数の読み書きが別のスレッドと同時になると未定義の動作になりうる
+        // （Unix）。スクリプトの処理は 1 つのスレッドで進み、環境変数を読む標準ライブラリの
+        // 関数もそこから呼ばれる
+        Value::Str(value) => unsafe { std::env::set_var(name, &**value) },
+        Value::Nil => unsafe { std::env::remove_var(name) },
+        other => return Err(type_error("os.setenv", 1, "文字列か nil", other)),
+    }
+    Ok(Value::Nil)
+}
+
+/// ホスト名
+fn hostname(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("os.hostname", args, 0)?;
+    Ok(match host_name() {
+        Ok(name) => string(name),
+        Err(e) => io_failure("ホスト名を調べられません", None, &e),
+    })
+}
+
+#[cfg(unix)]
+fn host_name() -> io::Result<String> {
+    unsafe extern "C" {
+        fn gethostname(name: *mut std::ffi::c_char, len: usize) -> std::ffi::c_int;
+    }
+    let mut buf = [0u8; 256];
+    // SAFETY: バッファの長さを渡している。最後の 1 バイトは必ず NUL のまま残す
+    let rc = unsafe { gethostname(buf.as_mut_ptr().cast(), buf.len() - 1) };
+    if rc != 0 {
+        return Err(io::Error::last_os_error());
+    }
+    let len = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+    Ok(String::from_utf8_lossy(&buf[..len]).into_owned())
+}
+
+#[cfg(windows)]
+fn host_name() -> io::Result<String> {
+    #[link(name = "kernel32")]
+    unsafe extern "system" {
+        fn GetComputerNameW(buffer: *mut u16, size: *mut u32) -> i32;
+    }
+    let mut buf = [0u16; 256];
+    let mut size = buf.len() as u32;
+    // SAFETY: バッファとその長さ（文字数）を渡している
+    let ok = unsafe { GetComputerNameW(buf.as_mut_ptr(), &mut size) };
+    if ok == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(String::from_utf16_lossy(&buf[..size as usize]))
+}
+
+#[cfg(not(any(unix, windows)))]
+fn host_name() -> io::Result<String> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "この OS では調べられません",
+    ))
+}
+
+/// 自分のプロセス番号
+fn getpid(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("os.getpid", args, 0)?;
+    Ok(Value::Num(f64::from(std::process::id())))
+}
+
+/// 使える論理 CPU の数。調べられなければ 1
+fn cpu_count(_: &mut Interpreter<'_>, args: &[Value]) -> Result<Value, String> {
+    expect_args("os.cpu_count", args, 0)?;
+    let n = thread::available_parallelism().map_or(1, usize::from);
+    Ok(Value::Num(n as f64))
 }
 
 /// `os.run_async[command, args, f]` / `os.run_async[command, args, options, f]`（design.md 5.23）
@@ -287,13 +408,14 @@ fn run_request(name: &str, args: &[Value]) -> Result<(String, Vec<String>, RunOp
         }
     }
     let options = match args.get(2) {
-        Some(value) => run_options(value)?,
+        Some(value) => run_options("os.run", 2, value)?,
         None => RunOptions {
             cwd: None,
             env: Vec::new(),
             stdin: None,
             as_bytes: false,
             timeout: None,
+            raw_arg: None,
         },
     };
     if command.is_empty() || command.contains('\0') {
@@ -325,6 +447,11 @@ fn spawn_and_wait(command: &str, arguments: &[String], options: RunOptions) -> V
         .stderr(Stdio::piped());
     if let Some(dir) = &options.cwd {
         cmd.current_dir(dir);
+    }
+    #[cfg(windows)]
+    if let Some(line) = &options.raw_arg {
+        use std::os::windows::process::CommandExt;
+        cmd.raw_arg(line);
     }
     for (key, value) in &options.env {
         cmd.env(key, value);
