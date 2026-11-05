@@ -37,6 +37,8 @@ pub fn compile_program(stmts: &[Stmt], keep_last: bool) -> Chunk {
 /// 関数の本体をコンパイルする。引数の宣言は呼び出し側（VM）が行い、ここは既定値の評価から始まる
 pub fn compile_function(def: &FuncDef) -> Chunk {
     let mut c = Compiler::new();
+    c.chunk.param_names = def.params.iter().map(|p| p.name.as_str().into()).collect();
+    c.chunk.rest_name = def.rest.as_deref().map(Into::into);
     for (i, param) in def.params.iter().enumerate() {
         if let Some(default) = &param.default {
             let skip = c.emit(
@@ -82,6 +84,8 @@ impl Compiler {
                 spans: Vec::new(),
                 consts: Vec::new(),
                 names: Vec::new(),
+                param_names: Vec::new(),
+                rest_name: None,
                 defs: Vec::new(),
                 patterns: Vec::new(),
             },
@@ -123,7 +127,7 @@ impl Compiler {
             return i;
         }
         let i = self.chunk.names.len() as u32;
-        self.chunk.names.push(name.to_string());
+        self.chunk.names.push(name.into());
         self.names.insert(name.to_string(), i);
         i
     }

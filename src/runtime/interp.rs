@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use super::bytecode::Chunk;
 use super::compile::compile_program;
-use super::env::Env;
+use super::env::{Env, NameBuild};
 use super::error::{RuntimeError, TraceEntry};
 use super::events::Events;
 use super::gc;
@@ -74,7 +74,7 @@ pub struct Interpreter<'a> {
     /// 関数の呼び出しの深さ（ファイルの本体は数えない）
     depth: usize,
     /// コンパイル済みの関数（定義のアドレス → 定義と命令列）
-    chunks: HashMap<usize, (Rc<FuncDef>, Rc<Chunk>)>,
+    chunks: HashMap<usize, (Rc<FuncDef>, Rc<Chunk>), NameBuild>,
     /// 止まっている `async` 関数の流れ（番号 → 流れ。design.md 5.46）
     coroutines: HashMap<u64, vm::Coroutine>,
     next_coroutine: u64,
@@ -115,7 +115,7 @@ impl<'a> Interpreter<'a> {
             vm_frames: Vec::new(),
             stack: Vec::new(),
             depth: 0,
-            chunks: HashMap::new(),
+            chunks: HashMap::default(),
             coroutines: HashMap::new(),
             next_coroutine: 1,
             ready: std::collections::VecDeque::new(),

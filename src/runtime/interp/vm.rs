@@ -136,41 +136,34 @@ impl Interpreter<'_> {
         span: Span,
         depth: usize,
     ) -> RResult<(VmFrame, Rc<Env>)> {
-        if args.len() < def.min_args() || def.max_args().is_some_and(|max| args.len() > max) {
-            return Err(RuntimeError::new(
-                span,
-                resolver::arity_message(
-                    &quoted_label(def),
-                    def.min_args(),
-                    def.max_args(),
-                    args.len(),
-                ),
-            ));
-        }
-        if depth >= super::MAX_DEPTH {
-            return Err(RuntimeError::new(
-                span,
-                format!(
-                    "関数の呼び出しが深すぎます（{} 段）。終わらない再帰になっていませんか",
-                    super::MAX_DEPTH
-                ),
-            ));
-        }
+        self.check_call(def, args.len(), span, depth)?;
 
         gc::maybe_collect();
         // 関数のスコープは、そのファイルのトップレベルのスコープの内側に作る
         let env = Env::new(Some(Rc::clone(parent)));
+        let chunk = self.chunk_for(def);
         let given = args.len().min(def.params.len());
         let mut args = args;
         let extra = args.split_off(given);
-        for (param, value) in def.params.iter().zip(args) {
-            env.declare(&param.name, value);
+        for (name, value) in chunk.param_names.iter().zip(args) {
+            env.declare_rc(name, value);
         }
-        if let Some(rest) = &def.rest {
-            env.declare(rest, gc::new_array(extra));
+        if let Some(rest) = &chunk.rest_name {
+            env.declare_rc(rest, gc::new_array(extra));
         }
-        let chunk = self.chunk_for(def);
-        let frame = VmFrame {
+        let frame = self.new_function_frame(module, def, chunk, given, span);
+        Ok((frame, env))
+    }
+
+    fn new_function_frame(
+        &self,
+        module: &Rc<Module>,
+        def: &Rc<FuncDef>,
+        chunk: Rc<Chunk>,
+        given: usize,
+        span: Span,
+    ) -> VmFrame {
+        VmFrame {
             chunk,
             ip: 0,
             base: self.stack.len(),
@@ -183,8 +176,59 @@ impl Interpreter<'_> {
             scopes: Vec::new(),
             caller_module: Rc::clone(&self.current),
             caller_env: Rc::clone(&self.env),
-        };
-        Ok((frame, env))
+        }
+    }
+
+    /// `enter_function` と同じだが、引数はスタックの上から `argc` 個にある（`Vec` を作らずに済ませる）。
+    /// 引数が定義より多い・`...@rest` がある・`async` のときは、`Vec` を作る道に任せる
+    fn enter_function_stack(
+        &mut self,
+        module: &Rc<Module>,
+        def: &Rc<FuncDef>,
+        parent: &Rc<Env>,
+        argc: usize,
+        span: Span,
+        ip: usize,
+    ) -> RResult<Step> {
+        if def.is_async || def.rest.is_some() || argc > def.params.len() {
+            let args = self.split_top(argc);
+            return self.enter_function(module, def, parent, args, span, ip);
+        }
+        self.check_call(def, argc, span, self.depth)?;
+        gc::maybe_collect();
+        let env = Env::new(Some(Rc::clone(parent)));
+        let chunk = self.chunk_for(def);
+        let at = self.stack.len() - argc;
+        for (name, value) in chunk.param_names.iter().zip(self.stack.drain(at..)) {
+            env.declare_rc(name, value);
+        }
+        let frame = self.new_function_frame(module, def, chunk, argc, span);
+        self.save_ip(ip);
+        self.current = Rc::clone(module);
+        self.env = env;
+        self.depth += 1;
+        self.vm_frames.push(frame);
+        Ok(Step::Reload)
+    }
+
+    /// 引数の数と呼び出しの深さを確かめる
+    fn check_call(&self, def: &Rc<FuncDef>, argc: usize, span: Span, depth: usize) -> RResult<()> {
+        if argc < def.min_args() || def.max_args().is_some_and(|max| argc > max) {
+            return Err(RuntimeError::new(
+                span,
+                resolver::arity_message(&quoted_label(def), def.min_args(), def.max_args(), argc),
+            ));
+        }
+        if depth >= super::MAX_DEPTH {
+            return Err(RuntimeError::new(
+                span,
+                format!(
+                    "関数の呼び出しが深すぎます（{} 段）。終わらない再帰になっていませんか",
+                    super::MAX_DEPTH
+                ),
+            ));
+        }
+        Ok(())
     }
 
     /// 関数を呼ぶ命令。`async` 関数なら新しい流れを始めて future を積み、普通の関数なら枠を積むだけ
@@ -728,15 +772,44 @@ impl Interpreter<'_> {
                 return Ok(self.do_return(value, target));
             }
             Op::Call { name, argc } => {
+                let name = &chunk.names[*name as usize];
+                let def = self.current.functions.borrow().get(&**name).cloned();
+                if let Some(def) = def {
+                    let module = Rc::clone(&self.current);
+                    let env = Rc::clone(&module.globals);
+                    return self.enter_function_stack(
+                        &module,
+                        &def,
+                        &env,
+                        *argc as usize,
+                        span,
+                        *ip,
+                    );
+                }
                 let args = self.split_top(*argc as usize);
-                return self.call_named(&chunk.names[*name as usize], args, span, *ip);
+                return self.call_named(name, args, span, *ip);
             }
             Op::CallSpread { name } => {
                 let args = self.pop_spread_args();
                 return self.call_named(&chunk.names[*name as usize], args, span, *ip);
             }
             Op::CallValue { argc, callee } => {
-                let args = self.split_top(*argc as usize);
+                let argc = *argc as usize;
+                let f_at = self.stack.len() - argc - 1;
+                if let Value::Func(closure) = &self.stack[f_at] {
+                    let closure = Rc::clone(closure);
+                    // 関数値を引数の下から抜く（引数は動かさない）
+                    self.stack.remove(f_at);
+                    return self.enter_function_stack(
+                        &closure.module,
+                        &closure.def,
+                        &closure.env,
+                        argc,
+                        span,
+                        *ip,
+                    );
+                }
+                let args = self.split_top(argc);
                 let f = self.pop();
                 return self.call_function_op(&f, args, span, *callee, *ip);
             }
